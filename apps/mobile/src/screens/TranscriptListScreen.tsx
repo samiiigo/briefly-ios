@@ -2,12 +2,13 @@ import React from 'react';
 import {FlatList, Pressable, Text, View} from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/RootNavigator';
-import {useBrieflyStore} from '../store/BrieflyContext';
+import {useBrieflyStore, useBrieflyStoreVersion} from '../store/BrieflyContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TranscriptList'>;
 
 export function TranscriptListScreen({navigation}: Props) {
   const store = useBrieflyStore();
+  useBrieflyStoreVersion();
   const transcripts = store.getTranscripts();
 
   return (

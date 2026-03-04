@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useMemo, useState} from 'react';
+import React, {createContext, useContext, useEffect, useMemo, useState} from 'react';
 import type {ReactNode} from 'react';
 import {
   BrieflyStore,
@@ -7,7 +7,12 @@ import {
   createCloudSummarizer,
 } from '@briefly/shared';
 
-const BrieflyStoreContext = createContext<BrieflyStore | null>(null);
+type BrieflyStoreContextValue = {
+  store: BrieflyStore;
+  version: number;
+};
+
+const BrieflyStoreContext = createContext<BrieflyStoreContextValue | null>(null);
 
 export function BrieflyStoreProvider({children}: {children: ReactNode}) {
   const [store] = useState(
@@ -18,8 +23,15 @@ export function BrieflyStoreProvider({children}: {children: ReactNode}) {
         cloudSummarizer: createCloudSummarizer(),
       }),
   );
+  const [version, setVersion] = useState(0);
 
-  const value = useMemo(() => store, [store]);
+  useEffect(() => {
+    void store.hydrate();
+  }, [store]);
+
+  useEffect(() => store.subscribe(() => setVersion(current => current + 1)), [store]);
+
+  const value = useMemo(() => ({store, version}), [store, version]);
 
   return (
     <BrieflyStoreContext.Provider value={value}>
@@ -29,9 +41,17 @@ export function BrieflyStoreProvider({children}: {children: ReactNode}) {
 }
 
 export function useBrieflyStore() {
-  const store = useContext(BrieflyStoreContext);
-  if (!store) {
+  const context = useContext(BrieflyStoreContext);
+  if (!context) {
     throw new Error('useBrieflyStore must be used within BrieflyStoreProvider');
   }
-  return store;
+  return context.store;
+}
+
+export function useBrieflyStoreVersion() {
+  const context = useContext(BrieflyStoreContext);
+  if (!context) {
+    throw new Error('useBrieflyStoreVersion must be used within BrieflyStoreProvider');
+  }
+  return context.version;
 }

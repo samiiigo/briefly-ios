@@ -1,12 +1,20 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Button, Switch, Text, TextInput, View} from 'react-native';
-import {useBrieflyStore} from '../store/BrieflyContext';
+import {useBrieflyStore, useBrieflyStoreVersion} from '../store/BrieflyContext';
 
 export function SettingsScreen() {
   const store = useBrieflyStore();
+  const version = useBrieflyStoreVersion();
   const [cloudEnabled, setCloudEnabled] = useState(store.getMode() === 'cloud');
   const [baseUrl, setBaseUrl] = useState(store.getCloudConfig().baseUrl);
   const [apiKey, setApiKey] = useState(store.getCloudConfig().apiKey ?? '');
+
+  useEffect(() => {
+    const config = store.getCloudConfig();
+    setCloudEnabled(store.getMode() === 'cloud');
+    setBaseUrl(config.baseUrl);
+    setApiKey(config.apiKey ?? '');
+  }, [store, version]);
 
   function toggleMode(value: boolean) {
     setCloudEnabled(value);

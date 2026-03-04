@@ -24,6 +24,8 @@ export class BrieflyStore {
   private transcripts: Transcript[] = [];
   private mode: Mode = 'local';
   private cloudConfig: CloudConfig = defaultCloudConfig;
+  private idCounter = 0;
+  private listeners = new Set<() => void>();
 
   constructor(args: CreateStoreArgs) {
     this.storage = args.storage;
@@ -33,6 +35,7 @@ export class BrieflyStore {
 
   async hydrate() {
     this.transcripts = await this.storage.loadTranscripts();
+    this.emitChange();
   }
 
   getMode() {
@@ -41,6 +44,7 @@ export class BrieflyStore {
 
   setMode(mode: Mode) {
     this.mode = mode;
+    this.emitChange();
   }
 
   getCloudConfig() {
@@ -49,6 +53,7 @@ export class BrieflyStore {
 
   setCloudConfig(config: CloudConfig) {
     this.cloudConfig = config;
+    this.emitChange();
   }
 
   getTranscripts() {
@@ -61,12 +66,13 @@ export class BrieflyStore {
 
   async addTranscript(input: Omit<Transcript, 'id' | 'createdAt'>) {
     const transcript: Transcript = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      id: this.createId(),
       createdAt: new Date().toISOString(),
       ...input,
     };
     this.transcripts.unshift(transcript);
     await this.storage.saveTranscripts(this.transcripts);
+    this.emitChange();
     return transcript;
   }
 
@@ -75,6 +81,7 @@ export class BrieflyStore {
       item.id === id ? {...item, text} : item,
     );
     await this.storage.saveTranscripts(this.transcripts);
+    this.emitChange();
   }
 
   async summarize(id: string, intent: SummarizeIntent) {
@@ -87,6 +94,31 @@ export class BrieflyStore {
       return this.cloudSummarizer(transcript.text, intent, this.cloudConfig);
     }
 
-    return this.localSummarizer(transcript.text, intent, this.cloudConfig);
+    return this.localSummarizer(transcript.text, intent);
+  }
+
+  subscribe(listener: () => void) {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private emitChange() {
+    for (const listener of this.listeners) {
+      listener();
+    }
+  }
+
+  private createId() {
+    if (globalThis.crypto?.randomUUID) {
+      return globalThis.crypto.randomUUID();
+    }
+
+    this.idCounter += 1;
+    const random = Math.floor(Math.random() * 0xffffff)
+      .toString(36)
+      .padStart(4, '0');
+    return `${Date.now()}-${this.idCounter}-${random}`;
   }
 }

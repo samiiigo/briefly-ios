@@ -4,14 +4,16 @@ import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/RootNavigator';
 import {pauseRecording, startRecording, stopRecording} from '../services/recording';
 import {startNativeTranscription, stopNativeTranscription} from '../services/transcription';
-import {useBrieflyStore} from '../store/BrieflyContext';
+import {useBrieflyStore, useBrieflyStoreVersion} from '../store/BrieflyContext';
 import {NativeIOSCard} from '../components/NativeIOSCard';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export function HomeScreen({navigation}: Props) {
   const store = useBrieflyStore();
+  useBrieflyStoreVersion();
   const [recording, setRecording] = useState(false);
+  const recent = store.getTranscripts().slice(0, 5);
 
   async function onRecord() {
     await startRecording();
@@ -48,7 +50,7 @@ export function HomeScreen({navigation}: Props) {
       <Button title="View Transcripts" onPress={() => navigation.navigate('TranscriptList')} />
       <Button title="Settings" onPress={() => navigation.navigate('Settings')} />
       <Text style={{fontWeight: '600'}}>Recent</Text>
-      {store.getTranscripts().slice(0, 5).map(item => (
+      {recent.map(item => (
         <View key={item.id} style={{paddingVertical: 8}}>
           <Text>{item.title}</Text>
           <Text>{new Date(item.createdAt).toLocaleString()}</Text>

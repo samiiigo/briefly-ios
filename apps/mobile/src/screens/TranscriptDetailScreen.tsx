@@ -1,19 +1,34 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {Button, ScrollView, Text, TextInput, View} from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/RootNavigator';
-import {useBrieflyStore} from '../store/BrieflyContext';
+import {useBrieflyStore, useBrieflyStoreVersion} from '../store/BrieflyContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TranscriptDetail'>;
 
 export function TranscriptDetailScreen({route}: Props) {
   const store = useBrieflyStore();
-  const transcript = useMemo(
-    () => store.getTranscript(route.params.transcriptId),
-    [route.params.transcriptId, store],
-  );
+  useBrieflyStoreVersion();
+  const transcript = store.getTranscript(route.params.transcriptId);
+  const transcriptId = transcript?.id;
+  const transcriptText = transcript?.text ?? '';
+  const previousTranscriptId = useRef<string | undefined>(transcriptId);
   const [draft, setDraft] = useState(transcript?.text ?? '');
+  const [isDirty, setIsDirty] = useState(false);
   const [result, setResult] = useState('');
+
+  useEffect(() => {
+    if (transcriptId !== previousTranscriptId.current) {
+      previousTranscriptId.current = transcriptId;
+      setIsDirty(false);
+      setDraft(transcriptText);
+      return;
+    }
+
+    if (transcript && !isDirty) {
+      setDraft(transcriptText);
+    }
+  }, [isDirty, transcript, transcriptId, transcriptText]);
 
   if (!transcript) {
     return (
@@ -25,6 +40,7 @@ export function TranscriptDetailScreen({route}: Props) {
 
   async function saveEdit() {
     await store.updateTranscriptText(transcript.id, draft);
+    setIsDirty(false);
   }
 
   async function summarize() {
@@ -44,7 +60,10 @@ export function TranscriptDetailScreen({route}: Props) {
       <TextInput
         multiline
         value={draft}
-        onChangeText={setDraft}
+        onChangeText={value => {
+          setDraft(value);
+          setIsDirty(true);
+        }}
         style={{borderWidth: 1, borderRadius: 8, minHeight: 180, padding: 8}}
       />
       <Button title="Save" onPress={saveEdit} />

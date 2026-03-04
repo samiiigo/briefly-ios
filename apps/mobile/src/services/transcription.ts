@@ -1,4 +1,4 @@
-import {NativeModules, Platform} from 'react-native';
+import {NativeModules} from 'react-native';
 
 type BrieflySpeechNativeModule = {
   startTranscription: () => Promise<void>;
@@ -6,11 +6,7 @@ type BrieflySpeechNativeModule = {
   isAvailable: () => Promise<boolean>;
 };
 
-const moduleName = Platform.select({
-  ios: 'BrieflySpeechModule',
-  android: 'BrieflySpeechModule',
-  default: 'BrieflySpeechModule',
-});
+const moduleName = 'BrieflySpeechModule';
 
 const nativeSpeech =
   (NativeModules[moduleName] as BrieflySpeechNativeModule | undefined) ?? null;
