@@ -3,8 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Switch,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -17,212 +15,260 @@ import { Colors, Spacing, BorderRadius } from '../utils/theme';
 export function SettingsScreen() {
   const {
     defaultProcessingMode,
-    cloudApiKey,
-    cloudApiProvider,
-    cloudApiEndpoint,
     setDefaultProcessingMode,
-    setCloudApiKey,
-    setCloudApiProvider,
-    setCloudApiEndpoint,
   } = useSettingsStore();
-
-  const [showKey, setShowKey] = useState(false);
-  const [apiKeyDraft, setApiKeyDraft] = useState(cloudApiKey);
 
   const isCloud = defaultProcessingMode === 'cloud';
 
-  const handleSaveApiKey = () => {
-    setCloudApiKey(apiKeyDraft.trim());
-    Alert.alert('Saved', 'API key updated.');
-  };
-
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Default Processing Mode */}
-        <Text style={styles.sectionLabel}>PROCESSING</Text>
+
+        {/* AI Processing Engine */}
+        <Text style={styles.sectionLabel}>AI PROCESSING ENGINE</Text>
+        <Text style={styles.sectionDescription}>
+          Briefly uses both local and cloud processing to offer the best transcription and meeting assistance while respecting your privacy.
+        </Text>
+
         <View style={styles.card}>
-          <View style={styles.row}>
-            <View>
-              <Text style={styles.rowTitle}>Default Mode</Text>
-              <Text style={styles.rowSubtitle}>
-                {isCloud ? 'Cloud — more powerful analysis' : 'On-Device — fully private'}
+          {/* On-Device Mode */}
+          <TouchableOpacity
+            style={styles.optionRow}
+            onPress={() => setDefaultProcessingMode('on-device')}
+          >
+            <View style={[styles.radio, !isCloud && styles.radioSelected]}>
+              {!isCloud && <View style={styles.radioDot} />}
+            </View>
+            <View style={styles.optionText}>
+              <Text style={styles.optionTitle}>On-Device Mode</Text>
+              <Text style={styles.optionSubtitle}>
+                All processing happens locally on your phone. Maximum privacy, but may consume more battery.
               </Text>
             </View>
-            <Switch
-              value={isCloud}
-              onValueChange={(v) => setDefaultProcessingMode(v ? 'cloud' : 'on-device')}
-              trackColor={{ false: Colors.surface, true: Colors.primary }}
-              thumbColor="#fff"
-            />
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <Ionicons name="lock-closed-outline" size={16} color={Colors.textSecondary} />
-            <Text style={styles.infoText}>
-              On-Device: audio never leaves your device. Cloud: audio sent via HTTPS with zero-data-retention headers.
-            </Text>
-          </View>
-        </View>
-
-        {/* Cloud API Settings */}
-        <Text style={styles.sectionLabel}>CLOUD API</Text>
-        <View style={styles.card}>
-          {/* Provider */}
-          <Text style={styles.fieldLabel}>Provider</Text>
-          <View style={styles.segmentRow}>
-            {(['openai', 'anthropic'] as const).map((p) => (
-              <TouchableOpacity
-                key={p}
-                style={[styles.segment, cloudApiProvider === p && styles.segmentActive]}
-                onPress={() => setCloudApiProvider(p)}
-              >
-                <Text
-                  style={[styles.segmentText, cloudApiProvider === p && styles.segmentTextActive]}
-                >
-                  {p === 'openai' ? 'OpenAI' : 'Anthropic'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.divider} />
 
-          {/* Endpoint */}
-          <Text style={styles.fieldLabel}>API Endpoint</Text>
-          <TextInput
-            style={styles.input}
-            value={cloudApiEndpoint}
-            onChangeText={setCloudApiEndpoint}
-            placeholder="https://api.openai.com/v1"
-            placeholderTextColor={Colors.textTertiary}
-            autoCapitalize="none"
-            keyboardType="url"
-          />
-
-          <View style={styles.divider} />
-
-          {/* API Key */}
-          <Text style={styles.fieldLabel}>API Key</Text>
-          <View style={styles.apiKeyRow}>
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
-              value={apiKeyDraft}
-              onChangeText={setApiKeyDraft}
-              placeholder="sk-..."
-              placeholderTextColor={Colors.textTertiary}
-              secureTextEntry={!showKey}
-              autoCapitalize="none"
-            />
-            <TouchableOpacity onPress={() => setShowKey((s) => !s)} style={styles.eyeButton}>
-              <Ionicons
-                name={showKey ? 'eye-off-outline' : 'eye-outline'}
-                size={20}
-                color={Colors.textSecondary}
-              />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveApiKey}>
-            <Text style={styles.saveButtonText}>Save API Key</Text>
+          {/* Cloud Mode */}
+          <TouchableOpacity
+            style={styles.optionRow}
+            onPress={() => setDefaultProcessingMode('cloud')}
+          >
+            <View style={[styles.radio, isCloud && styles.radioSelected]}>
+              {isCloud && <View style={styles.radioDot} />}
+            </View>
+            <View style={styles.optionText}>
+              <View style={styles.optionTitleRow}>
+                <Text style={styles.optionTitle}>Cloud Mode</Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>RECOMMENDED</Text>
+                </View>
+              </View>
+              <Text style={styles.optionSubtitle}>
+                Uses advanced cloud AI for better accuracy and speed. Zero Data Retention (ZDR) policy strictly applies.
+              </Text>
+            </View>
           </TouchableOpacity>
         </View>
 
-        {/* About */}
-        <Text style={styles.sectionLabel}>ABOUT</Text>
+        {/* Storage Management */}
+        <Text style={styles.sectionLabel}>STORAGE MANAGEMENT</Text>
         <View style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.rowTitle}>Briefly</Text>
-            <Text style={styles.rowSubtitle}>v1.0.0</Text>
-          </View>
+          <TouchableOpacity style={styles.row}>
+            <Ionicons name="phone-portrait-outline" size={20} color={Colors.textPrimary} style={styles.rowIcon} />
+            <Text style={styles.rowTitle}>Manage Local Storage</Text>
+            <Text style={styles.rowValue}>1.2 GB</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+          </TouchableOpacity>
+
           <View style={styles.divider} />
-          <View style={styles.row}>
-            <Text style={styles.rowTitle}>Privacy Policy</Text>
-            <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
-          </View>
+
+          <TouchableOpacity style={styles.row}>
+            <Ionicons name="cloud-upload-outline" size={20} color={Colors.textPrimary} style={styles.rowIcon} />
+            <Text style={styles.rowTitle}>Export All Transcripts</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity style={styles.row}>
+            <Ionicons name="cloud-download-outline" size={20} color={Colors.textPrimary} style={styles.rowIcon} />
+            <Text style={styles.rowTitle}>Import Transcripts</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() =>
+              Alert.alert('Clear Cache', 'Are you sure?', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Clear', style: 'destructive' },
+              ])
+            }
+          >
+            <Ionicons name="trash-outline" size={20} color={Colors.red} style={styles.rowIcon} />
+            <Text style={[styles.rowTitle, styles.rowTitleRed]}>Clear Cache</Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Preferences */}
+        <Text style={styles.sectionLabel}>PREFERENCES</Text>
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.row}>
+            <Text style={styles.rowTitle}>Language</Text>
+            <Text style={styles.rowValue}>English (US)</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity style={styles.row}>
+            <Text style={styles.rowTitle}>Theme</Text>
+            <Text style={styles.rowValue}>Dark Glass</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
   },
-  headerTitle: { fontSize: 28, fontWeight: '700', color: Colors.textPrimary },
-  content: { padding: Spacing.md, paddingBottom: 100 },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xs,
+  },
+  headerTitle: {
+    fontSize: 34,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+  },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: 'rgba(255,255,255,0.5)',
     letterSpacing: 0.5,
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.lg,
+    marginTop: 24,
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  sectionDescription: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    lineHeight: 20,
+    marginBottom: 12,
+    marginLeft: 4,
   },
   card: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
+    backgroundColor: '#1C1C1E',
+    borderRadius: 12,
     overflow: 'hidden',
-    paddingHorizontal: Spacing.md,
   },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginLeft: 16,
+  },
+  // Processing options
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 16,
+    gap: 12,
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  radioSelected: {
+    borderColor: '#0A84FF',
+    backgroundColor: '#0A84FF',
+  },
+  radioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  optionText: {
+    flex: 1,
+  },
+  optionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  optionSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  badge: {
+    backgroundColor: '#0A84FF',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  // Storage / Preference rows
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingHorizontal: 16,
     paddingVertical: 14,
+    gap: 12,
   },
-  rowTitle: { fontSize: 15, color: Colors.textPrimary, fontWeight: '500' },
-  rowSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.border,
-    marginVertical: 0,
+  rowIcon: {
+    width: 24,
+    textAlign: 'center',
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
-    paddingVertical: 12,
-  },
-  infoText: { fontSize: 13, color: Colors.textSecondary, flex: 1, lineHeight: 18 },
-  fieldLabel: { fontSize: 12, color: Colors.textSecondary, marginTop: 14, marginBottom: 6 },
-  segmentRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
-  segment: {
+  rowTitle: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.surfaceElevated,
-    alignItems: 'center',
+    fontSize: 16,
+    color: '#FFFFFF',
   },
-  segmentActive: { backgroundColor: Colors.primary },
-  segmentText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
-  segmentTextActive: { color: '#fff', fontWeight: '600' },
-  input: {
-    backgroundColor: Colors.surfaceElevated,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+  rowTitleRed: {
+    color: Colors.red,
   },
-  apiKeyRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  eyeButton: { padding: 8 },
-  saveButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.md,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginVertical: Spacing.md,
+  rowValue: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.4)',
+    marginRight: 4,
   },
-  saveButtonText: { fontSize: 15, fontWeight: '600', color: '#fff' },
 });

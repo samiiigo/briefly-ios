@@ -7,11 +7,12 @@ export const Colors = {
   card: '#1C1C1E',
   border: '#38383A',
 
-  primary: '#007AFF',
+  primary: '#0A84FF',
   primaryDark: '#0056b3',
   red: '#FF3B30',
   green: '#34C759',
-  orange: '#FF9500',
+  orange: '#FF9F0A',
+  purple: '#BF5AF2',
 
   textPrimary: '#FFFFFF',
   textSecondary: '#8E8E93',

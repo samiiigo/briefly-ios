@@ -131,9 +131,10 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: '700',
     color: Colors.textPrimary,
+    letterSpacing: 0.3,
   },
   headerIcon: {
     width: 36,

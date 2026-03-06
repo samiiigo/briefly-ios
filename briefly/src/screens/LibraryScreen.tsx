@@ -23,8 +23,6 @@ export function LibraryScreen() {
   const navigation = useNavigation<Nav>();
   const { recordings, deleteRecording } = useRecordingStore();
   const [activeTab, setActiveTab] = useState('All');
-
-  // Simple keyword filter per tab (can be extended with recording tags)
   const filtered = recordings.filter((r) => {
     if (activeTab === 'All') return true;
     return r.title.toLowerCase().includes(activeTab.toLowerCase().slice(0, 5));
@@ -32,11 +30,11 @@ export function LibraryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Ionicons name="folder" size={22} color={Colors.primary} style={{ marginRight: 6 }} />
-        <Text style={styles.headerTitle}>Library</Text>
+        <Text style={styles.pageTitle}>Library</Text>
         <TouchableOpacity style={styles.searchIcon}>
-          <Ionicons name="search" size={22} color={Colors.textSecondary} />
+          <Ionicons name="search" size={20} color="rgba(255,255,255,0.7)" />
         </TouchableOpacity>
       </View>
 
@@ -45,6 +43,7 @@ export function LibraryScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tabsContainer}
+        style={styles.tabsScrollView}
       >
         {FILTER_TABS.map((tab) => (
           <TouchableOpacity
@@ -59,32 +58,65 @@ export function LibraryScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Folder grid — static in v1 */}
-        <Text style={styles.sectionLabel}>FOLDERS</Text>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        {/* Folders section header */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionLabel}>FOLDERS</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAll}>See All</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.folderGrid}>
-          <View style={[styles.folderCard, { backgroundColor: '#1A1200' }]}>
-            <Ionicons name="star" size={22} color="#FFD60A" />
-            <Text style={styles.folderName}>Favorites</Text>
-            <Text style={styles.folderCount}>0 items</Text>
+          <View style={styles.folderCard}>
+            <View style={[styles.folderCardInner, styles.folderFavorites]}>
+              <View style={styles.folderIconRow}>
+                <Ionicons name="star" size={24} color="#FF9F0A" />
+              </View>
+              <View style={styles.folderTextRow}>
+                <Text style={styles.folderCount}>12 items</Text>
+                <Text style={styles.folderName}>Favorites</Text>
+              </View>
+            </View>
           </View>
-          <View style={[styles.folderCard, { backgroundColor: '#001836' }]}>
-            <Ionicons name="briefcase" size={22} color={Colors.primary} />
-            <Text style={styles.folderName}>Work</Text>
-            <Text style={styles.folderCount}>{recordings.length} items</Text>
+
+          <View style={styles.folderCard}>
+            <View style={[styles.folderCardInner, styles.folderWork]}>
+              <View style={styles.folderIconRow}>
+                <Ionicons name="briefcase" size={24} color="#0A84FF" />
+              </View>
+              <View style={styles.folderTextRow}>
+                <Text style={styles.folderCount}>48 items</Text>
+                <Text style={styles.folderName}>Work</Text>
+              </View>
+            </View>
           </View>
-          <View style={[styles.folderCard, { backgroundColor: '#1A0020' }]}>
-            <Ionicons name="person" size={22} color="#AF52DE" />
-            <Text style={styles.folderName}>Personal</Text>
-            <Text style={styles.folderCount}>0 items</Text>
+
+          <View style={styles.folderCard}>
+            <View style={[styles.folderCardInner, styles.folderPersonal]}>
+              <View style={styles.folderIconRow}>
+                <Ionicons name="person" size={24} color="#BF5AF2" />
+              </View>
+              <View style={styles.folderTextRow}>
+                <Text style={styles.folderCount}>23 items</Text>
+                <Text style={styles.folderName}>Personal</Text>
+              </View>
+            </View>
           </View>
-          <View style={[styles.folderCard, { backgroundColor: '#1C1C1E' }]}>
-            <Ionicons name="archive" size={22} color={Colors.textSecondary} />
-            <Text style={styles.folderName}>Archive</Text>
-            <Text style={styles.folderCount}>0 items</Text>
+
+          <View style={styles.folderCard}>
+            <View style={[styles.folderCardInner, styles.folderArchive]}>
+              <View style={styles.folderIconRow}>
+                <Ionicons name="add" size={24} color="rgba(255,255,255,0.5)" />
+              </View>
+              <View style={styles.folderTextRow}>
+                <Text style={styles.folderName}>New Folder</Text>
+              </View>
+            </View>
           </View>
         </View>
 
+        {/* Recent Recordings */}
         <Text style={styles.sectionLabel}>RECENT RECORDINGS</Text>
         {filtered.length === 0 ? (
           <Text style={styles.emptyText}>No recordings in this category.</Text>
@@ -104,55 +136,131 @@ export function LibraryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: '#0A0A0C',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xs,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: Colors.textPrimary, flex: 1 },
-  searchIcon: { padding: 4 },
+  pageTitle: {
+    fontSize: 34,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  searchIcon: {
+    padding: 4,
+  },
+  tabsScrollView: {
+    flexGrow: 0,
+  },
   tabsContainer: {
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: 20,
     paddingVertical: Spacing.sm,
-    gap: Spacing.sm,
+    gap: 8,
   },
   tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surface,
-    marginRight: Spacing.sm,
+    paddingHorizontal: 18,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  tabActive: { backgroundColor: Colors.primary },
-  tabText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
-  tabTextActive: { color: '#fff', fontWeight: '600' },
-  content: { padding: Spacing.md, paddingBottom: 100 },
-  sectionLabel: {
-    fontSize: 12,
+  tabActive: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  tabText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    fontWeight: '500',
+  },
+  tabTextActive: {
+    color: '#FFFFFF',
     fontWeight: '600',
-    color: Colors.textSecondary,
-    letterSpacing: 0.5,
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.sm,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+    justifyContent: 'flex-start',
   },
   folderGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.sm,
+    justifyContent: 'space-between',
     marginBottom: Spacing.lg,
   },
   folderCard: {
-    width: '48%',
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    minHeight: 90,
-    justifyContent: 'flex-end',
+    width: '48.5%',
+    marginBottom: 12,
   },
-  folderName: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary, marginTop: Spacing.sm },
-  folderCount: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  emptyText: { color: Colors.textSecondary, fontSize: 15, textAlign: 'center', marginTop: 40 },
+  folderCardInner: {
+    borderRadius: 16,
+    padding: 16,
+    height: 90,
+    justifyContent: 'space-between',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  folderFavorites: {
+    backgroundColor: 'rgba(255,159,10,0.08)',
+  },
+  folderWork: {
+    backgroundColor: 'rgba(10,132,255,0.08)',
+  },
+  folderPersonal: {
+    backgroundColor: 'rgba(191,90,242,0.08)',
+  },
+  folderArchive: {
+    backgroundColor: 'rgba(28,28,30,0.6)',
+  },
+  folderIconRow: {
+    marginBottom: 8,
+  },
+  folderTextRow: {
+    gap: 2,
+  },
+  folderCount: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  folderName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.5)',
+    letterSpacing: 0.5,
+  },
+  seeAll: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#0A84FF',
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 15,
+    textAlign: 'center',
+    marginTop: 40,
+  },
 });
