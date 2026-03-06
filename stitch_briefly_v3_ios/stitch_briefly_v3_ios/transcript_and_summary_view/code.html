@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Transcript and Insights View</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#007AFF",
+                        "background-dark": "#000000",
+                    },
+                    fontFamily: {
+                        "display": ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"Segoe UI"', 'Roboto', 'sans-serif'],
+                        "sans": ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Segoe UI"', 'Roboto', 'sans-serif']
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-sans text-slate-100 min-h-screen">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl bg-background-dark pb-32">
+<div class="flex items-center p-4 justify-between sticky top-0 z-10 bg-white/10 backdrop-blur-xl border-b border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]">
+<button class="flex size-10 shrink-0 items-center justify-center text-slate-300 hover:bg-white/10 rounded-full transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<p class="text-sm font-medium text-slate-300 flex-1 text-center">Oct 24, 2:30 PM</p>
+<div class="size-10 shrink-0"></div>
+</div>
+<div class="px-4 py-2 flex flex-col gap-6">
+<div>
+<input class="w-full bg-transparent text-2xl font-bold leading-tight tracking-tight border-none p-0 focus:ring-0 text-slate-100 placeholder:text-slate-400" type="text" value="Product Strategy Sync"/>
+</div>
+<div class="rounded-2xl bg-white/10 backdrop-blur-xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] p-4">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-primary text-[20px]">lightbulb</span>
+<h3 class="font-bold text-slate-100">Key Insights</h3>
+</div>
+<ul class="flex flex-col gap-2.5 text-sm text-slate-300 ml-1">
+<li class="flex gap-2 items-start">
+<div class="size-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div>
+<p>Focus shift towards lightweight, local processing to emphasize user privacy.</p>
+</li>
+<li class="flex gap-2 items-start">
+<div class="size-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div>
+<p>Refine UI transitions between summary and transcript to optimize performance.</p>
+</li>
+<li class="flex gap-2 items-start">
+<div class="size-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div>
+<p>Action Item: Design team to finalize the dual-tab animation by end of week.</p>
+</li>
+</ul>
+</div>
+<div class="flex flex-col gap-6 mt-2">
+<div class="flex gap-3 px-2">
+<div class="flex flex-col items-center pt-1">
+<div class="size-9 rounded-full bg-indigo-900/50 flex items-center justify-center text-indigo-300 font-bold text-sm shrink-0">
+                            AK
+                        </div>
+</div>
+<div class="flex-1 flex flex-col gap-1.5">
+<div class="flex items-center gap-2">
+<span class="font-bold text-sm text-slate-100">Alex Kim</span>
+<span class="text-xs text-slate-400 font-medium">00:00</span>
+</div>
+<p class="text-[15px] leading-relaxed text-slate-300">
+                            Alright, let's get started. Thanks everyone for joining the design sync today. We have a few key items on the agenda, primarily focusing on the new transcript view and how we're handling the local processing badges.
+                        </p>
+</div>
+</div>
+<div class="flex gap-3 bg-white/10 backdrop-blur-xl border border-white/10 border-l-4 border-l-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] p-3 -mx-3 rounded-2xl">
+<div class="flex flex-col items-center pt-1">
+<div class="size-9 rounded-full bg-emerald-900/50 flex items-center justify-center text-emerald-300 font-bold text-sm shrink-0">
+                            SJ
+                        </div>
+</div>
+<div class="flex-1 flex flex-col gap-1.5">
+<div class="flex items-center gap-2">
+<span class="font-bold text-sm text-slate-100">Sarah Jones</span>
+<span class="text-xs text-primary font-medium">00:15</span>
+</div>
+<p class="text-[15px] leading-relaxed text-slate-100 font-medium">
+                            Yes, I reviewed the latest mocks. The dual-tab structure looks solid. My main question is about the transitions between the Summary and Transcript views. Do we want them to swipe, or just cut?
+                        </p>
+</div>
+</div>
+<div class="flex gap-3 px-2">
+<div class="flex flex-col items-center pt-1">
+<div class="size-9 rounded-full bg-indigo-900/50 flex items-center justify-center text-indigo-300 font-bold text-sm shrink-0">
+                            AK
+                        </div>
+</div>
+<div class="flex-1 flex flex-col gap-1.5">
+<div class="flex items-center gap-2">
+<span class="font-bold text-sm text-slate-100">Alex Kim</span>
+<span class="text-xs text-slate-400 font-medium">00:28</span>
+</div>
+<p class="text-[15px] leading-relaxed text-slate-300">
+                            I think a subtle crossfade or simple cut is best for performance, especially since we are emphasizing the lightweight, local-first nature of the app. Let's keep it snappy. Let's look at the summary view next.
+                        </p>
+</div>
+</div>
+</div>
+</div>
+<div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/10 backdrop-blur-xl border-t border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] p-4 pb-8 z-20">
+<div class="flex items-center gap-3 mb-5">
+<span class="text-xs font-medium text-slate-400 w-10 text-right">0:15</span>
+<div class="flex-1 h-1.5 bg-slate-800 rounded-full relative cursor-pointer">
+<div class="absolute top-0 left-0 h-full bg-primary rounded-full w-[15%]"></div>
+<div class="absolute top-1/2 -translate-y-1/2 left-[15%] size-3.5 bg-primary rounded-full shadow-md"></div>
+</div>
+<span class="text-xs font-medium text-slate-400 w-10">-45:05</span>
+</div>
+<div class="flex items-center justify-between px-2">
+<button class="text-sm font-bold text-slate-300 hover:text-primary transition-colors">1.5x</button>
+<div class="flex items-center gap-6">
+<button class="text-slate-300 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[32px]">replay_10</span>
+</button>
+<button class="size-16 rounded-full bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(0,122,255,0.5)] hover:bg-primary/90 transition-transform active:scale-95">
+<span class="material-symbols-outlined filled text-[36px]">pause</span>
+</button>
+<button class="text-slate-300 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[32px]">forward_10</span>
+</button>
+</div>
+<button class="text-slate-300 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[24px]">ios_share</span>
+</button>
+</div>
+</div>
+</div>
+
+</body></html>

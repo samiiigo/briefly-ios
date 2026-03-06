@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Detailed AI Meeting Summary</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#136dec",
+                        "background-dark": "#000000",
+                    },
+                    fontFamily: {
+                        "display": ["-apple-system", "BlinkMacSystemFont", "SF Pro", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)];
+        }
+        .glass-card {
+            @apply bg-white/5 backdrop-blur-lg border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-3xl p-5 relative overflow-hidden;
+        }
+        .glass-card::before {
+            content: '';
+            @apply absolute inset-0 bg-gradient-to-br from-white/[0.08] to-transparent pointer-events-none;
+        }
+        .glass-button-container {
+            @apply bg-black/60 backdrop-blur-2xl border-t border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)];
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display text-slate-100 min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden pb-32" style="--checkbox-tick-svg: url('data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27rgb(255,255,255)%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3cpath d=%27M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z%27/%3e%3c/svg%3e');">
+<div class="sticky top-0 z-20 flex items-center glass-panel p-4 pb-4 justify-between">
+<button class="text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
+</button>
+<h2 class="text-lg font-semibold leading-tight tracking-tight flex-1 text-center truncate px-2">Q3 Strategy Alignment</h2>
+<button class="text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">more_horiz</span>
+</button>
+</div>
+<div class="px-4 py-6 space-y-6">
+<section class="glass-card">
+<div class="flex items-center gap-3 mb-4">
+<div class="flex items-center justify-center rounded-xl bg-primary/20 text-primary shadow-[inset_0_0_8px_rgba(19,109,236,0.3)] shrink-0 size-10">
+<span class="material-symbols-outlined text-xl">gavel</span>
+</div>
+<h3 class="text-xl font-semibold tracking-tight leading-normal flex-1 text-white">Decisions</h3>
+</div>
+<div class="bg-black/20 rounded-2xl p-4 border border-white/5">
+<ul class="space-y-3 list-disc list-outside ml-4 text-[15px] leading-relaxed text-slate-300">
+<li class="pl-1">Launch Q4 marketing campaign early, starting Oct 1st instead of Nov 1st.</li>
+<li class="pl-1">Reallocate 15% budget from print to paid social channels (LinkedIn &amp; Instagram).</li>
+<li class="pl-1">Pause hiring for junior design roles until Q1 of next year.</li>
+</ul>
+</div>
+</section>
+<section class="glass-card">
+<div class="flex items-center gap-3 mb-4">
+<div class="flex items-center justify-center rounded-xl bg-primary/20 text-primary shadow-[inset_0_0_8px_rgba(19,109,236,0.3)] shrink-0 size-10">
+<span class="material-symbols-outlined text-xl">check_box</span>
+</div>
+<h3 class="text-xl font-semibold tracking-tight leading-normal flex-1 text-white">Action Items</h3>
+</div>
+<div class="space-y-1">
+<label class="flex items-start gap-x-3 py-3 px-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5">
+<input checked="" class="mt-1 h-5 w-5 rounded-md border-white/20 bg-black/30 text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-primary focus:ring-offset-0 focus:outline-none transition-all shadow-inner" type="checkbox"/>
+<div class="flex-1">
+<p class="text-[15px] font-medium leading-tight line-through text-slate-500">Draft new campaign brief</p>
+<p class="text-[13px] text-slate-500 mt-1">@Sarah • Due Friday</p>
+</div>
+</label>
+<label class="flex items-start gap-x-3 py-3 px-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5">
+<input class="mt-1 h-5 w-5 rounded-md border-white/30 bg-black/30 text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-primary focus:ring-offset-0 focus:outline-none transition-all shadow-inner" type="checkbox"/>
+<div class="flex-1">
+<p class="text-[15px] font-medium leading-tight text-slate-200">Review revised budget proposal</p>
+<p class="text-[13px] text-slate-400 mt-1">@Mike • Due Next Wed</p>
+</div>
+</label>
+<label class="flex items-start gap-x-3 py-3 px-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5">
+<input class="mt-1 h-5 w-5 rounded-md border-white/30 bg-black/30 text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-primary focus:ring-offset-0 focus:outline-none transition-all shadow-inner" type="checkbox"/>
+<div class="flex-1">
+<p class="text-[15px] font-medium leading-tight text-slate-200">Send updated Q3 goals to team</p>
+<p class="text-[13px] text-slate-400 mt-1">@Alex • Due Today</p>
+</div>
+</label>
+</div>
+</section>
+<section class="glass-card">
+<div class="flex items-center gap-3 mb-5">
+<div class="flex items-center justify-center rounded-xl bg-primary/20 text-primary shadow-[inset_0_0_8px_rgba(19,109,236,0.3)] shrink-0 size-10">
+<span class="material-symbols-outlined text-xl">format_list_bulleted</span>
+</div>
+<h3 class="text-xl font-semibold tracking-tight leading-normal flex-1 text-white">Main Topics</h3>
+</div>
+<div class="space-y-6">
+<div>
+<h4 class="text-[15px] font-semibold tracking-tight text-white mb-1.5">Q3 Performance Review</h4>
+<p class="text-[14px] text-slate-300 leading-relaxed">Overall performance was strong, exceeding revenue targets by 8%. However, user acquisition costs rose significantly in August, prompting a review of our current marketing channels.</p>
+</div>
+<div>
+<h4 class="text-[15px] font-semibold tracking-tight text-white mb-1.5">Budget Reallocation</h4>
+<p class="text-[14px] text-slate-300 leading-relaxed">Due to the high ROI seen on recent social campaigns, the team agreed to shift funds away from traditional print media. This will provide more resources for targeted LinkedIn and Instagram ads.</p>
+</div>
+<div>
+<h4 class="text-[15px] font-semibold tracking-tight text-white mb-1.5">Hiring Freeze</h4>
+<p class="text-[14px] text-slate-300 leading-relaxed">To maintain current margins ahead of the Q4 push, a temporary freeze on junior design hires was implemented. Current team members will absorb the workload, with a review scheduled for January.</p>
+</div>
+</div>
+</section>
+</div>
+<div class="fixed bottom-0 left-0 right-0 p-4 pt-6 pb-8 glass-button-container z-20">
+<button class="w-full flex items-center justify-center gap-2 bg-primary/90 backdrop-blur-md hover:bg-primary text-white font-semibold py-4 px-6 rounded-2xl transition-all shadow-[0_8px_16px_rgba(19,109,236,0.3)] border border-white/20">
+<span class="material-symbols-outlined">refresh</span>
+                Rerun Summary
+            </button>
+</div>
+</div>
+</body></html>
