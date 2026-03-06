@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "Briefly",
+    "slug": "briefly",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.briefly.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Briefly needs microphone access to record audio for transcription.",
+        "NSSpeechRecognitionUsageDescription": "Briefly uses on-device speech recognition to transcribe your recordings privately.",
+        "NSMicrophoneUsageDescriptionAlways": "Briefly needs microphone access to record audio."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.briefly.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "permissions": [
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Briefly needs microphone access to record audio for transcription."
+        }
+      ]
+    ],
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "briefly-app"
+      }
+    }
+  }
+}
