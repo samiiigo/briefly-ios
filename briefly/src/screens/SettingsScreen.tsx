@@ -19,10 +19,24 @@ export function SettingsScreen() {
     setDefaultProcessingMode,
     cloudApiKey,
     setCloudApiKey,
+    cloudApiProvider,
+    setCloudApiProvider,
+    setCloudApiEndpoint,
   } = useSettingsStore();
 
   const [apiKeyInput, setApiKeyInput] = useState(cloudApiKey);
   const isCloud = defaultProcessingMode === 'cloud';
+
+  const handleProviderChange = (provider: 'openai' | 'gemini') => {
+    setCloudApiProvider(provider);
+    setCloudApiKey('');
+    setApiKeyInput('');
+    setCloudApiEndpoint(
+      provider === 'gemini'
+        ? 'https://generativelanguage.googleapis.com/v1beta'
+        : 'https://api.openai.com/v1'
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -80,12 +94,55 @@ export function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Cloud API Key */}
+        {/* Cloud Provider + API Key */}
         {isCloud && (
           <>
-            <Text style={styles.sectionLabel}>CLOUD API KEY</Text>
+            <Text style={styles.sectionLabel}>AI PROVIDER</Text>
+            <View style={styles.card}>
+              {/* OpenAI */}
+              <TouchableOpacity
+                style={styles.optionRow}
+                onPress={() => handleProviderChange('openai')}
+              >
+                <View style={[styles.radio, cloudApiProvider === 'openai' && styles.radioSelected]}>
+                  {cloudApiProvider === 'openai' && <View style={styles.radioDot} />}
+                </View>
+                <View style={styles.optionText}>
+                  <View style={styles.optionTitleRow}>
+                    <Text style={styles.optionTitle}>OpenAI</Text>
+                    <View style={styles.badge}><Text style={styles.badgeText}>WHISPER + GPT-4o</Text></View>
+                  </View>
+                  <Text style={styles.optionSubtitle}>
+                    Whisper for transcription · GPT-4o-mini for summaries. Requires an OpenAI API key (sk-...).
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.divider} />
+
+              {/* Gemini */}
+              <TouchableOpacity
+                style={styles.optionRow}
+                onPress={() => handleProviderChange('gemini')}
+              >
+                <View style={[styles.radio, cloudApiProvider === 'gemini' && styles.radioSelected]}>
+                  {cloudApiProvider === 'gemini' && <View style={styles.radioDot} />}
+                </View>
+                <View style={styles.optionText}>
+                  <View style={styles.optionTitleRow}>
+                    <Text style={styles.optionTitle}>Google Gemini</Text>
+                    <View style={[styles.badge, styles.badgeGemini]}><Text style={styles.badgeText}>GEMINI 1.5 FLASH</Text></View>
+                  </View>
+                  <Text style={styles.optionSubtitle}>
+                    Gemini 1.5 Flash for both transcription and summaries. Requires a Google AI Studio key (AIza...).
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.sectionLabel}>API KEY</Text>
             <Text style={styles.sectionDescription}>
-              Required for Cloud Mode. Your key is stored locally and never shared.
+              Stored locally on your device and never shared.
             </Text>
             <View style={styles.card}>
               <View style={styles.apiKeyRow}>
@@ -95,7 +152,7 @@ export function SettingsScreen() {
                   value={apiKeyInput}
                   onChangeText={setApiKeyInput}
                   onBlur={() => setCloudApiKey(apiKeyInput)}
-                  placeholder="sk-..."
+                  placeholder={cloudApiProvider === 'gemini' ? 'AIza...' : 'sk-...'}
                   placeholderTextColor="rgba(255,255,255,0.25)"
                   secureTextEntry
                   autoCapitalize="none"

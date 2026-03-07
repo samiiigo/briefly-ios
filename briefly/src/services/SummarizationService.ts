@@ -73,34 +73,36 @@ async function summarizeOnDevice(
   return extractiveSummarize(text);
 }
 
-// ─── Cloud ────────────────────────────────────────────────────────────────────
+// ─── Cloud: route by provider ─────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `You are a concise meeting/lecture summarizer. Given a transcript, output a JSON object with:
 - "summary": a 2-4 sentence paragraph summarizing the main topic and outcome
 - "keyInsights": an array of 3-6 short bullet strings capturing decisions, action items, or important points
 
-Respond ONLY with valid JSON. No markdown, no explanation.`;
+Respond ONLY with valid JSON. No markdown fences, no extra explanation.`;
 
 async function summarizeCloud(
   segments: TranscriptSegment[]
 ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
-  const { cloudApiKey, cloudApiEndpoint, cloudApiProvider } = useSettingsStore.getState();
+  const { cloudApiProvider } = useSettingsStore.getState();
+  if (cloudApiProvider === 'gemini') {
+    return summarizeWithGemini(segments);
+  }
+  return summarizeWithOpenAI(segments);
+}
+
+// ─── OpenAI ───────────────────────────────────────────────────────────────────
+
+async function summarizeWithOpenAI(
+  segments: TranscriptSegment[]
+): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
+  const { cloudApiKey, cloudApiEndpoint } = useSettingsStore.getState();
 
   if (!cloudApiKey) {
     throw new Error('Cloud API key is not configured. Go to Settings to add your API key.');
   }
 
   const text = segmentsToText(segments);
-
-  const body = {
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: `Transcript:\n${text}` },
-    ],
-    temperature: 0.3,
-    max_tokens: 800,
-  };
 
   const response = await fetch(`${cloudApiEndpoint}/chat/completions`, {
     method: 'POST',
@@ -109,25 +111,78 @@ async function summarizeCloud(
       Authorization: `Bearer ${cloudApiKey}`,
       'OpenAI-No-Training': '1',
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `Transcript:\n${text}` },
+      ],
+      temperature: 0.3,
+      max_tokens: 800,
+    }),
   });
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`Cloud summarization failed: ${response.status} ${err}`);
+    throw new Error(`OpenAI summarization failed: ${response.status} ${err}`);
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content ?? '{}';
+  return parseJsonSummary(data.choices?.[0]?.message?.content ?? '{}', segmentsToText(segments));
+}
 
-  let parsed: any = {};
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    // Return extractive fallback if JSON parse fails
-    return extractiveSummarize(text);
+// ─── Gemini ───────────────────────────────────────────────────────────────────
+
+async function summarizeWithGemini(
+  segments: TranscriptSegment[]
+): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
+  const { cloudApiKey } = useSettingsStore.getState();
+
+  if (!cloudApiKey) {
+    throw new Error('Gemini API key is not configured. Go to Settings to add your API key.');
   }
 
+  const text = segmentsToText(segments);
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent` +
+    `?key=${cloudApiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [
+        { role: 'user', parts: [{ text: `Transcript:\n${text}` }] },
+      ],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 800 },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Gemini summarization failed: ${response.status} ${err}`);
+  }
+
+  const data = await response.json();
+  const content: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
+  return parseJsonSummary(content, text);
+}
+
+// ─── Shared JSON parser ───────────────────────────────────────────────────────
+
+function parseJsonSummary(
+  raw: string,
+  fallbackText: string
+): { summary: string; keyInsights: KeyInsight[] } {
+  // Strip optional markdown code fences that some models add
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  let parsed: any = {};
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    return extractiveSummarize(fallbackText);
+  }
   return {
     summary: parsed.summary ?? '',
     keyInsights: ((parsed.keyInsights as string[]) ?? []).map((t) => ({

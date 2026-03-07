@@ -18,7 +18,7 @@ import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { ProcessingBadge } from '../components/ProcessingBadge';
 import { ProcessingMode, RootStackParamList } from '../types';
-import { formatDuration, formatFileSize, generateId, generateTitle } from '../utils';
+import { formatDuration, formatFileSize, generateId, generateTitle, ensureUniqueTitle } from '../utils';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
 
 // On-device transcription requires the BrieflyTranscriber native module.
@@ -39,10 +39,11 @@ export function SaveRecordingScreen() {
   const route = useRoute<Route>();
   const { duration, filePath, fileSize, preTranscript } = route.params;
 
-  const { addRecording } = useRecordingStore();
+  const { addRecording, recordings } = useRecordingStore();
   const { defaultProcessingMode } = useSettingsStore();
 
-  const [title, setTitle] = useState(generateTitle());
+  const existingTitles = recordings.map((r) => r.title);
+  const [title, setTitle] = useState(() => ensureUniqueTitle(generateTitle(), existingTitles));
   const [processingMode, setProcessingMode] = useState<ProcessingMode>(
     getInitialMode(defaultProcessingMode)
   );
@@ -53,9 +54,11 @@ export function SaveRecordingScreen() {
     setSaving(true);
 
     const id = generateId();
+    const baseTitle = title.trim() || generateTitle();
+    const safeTitle = ensureUniqueTitle(baseTitle, existingTitles);
     const recording = {
       id,
-      title: title.trim() || generateTitle(),
+      title: safeTitle,
       createdAt: Date.now(),
       duration,
       filePath,

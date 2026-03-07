@@ -47,8 +47,16 @@ export function generateId(): string {
 
 export function generateTitle(): string {
   const now = new Date();
-  return `Recording – ${now.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-  })}`;
+  const date = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  const time = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return `Recording – ${date} at ${time}`;
+}
+
+export function ensureUniqueTitle(title: string, existingTitles: string[]): string {
+  if (!existingTitles.includes(title)) return title;
+  let counter = 2;
+  while (existingTitles.includes(`${title} (${counter})`)) {
+    counter++;
+  }
+  return `${title} (${counter})`;
 }

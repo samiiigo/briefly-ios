@@ -4,11 +4,11 @@ import { ProcessingMode } from '../types';
 interface SettingsState {
   defaultProcessingMode: ProcessingMode;
   cloudApiKey: string;
-  cloudApiProvider: 'openai' | 'anthropic';
+  cloudApiProvider: 'openai' | 'gemini' | 'anthropic';
   cloudApiEndpoint: string;
   setDefaultProcessingMode: (mode: ProcessingMode) => void;
   setCloudApiKey: (key: string) => void;
-  setCloudApiProvider: (provider: 'openai' | 'anthropic') => void;
+  setCloudApiProvider: (provider: 'openai' | 'gemini' | 'anthropic') => void;
   setCloudApiEndpoint: (endpoint: string) => void;
 }
 

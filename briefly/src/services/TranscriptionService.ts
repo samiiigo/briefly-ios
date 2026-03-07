@@ -1,17 +1,10 @@
 /**
  * TranscriptionService
  *
- * Abstraction layer for on-device and cloud transcription.
- *
- * On-Device (iOS):  Uses the native BrieflyTranscriber Swift module which wraps
- *                   Apple's SpeechAnalyzer + SpeechTranscriber APIs (iOS 26+).
- *                   Falls back to expo-speech on older devices.
- *
- * On-Device (Android): Uses Android SpeechRecognizer via a native module.
- *                      Falls back to a placeholder until a local model is bundled.
- *
- * Cloud:  Sends the audio file to OpenAI Whisper (or compatible endpoint)
- *         with zero-data-retention headers where supported.
+ * Providers:
+ *  - On-Device (iOS dev build): BrieflyTranscriber native module → SFSpeechRecognizer
+ *  - Cloud / OpenAI:  Whisper-1 via /audio/transcriptions (FormData multipart)
+ *  - Cloud / Gemini:  gemini-1.5-flash via /generateContent (base64 inline audio)
  */
 
 import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
@@ -35,8 +28,7 @@ async function transcribeOnDevice(
     return transcribeWithNativeModule(audioUri, onSegment);
   }
 
-  // Native module not available (e.g. Expo Go).
-  // Fall through to cloud if an API key is configured.
+  // Native module not available (Expo Go) — fall through to cloud if key is set.
   const { cloudApiKey } = useSettingsStore.getState();
   if (cloudApiKey) {
     return transcribeCloud(audioUri, onSegment);
@@ -44,7 +36,7 @@ async function transcribeOnDevice(
 
   throw new Error(
     'On-device transcription requires a development build.\n\n' +
-    'Add an OpenAI API key in Settings to transcribe using cloud instead.'
+    'Add an API key in Settings to transcribe using cloud instead.'
   );
 }
 
@@ -89,9 +81,22 @@ async function transcribeWithNativeModule(
   });
 }
 
-// ─── Cloud ────────────────────────────────────────────────────────────────────
+// ─── Cloud: route by provider ─────────────────────────────────────────────────
 
 async function transcribeCloud(
+  audioUri: string,
+  onSegment?: (segment: TranscriptSegment) => void
+): Promise<TranscriptSegment[]> {
+  const { cloudApiProvider } = useSettingsStore.getState();
+  if (cloudApiProvider === 'gemini') {
+    return transcribeWithGemini(audioUri, onSegment);
+  }
+  return transcribeWithOpenAI(audioUri, onSegment);
+}
+
+// ─── OpenAI Whisper ───────────────────────────────────────────────────────────
+
+async function transcribeWithOpenAI(
   audioUri: string,
   onSegment?: (segment: TranscriptSegment) => void
 ): Promise<TranscriptSegment[]> {
@@ -106,7 +111,6 @@ async function transcribeCloud(
     throw new Error('Audio file not found');
   }
 
-  // Read audio as base64 for upload
   const formData = new FormData();
   formData.append('file', {
     uri: audioUri,
@@ -121,7 +125,6 @@ async function transcribeCloud(
     method: 'POST',
     headers: {
       Authorization: `Bearer ${cloudApiKey}`,
-      // Zero data retention hint (supported by some providers)
       'OpenAI-No-Training': '1',
     },
     body: formData,
@@ -129,7 +132,7 @@ async function transcribeCloud(
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`Cloud transcription failed: ${response.status} ${err}`);
+    throw new Error(`OpenAI transcription failed: ${response.status} ${err}`);
   }
 
   const data = await response.json();
@@ -159,6 +162,93 @@ async function transcribeCloud(
   }
 
   return segments;
+}
+
+// ─── Google Gemini ────────────────────────────────────────────────────────────
+
+/** MIME type inferred from the recorded file's extension. */
+function audioMimeType(uri: string): string {
+  const ext = uri.split('.').pop()?.toLowerCase() ?? '';
+  const map: Record<string, string> = {
+    wav: 'audio/wav',
+    mp3: 'audio/mpeg',
+    caf: 'audio/x-caf',
+    ogg: 'audio/ogg',
+    flac: 'audio/flac',
+  };
+  return map[ext] ?? 'audio/mp4'; // m4a / mp4
+}
+
+async function transcribeWithGemini(
+  audioUri: string,
+  onSegment?: (segment: TranscriptSegment) => void
+): Promise<TranscriptSegment[]> {
+  const { cloudApiKey } = useSettingsStore.getState();
+
+  if (!cloudApiKey) {
+    throw new Error('Gemini API key is not configured. Go to Settings to add your API key.');
+  }
+
+  const fileInfo = await FileSystem.getInfoAsync(audioUri);
+  if (!fileInfo.exists) {
+    throw new Error('Audio file not found');
+  }
+
+  // Read audio as base64 for Gemini inline_data
+  const base64Audio = await FileSystem.readAsStringAsync(audioUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent` +
+    `?key=${cloudApiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            {
+              inline_data: {
+                mime_type: audioMimeType(audioUri),
+                data: base64Audio,
+              },
+            },
+            {
+              text:
+                'Transcribe this audio recording accurately. ' +
+                'Return only the spoken words exactly as said, ' +
+                'with natural punctuation. No labels, no commentary.',
+            },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Gemini transcription failed: ${response.status} ${err}`);
+  }
+
+  const data = await response.json();
+  const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+
+  if (!text.trim()) {
+    throw new Error('Gemini returned an empty transcription. Check your API key and audio file.');
+  }
+
+  const seg: TranscriptSegment = {
+    id: generateId(),
+    text: text.trim(),
+    startTime: 0,
+    endTime: 0,
+    isFinal: true,
+  };
+  onSegment?.(seg);
+  return [seg];
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
