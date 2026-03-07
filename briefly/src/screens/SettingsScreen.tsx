@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { detectProvider, providerLabel } from '../utils';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
 
 export function SettingsScreen() {
@@ -19,24 +20,11 @@ export function SettingsScreen() {
     setDefaultProcessingMode,
     cloudApiKey,
     setCloudApiKey,
-    cloudApiProvider,
-    setCloudApiProvider,
-    setCloudApiEndpoint,
   } = useSettingsStore();
 
   const [apiKeyInput, setApiKeyInput] = useState(cloudApiKey);
   const isCloud = defaultProcessingMode === 'cloud';
-
-  const handleProviderChange = (provider: 'openai' | 'gemini') => {
-    setCloudApiProvider(provider);
-    setCloudApiKey('');
-    setApiKeyInput('');
-    setCloudApiEndpoint(
-      provider === 'gemini'
-        ? 'https://generativelanguage.googleapis.com/v1beta'
-        : 'https://api.openai.com/v1'
-    );
-  };
+  const detectedProvider = detectProvider(apiKeyInput);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -94,55 +82,12 @@ export function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Cloud Provider + API Key */}
+        {/* Cloud API Key */}
         {isCloud && (
           <>
-            <Text style={styles.sectionLabel}>AI PROVIDER</Text>
-            <View style={styles.card}>
-              {/* OpenAI */}
-              <TouchableOpacity
-                style={styles.optionRow}
-                onPress={() => handleProviderChange('openai')}
-              >
-                <View style={[styles.radio, cloudApiProvider === 'openai' && styles.radioSelected]}>
-                  {cloudApiProvider === 'openai' && <View style={styles.radioDot} />}
-                </View>
-                <View style={styles.optionText}>
-                  <View style={styles.optionTitleRow}>
-                    <Text style={styles.optionTitle}>OpenAI</Text>
-                    <View style={styles.badge}><Text style={styles.badgeText}>WHISPER + GPT-4o</Text></View>
-                  </View>
-                  <Text style={styles.optionSubtitle}>
-                    Whisper for transcription · GPT-4o-mini for summaries. Requires an OpenAI API key (sk-...).
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              <View style={styles.divider} />
-
-              {/* Gemini */}
-              <TouchableOpacity
-                style={styles.optionRow}
-                onPress={() => handleProviderChange('gemini')}
-              >
-                <View style={[styles.radio, cloudApiProvider === 'gemini' && styles.radioSelected]}>
-                  {cloudApiProvider === 'gemini' && <View style={styles.radioDot} />}
-                </View>
-                <View style={styles.optionText}>
-                  <View style={styles.optionTitleRow}>
-                    <Text style={styles.optionTitle}>Google Gemini</Text>
-                    <View style={[styles.badge, styles.badgeGemini]}><Text style={styles.badgeText}>GEMINI 3 FLASH</Text></View>
-                  </View>
-                  <Text style={styles.optionSubtitle}>
-                    Gemini 3 Flash for both transcription and summaries. Requires a Google AI Studio key (AIza...).
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
             <Text style={styles.sectionLabel}>API KEY</Text>
             <Text style={styles.sectionDescription}>
-              Stored locally on your device and never shared.
+              Paste any supported key — OpenAI, Google Gemini, Anthropic Claude, or a GitHub PAT. The provider is detected automatically. Stored locally on your device and never shared.
             </Text>
             <View style={styles.card}>
               <View style={styles.apiKeyRow}>
@@ -152,7 +97,7 @@ export function SettingsScreen() {
                   value={apiKeyInput}
                   onChangeText={setApiKeyInput}
                   onBlur={() => setCloudApiKey(apiKeyInput)}
-                  placeholder={cloudApiProvider === 'gemini' ? 'AIza...' : 'sk-...'}
+                  placeholder="sk-… · AIza… · sk-ant-… · github_pat_…"
                   placeholderTextColor="rgba(255,255,255,0.25)"
                   secureTextEntry
                   autoCapitalize="none"
@@ -164,6 +109,18 @@ export function SettingsScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+              {detectedProvider && (
+                <View style={styles.detectedRow}>
+                  <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
+                  <Text style={styles.detectedText}>{providerLabel(detectedProvider)} detected</Text>
+                </View>
+              )}
+              {apiKeyInput.trim().length > 0 && !detectedProvider && (
+                <View style={styles.detectedRow}>
+                  <Ionicons name="help-circle" size={14} color={Colors.orange} />
+                  <Text style={[styles.detectedText, { color: Colors.orange }]}>Provider not recognised</Text>
+                </View>
+              )}
             </View>
           </>
         )}
@@ -338,6 +295,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
+  badgeGemini: {
+    backgroundColor: '#1A73E8',
+  },
   // Storage / Preference rows
   row: {
     flexDirection: 'row',
@@ -375,5 +335,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#FFFFFF',
     paddingVertical: 4,
+  },
+  detectedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  detectedText: {
+    fontSize: 13,
+    color: Colors.primary,
   },
 });

@@ -45,6 +45,45 @@ export function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+// ─── Cloud provider detection ─────────────────────────────────────────────────
+
+export type CloudProvider = 'openai' | 'gemini' | 'anthropic' | 'github';
+
+/**
+ * Detects the cloud provider from an API key based on its prefix format:
+ *   sk-ant-…       → Anthropic Claude
+ *   sk-proj-… / sk-… → OpenAI
+ *   AIza…          → Google Gemini
+ *   github_pat_… / ghp_… → GitHub Models (OpenAI-compatible)
+ */
+export function detectProvider(key: string): CloudProvider | null {
+  const k = key.trim();
+  if (!k) return null;
+  if (k.startsWith('sk-ant-')) return 'anthropic';
+  if (k.startsWith('sk-proj-') || k.startsWith('sk-')) return 'openai';
+  if (k.startsWith('AIza')) return 'gemini';
+  if (k.startsWith('github_pat_') || k.startsWith('ghp_')) return 'github';
+  return null;
+}
+
+export function providerEndpoint(provider: CloudProvider): string {
+  switch (provider) {
+    case 'openai':    return 'https://api.openai.com/v1';
+    case 'gemini':    return 'https://generativelanguage.googleapis.com/v1beta';
+    case 'anthropic': return 'https://api.anthropic.com/v1';
+    case 'github':    return 'https://models.inference.ai.azure.com';
+  }
+}
+
+export function providerLabel(provider: CloudProvider): string {
+  switch (provider) {
+    case 'openai':    return 'OpenAI';
+    case 'gemini':    return 'Google Gemini';
+    case 'anthropic': return 'Anthropic Claude';
+    case 'github':    return 'GitHub Models';
+  }
+}
+
 export function generateTitle(): string {
   const now = new Date();
   const date = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });

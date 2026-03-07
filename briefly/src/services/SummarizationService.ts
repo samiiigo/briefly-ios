@@ -88,6 +88,10 @@ async function summarizeCloud(
   if (cloudApiProvider === 'gemini') {
     return summarizeWithGemini(segments);
   }
+  if (cloudApiProvider === 'anthropic') {
+    return summarizeWithAnthropic(segments);
+  }
+  // openai and github both use the OpenAI-compatible chat completions endpoint
   return summarizeWithOpenAI(segments);
 }
 
@@ -166,6 +170,44 @@ async function summarizeWithGemini(
 
   const data = await response.json();
   const content: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
+  return parseJsonSummary(content, text);
+}
+
+// ─── Anthropic Claude ─────────────────────────────────────────────────────────
+
+async function summarizeWithAnthropic(
+  segments: TranscriptSegment[]
+): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
+  const { cloudApiKey } = useSettingsStore.getState();
+
+  if (!cloudApiKey) {
+    throw new Error('Anthropic API key is not configured. Go to Settings to add your API key.');
+  }
+
+  const text = segmentsToText(segments);
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': cloudApiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 800,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: `Transcript:\n${text}` }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Anthropic summarization failed: ${response.status} ${err}`);
+  }
+
+  const data = await response.json();
+  const content: string = data.content?.[0]?.text ?? '{}';
   return parseJsonSummary(content, text);
 }
 
