@@ -146,25 +146,28 @@ export function RecordingScreen() {
   // ─── Pause / Resume ───────────────────────────────────────────────────────
 
   const handlePause = async () => {
-    if (isPaused) {
-      if (useLiveTranscription) {
-        await AudioService.resumeLiveTranscription();
+    try {
+      if (isPaused) {
+        if (useLiveTranscription) {
+          await AudioService.resumeLiveTranscription();
+        } else {
+          await AudioService.resumeRecording();
+        }
+        startTimer();
+        setIsPaused(false);
+        isPausedRef.current = false;
       } else {
-        await AudioService.resumeRecording();
-        scheduleNextChunk();
+        if (useLiveTranscription) {
+          await AudioService.pauseLiveTranscription();
+        } else {
+          await AudioService.pauseRecording();
+        }
+        stopTimer();
+        setIsPaused(true);
+        isPausedRef.current = true;
       }
-      startTimer();
-      setIsPaused(false);
-      isPausedRef.current = false;
-    } else {
-      if (useLiveTranscription) {
-        await AudioService.pauseLiveTranscription();
-      } else {
-        await AudioService.pauseRecording();
-      }
-      stopTimer();
-      setIsPaused(true);
-      isPausedRef.current = true;
+    } catch (err: any) {
+      Alert.alert('Error', err?.message ?? 'Could not pause or resume recording.');
     }
   };
 

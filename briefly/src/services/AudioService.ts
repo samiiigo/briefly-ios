@@ -18,6 +18,7 @@ interface LiveTranscriptionCallbacks {
 
 class AudioServiceClass {
   private recording: Audio.Recording | null = null;
+  private _recordingPaused = false;
   private sound: Audio.Sound | null = null;
   private startTime: number = 0;
 
@@ -99,19 +100,27 @@ class AudioServiceClass {
     });
 
     this.recording = recording;
+    this._recordingPaused = false;
     this.startTime = Date.now();
   }
 
   async pauseRecording(): Promise<void> {
     if (this.recording) {
       await this.recording.pauseAsync();
+      this._recordingPaused = true;
     }
   }
 
   async resumeRecording(): Promise<void> {
-    if (this.recording) {
-      await this.recording.startAsync();
-    }
+    if (!this.recording) return;
+    // Re-assert the audio session recording mode. After a pause, iOS may
+    // release the recording session, causing startAsync() to silently fail.
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+    });
+    await this.recording.startAsync();
+    this._recordingPaused = false;
   }
 
   async stopRecording(): Promise<AudioRecordingResult> {
@@ -119,11 +128,17 @@ class AudioServiceClass {
       throw new Error('No active recording');
     }
 
-    // Read duration BEFORE stopping — getStatusAsync() may fail after unload
     let durationMillis = 0;
     try {
       const status = await this.recording.getStatusAsync();
       durationMillis = status.durationMillis ?? 0;
+      // On iOS, the AAC encoder buffers audio frames internally. Calling
+      // stopAndUnloadAsync() while actively recording can lose those buffered
+      // frames, resulting in a file shorter than the actual recording duration.
+      // Pausing first forces the encoder to flush all pending frames to disk.
+      if (status.isRecording) {
+        await this.recording.pauseAsync();
+      }
     } catch {}
 
     await this.recording.stopAndUnloadAsync();
@@ -137,6 +152,7 @@ class AudioServiceClass {
 
     const duration = durationMillis / 1000;
     this.recording = null;
+    this._recordingPaused = false;
 
     await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
 
