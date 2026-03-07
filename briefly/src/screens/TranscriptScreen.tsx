@@ -23,6 +23,8 @@ import { KeyInsights } from '../components/KeyInsights';
 import { TranscriptSegmentView } from '../components/TranscriptSegmentView';
 import { ProcessingBadge } from '../components/ProcessingBadge';
 import { RootStackParamList } from '../types';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { transcriptionModeTitle } from '../utils/transcriptionMode';
 import { formatDuration, formatDate, ensureUniqueTitle } from '../utils';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
 
@@ -35,6 +37,7 @@ export function TranscriptScreen() {
   const { recordingId } = route.params;
   const recording = useRecordingStore((s) => s.getRecordingById(recordingId));
   const { updateRecording, recordings } = useRecordingStore();
+  const { defaultTranscriptionMode } = useSettingsStore();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackPos, setPlaybackPos] = useState(0);
@@ -253,6 +256,9 @@ export function TranscriptScreen() {
   }
 
   const progress = playbackDur > 0 ? playbackPos / playbackDur : 0;
+  const transcriptionModeLabel = transcriptionModeTitle(
+    recording.transcriptionMode ?? defaultTranscriptionMode
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -275,6 +281,9 @@ export function TranscriptScreen() {
         <Text style={styles.title}>{recording.title}</Text>
         <View style={styles.metaRow}>
           <ProcessingBadge mode={recording.processingMode} size="sm" />
+          <Text style={styles.transcriptionMode}>
+            {transcriptionModeLabel}
+          </Text>
         </View>
 
         {/* Error banner */}
@@ -405,8 +414,13 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.sm,
     marginBottom: Spacing.md,
+  },
+  transcriptionMode: {
+    fontSize: 12,
+    color: Colors.textSecondary,
   },
 
   // Summary

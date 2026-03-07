@@ -215,6 +215,7 @@ export function RecordingScreen() {
       preTranscript,
       transcriptionMode,
       targetFolder: route.params?.targetFolder,
+      targetUserFolderId: route.params?.targetUserFolderId,
     });
   };
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,24 +14,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { AudioService } from '../services/AudioService';
 import { RecordingCard } from '../components/RecordingCard';
+import { RecordButton } from '../components/RecordButton';
 import { Recording, RootStackParamList } from '../types';
-import { formatGroupLabel, ensureUniqueTitle } from '../utils';
+import { ensureUniqueTitle, groupRecordingsByTime } from '../utils';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { transcriptionModeTitle } from '../utils/transcriptionMode';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-function groupRecordings(recordings: Recording[]) {
-  const groups: { [key: string]: Recording[] } = { TODAY: [], 'PAST WEEK': [], OLDER: [] };
-  recordings.forEach((r) => {
-    const label = formatGroupLabel(r.createdAt);
-    groups[label].push(r);
-  });
-  return Object.entries(groups)
-    .filter(([, data]) => data.length > 0)
-    .map(([title, data]) => ({ title, data }));
-}
 
 export function HomeScreen() {
   const navigation = useNavigation<Nav>();
@@ -40,6 +30,16 @@ export function HomeScreen() {
   const deleteRecording = useRecordingStore((s) => s.deleteRecording);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
   const defaultTranscriptionMode = useSettingsStore((s) => s.defaultTranscriptionMode);
+
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setNow(Date.now());
+    }, 60_000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   const handleRename = useCallback((recording: Recording, newTitle: string) => {
     const existingTitles = recordings.filter((r) => r.id !== recording.id).map((r) => r.title);
@@ -79,7 +79,10 @@ export function HomeScreen() {
     );
   }, [defaultTranscriptionMode, navigation]);
 
-  const sections = useMemo(() => groupRecordings(recordings), [recordings]);
+  const sections = useMemo(
+    () => groupRecordingsByTime(recordings),
+    [recordings, now]
+  );
 
   if (recordings.length === 0) {
     return (
@@ -107,9 +110,7 @@ export function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.fab} onPress={handleStartRecording}>
-          <Ionicons name="mic" size={28} color="#fff" />
-        </TouchableOpacity>
+        <RecordButton onPress={handleStartRecording} />
       </SafeAreaView>
     );
   }
@@ -141,9 +142,7 @@ export function HomeScreen() {
         )}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={handleStartRecording}>
-        <Ionicons name="mic" size={28} color="#fff" />
-      </TouchableOpacity>
+      <RecordButton onPress={handleStartRecording} />
     </SafeAreaView>
   );
 }
@@ -188,22 +187,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: Spacing.sm,
     marginTop: Spacing.sm,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 90,
-    right: Spacing.md,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.recordButton,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.recordButton,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
   },
   // Empty state
   emptyState: {

@@ -2,6 +2,11 @@ export type ProcessingMode = 'on-device' | 'cloud';
 export type TranscriptionMode = 'on-device' | 'cloud' | 'on-device-first';
 export type RecordingFolder = 'unlisted' | 'favorites' | 'archived';
 
+export interface UserFolder {
+  id: string;
+  name: string;
+}
+
 export type RecordingStatus =
   | 'idle'
   | 'recording'
@@ -37,6 +42,7 @@ export interface Recording {
   transcriptionMode?: TranscriptionMode;
   processingMode: ProcessingMode;
   folder?: RecordingFolder;
+  userFolderId?: string;
   isFavorite?: boolean;
   isArchived?: boolean;
   status: RecordingStatus;
@@ -52,6 +58,7 @@ export type RootStackParamList = {
     | {
         transcriptionModeOverride?: TranscriptionMode;
         targetFolder?: RecordingFolder;
+        targetUserFolderId?: string;
       }
     | undefined;
   SaveRecording: {
@@ -61,9 +68,16 @@ export type RootStackParamList = {
     preTranscript?: TranscriptSegment[];
     transcriptionMode?: TranscriptionMode;
     targetFolder?: RecordingFolder;
+    targetUserFolderId?: string;
   };
   Summarizing: { recordingId: string };
   Transcript: { recordingId: string };
+  FolderList: undefined;
+  FolderRecordings: {
+    folderId: string;
+    folderName: string;
+    folderType: 'built-in' | 'user';
+  };
 };
 
 export type MainTabParamList = {

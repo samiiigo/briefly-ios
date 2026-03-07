@@ -1,14 +1,13 @@
 import { Recording } from '../types';
 import { resolveRecordingFolder } from './recordingFolder';
 
-export type LibraryTabId = 'all' | 'favorites' | 'archived' | 'active' | 'processing' | 'errors';
+export type LibraryTabId = 'all' | 'favorites' | 'archived' | 'active' | 'errors';
 
 export const LIBRARY_TAB_PREDICATES: Record<LibraryTabId, (recording: Recording) => boolean> = {
   all: () => true,
   active: (r) => resolveRecordingFolder(r) === 'unlisted',
   favorites: (r) => resolveRecordingFolder(r) === 'favorites',
   archived: (r) => resolveRecordingFolder(r) === 'archived',
-  processing: (r) => r.status === 'transcribing' || r.status === 'summarizing',
   errors: (r) => r.status === 'error',
 };
 
@@ -18,7 +17,7 @@ export function countByLibraryTab(recordings: Recording[]): Record<LibraryTabId,
       acc[tabId] = recordings.filter(LIBRARY_TAB_PREDICATES[tabId]).length;
       return acc;
     },
-    { all: 0, favorites: 0, archived: 0, active: 0, processing: 0, errors: 0 } as Record<LibraryTabId, number>
+    { all: 0, favorites: 0, archived: 0, active: 0, errors: 0 } as Record<LibraryTabId, number>
   );
 }
 

@@ -37,6 +37,7 @@ export function SaveRecordingScreen() {
   const route = useRoute<Route>();
   const { duration, filePath, fileSize, preTranscript } = route.params;
   const targetFolder: RecordingFolder = route.params.targetFolder ?? 'unlisted';
+  const targetUserFolderId = route.params.targetUserFolderId;
 
   const { addRecording, recordings } = useRecordingStore();
   const { defaultProcessingMode, defaultTranscriptionMode } = useSettingsStore();
@@ -67,6 +68,7 @@ export function SaveRecordingScreen() {
       processingMode,
       folder: targetFolder,
       ...folderFlagsFor(targetFolder),
+      userFolderId: targetUserFolderId,
       status: 'transcribing' as const,
       transcript: preTranscript, // pre-built from live chunks (cloud mode)
     };
@@ -153,11 +155,13 @@ export function SaveRecordingScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.detailLabel}>Folder</Text>
               <Text style={styles.processingSubtitle}>
-                {targetFolder === 'favorites'
-                  ? 'Favorites'
-                  : targetFolder === 'archived'
-                    ? 'Archived'
-                    : 'Unlisted'}
+                {targetUserFolderId
+                  ? 'User folder'
+                  : targetFolder === 'favorites'
+                    ? 'Favorites'
+                    : targetFolder === 'archived'
+                      ? 'Archived'
+                      : 'Unlisted'}
               </Text>
             </View>
           </View>

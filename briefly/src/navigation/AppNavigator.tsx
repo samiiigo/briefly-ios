@@ -13,6 +13,8 @@ import { RecordingScreen } from '../screens/RecordingScreen';
 import { SaveRecordingScreen } from '../screens/SaveRecordingScreen';
 import { SummarizingScreen } from '../screens/SummarizingScreen';
 import { TranscriptScreen } from '../screens/TranscriptScreen';
+import { FolderListScreen } from '../screens/FolderListScreen';
+import { FolderRecordingsScreen } from '../screens/FolderRecordingsScreen';
 
 import { RootStackParamList, MainTabParamList } from '../types';
 import { Colors } from '../utils/theme';
@@ -75,7 +77,8 @@ export function AppNavigator() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: Colors.background },
-          animation: 'slide_from_bottom',
+          // Use a consistent horizontal push animation for all forward navigation
+          animation: 'slide_from_right',
         }}
       >
         <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'none' }} />
@@ -87,6 +90,8 @@ export function AppNavigator() {
           component={TranscriptScreen}
           options={{ animation: 'slide_from_right' }}
         />
+        <Stack.Screen name="FolderList" component={FolderListScreen} />
+        <Stack.Screen name="FolderRecordings" component={FolderRecordingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

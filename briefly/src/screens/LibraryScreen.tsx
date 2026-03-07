@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,19 +6,26 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Platform,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AudioService } from '../services/AudioService';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { AudioService } from '../services/AudioService';
 import { useRecordingStore } from '../store/useRecordingStore';
+import { useUserFolderStore } from '../store/useUserFolderStore';
 import { RecordingCard } from '../components/RecordingCard';
+import { RecordButton } from '../components/RecordButton';
 import { Colors, Spacing } from '../utils/theme';
-import { RootStackParamList, RecordingFolder } from '../types';
-import { folderFlagsFor } from '../utils/recordingFolder';
+import { RootStackParamList } from '../types';
+import { folderFlagsFor, resolveRecordingFolder } from '../utils/recordingFolder';
 import { countByLibraryTab, filterByLibraryTab, LibraryTabId } from '../utils/libraryFilters';
+import { groupRecordingsByTime } from '../utils';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -32,27 +39,98 @@ const LIBRARY_TABS: LibraryTab[] = [
   { id: 'active', label: 'Unlisted' },
   { id: 'favorites', label: 'Favorites' },
   { id: 'archived', label: 'Archived' },
-  { id: 'processing', label: 'Processing' },
   { id: 'errors', label: 'Errors' },
 ];
+
+const BUILT_IN_FOLDERS = [
+  { id: 'favorites', name: 'Favorites', icon: 'star' as const, color: '#FF9F0A', styleKey: 'folderFavorites' },
+  { id: 'unlisted', name: 'Unlisted', icon: 'albums' as const, color: '#0A84FF', styleKey: 'folderWork' },
+  { id: 'archived', name: 'Archived', icon: 'archive' as const, color: '#BF5AF2', styleKey: 'folderPersonal' },
+] as const;
+
+const MAX_FOLDER_TILES = 6;
+
+interface FolderTile {
+  id: string;
+  name: string;
+  folderType: 'built-in' | 'user';
+  styleKey?: string;
+  icon: string;
+  color: string;
+  count: number;
+}
 
 export function LibraryScreen() {
   const navigation = useNavigation<Nav>();
   const recordings = useRecordingStore((s) => s.recordings);
   const deleteRecording = useRecordingStore((s) => s.deleteRecording);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
+  const { folders, loadFolders, addFolder } = useUserFolderStore();
+
   const [activeTab, setActiveTab] = useState<LibraryTabId>('all');
-  const [selectedFolder, setSelectedFolder] = useState<RecordingFolder | null>(null);
+  const [addFolderModalVisible, setAddFolderModalVisible] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    loadFolders();
+  }, [loadFolders]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const tabCounts = useMemo(() => countByLibraryTab(recordings), [recordings]);
-
   const filtered = useMemo(() => filterByLibraryTab(recordings, activeTab), [activeTab, recordings]);
 
-  const addToFavorites = useCallback(async (recordingId: string) => {
-    const target = recordings.find((r) => r.id === recordingId);
-    if (!target || target.isFavorite) return;
-    await updateRecording(recordingId, folderFlagsFor('favorites'));
-  }, [recordings, updateRecording]);
+  const countForBuiltIn = useCallback(
+    (id: string) => {
+      if (id === 'favorites') return recordings.filter((r) => resolveRecordingFolder(r) === 'favorites').length;
+      if (id === 'unlisted') return recordings.filter((r) => resolveRecordingFolder(r) === 'unlisted').length;
+      if (id === 'archived') return recordings.filter((r) => resolveRecordingFolder(r) === 'archived').length;
+      return 0;
+    },
+    [recordings]
+  );
+
+  const countForUserFolder = useCallback(
+    (id: string) => recordings.filter((r) => r.userFolderId === id).length,
+    [recordings]
+  );
+
+  const folderTiles = useMemo<FolderTile[]>(() => {
+    const builtInTiles: FolderTile[] = BUILT_IN_FOLDERS.map((f) => ({
+      id: f.id,
+      name: f.name,
+      folderType: 'built-in',
+      styleKey: f.styleKey,
+      icon: f.icon,
+      color: f.color,
+      count: countForBuiltIn(f.id),
+    }));
+
+    const userTiles: FolderTile[] = folders.map((f) => ({
+      id: f.id,
+      name: f.name,
+      folderType: 'user',
+      icon: 'folder',
+      color: 'rgba(255,255,255,0.7)',
+      count: countForUserFolder(f.id),
+    }));
+
+    // Built-in folders first in fixed order, then user folders.
+    return [...builtInTiles, ...userTiles];
+  }, [folders, countForBuiltIn, countForUserFolder]);
+
+  const addToFavorites = useCallback(
+    async (recordingId: string) => {
+      const target = recordings.find((r) => r.id === recordingId);
+      if (!target || target.isFavorite) return;
+      await updateRecording(recordingId, folderFlagsFor('favorites'));
+    },
+    [recordings, updateRecording]
+  );
 
   const moveToArchive = useCallback(async (recordingId: string) => {
     await updateRecording(recordingId, folderFlagsFor('archived'));
@@ -65,8 +143,64 @@ export function LibraryScreen() {
   const handleStartRecording = useCallback(async () => {
     const granted = await AudioService.requestPermissions();
     if (!granted) return;
-    navigation.navigate('Recording', { targetFolder: selectedFolder ?? 'unlisted' });
-  }, [navigation, selectedFolder]);
+    navigation.navigate('Recording', { targetFolder: 'unlisted' });
+  }, [navigation]);
+
+  const openFolder = useCallback(
+    (folderId: string, folderName: string, folderType: 'built-in' | 'user') => {
+      navigation.navigate('FolderRecordings', { folderId, folderName, folderType });
+    },
+    [navigation]
+  );
+
+  const handleAddFolder = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        'New Folder',
+        'Enter a name for the folder',
+        (name) => {
+          const trimmed = name?.trim();
+          if (!trimmed) return;
+          addFolder(trimmed).catch((err) => Alert.alert('Error', err.message || 'Could not create folder'));
+        },
+        'plain-text',
+        ''
+      );
+    } else {
+      setNewFolderName('');
+      setAddFolderModalVisible(true);
+    }
+  }, [addFolder]);
+
+  const confirmAddFolder = useCallback(() => {
+    const trimmed = newFolderName.trim();
+    if (!trimmed) return;
+    addFolder(trimmed)
+      .then(() => {
+        setAddFolderModalVisible(false);
+        setNewFolderName('');
+      })
+      .catch((err) => Alert.alert('Error', err.message || 'Could not create folder'));
+  }, [addFolder, newFolderName]);
+
+  const { visibleFolders, showAddFolderTile, hasMoreFolders } = useMemo(() => {
+    const totalFolders = folderTiles.length;
+    const canShowAdd = totalFolders < MAX_FOLDER_TILES;
+    const maxFolderSlots = MAX_FOLDER_TILES - (canShowAdd ? 1 : 0);
+    const visible = folderTiles.slice(0, maxFolderSlots);
+    const more = totalFolders > maxFolderSlots;
+
+    return {
+      visibleFolders: visible,
+      showAddFolderTile: canShowAdd,
+      hasMoreFolders: more,
+    };
+  }, [folderTiles]);
+
+  const recentSections = useMemo(
+    () => groupRecordingsByTime(filtered),
+    [filtered, now]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -102,184 +236,187 @@ export function LibraryScreen() {
         {/* Folders section header */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionLabel}>FOLDERS</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAll}>See All</Text>
-          </TouchableOpacity>
+          {hasMoreFolders && (
+            <TouchableOpacity onPress={() => navigation.navigate('FolderList')}>
+              <Text style={styles.seeAll}>See All</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.folderGrid}>
-          <TouchableOpacity
-            style={styles.folderCard}
-            activeOpacity={0.8}
-            onPress={() => setSelectedFolder((prev) => (prev === 'favorites' ? null : 'favorites'))}
-          >
-            <View
-              style={[
-                styles.folderCardInner,
-                styles.folderFavorites,
-                selectedFolder === 'favorites' && styles.folderSelected,
-              ]}
+          {visibleFolders.map((f) => (
+            <TouchableOpacity
+              key={f.id}
+              style={styles.folderCard}
+              activeOpacity={0.8}
+              onPress={() => openFolder(f.id, f.name, f.folderType)}
             >
-              <View style={styles.folderIconRow}>
-                <Ionicons name="star" size={24} color="#FF9F0A" />
+              <View
+                style={[
+                  styles.folderCardInner,
+                  f.folderType === 'built-in' && f.styleKey ? styles[f.styleKey] : styles.folderUser,
+                ]}
+              >
+                <View style={styles.folderIconRow}>
+                  <Ionicons name={f.icon as any} size={24} color={f.color} />
+                </View>
+                <View style={styles.folderTextRow}>
+                  <Text style={styles.folderCount}>{f.count} items</Text>
+                  <Text style={styles.folderName}>{f.name}</Text>
+                </View>
               </View>
-              <View style={styles.folderTextRow}>
-                <Text style={styles.folderCount}>{tabCounts.favorites} items</Text>
-                <Text style={styles.folderName}>Favorites</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          ))}
 
-          <TouchableOpacity
-            style={styles.folderCard}
-            activeOpacity={0.8}
-            onPress={() => setSelectedFolder((prev) => (prev === 'unlisted' ? null : 'unlisted'))}
-          >
-            <View
-              style={[
-                styles.folderCardInner,
-                styles.folderWork,
-                selectedFolder === 'unlisted' && styles.folderSelected,
-              ]}
+          {showAddFolderTile && (
+            <TouchableOpacity
+              style={styles.folderCard}
+              activeOpacity={0.8}
+              onPress={handleAddFolder}
             >
-              <View style={styles.folderIconRow}>
-                <Ionicons name="albums" size={24} color="#0A84FF" />
+              <View style={[styles.folderCardInner, styles.folderAdd]}>
+                <View style={styles.folderIconRow}>
+                  <Ionicons name="add-circle-outline" size={28} color="rgba(255,255,255,0.5)" />
+                </View>
+                <View style={styles.folderTextRow}>
+                  <Text style={styles.folderAddLabel}>Add folder</Text>
+                </View>
               </View>
-              <View style={styles.folderTextRow}>
-                <Text style={styles.folderCount}>{tabCounts.active} items</Text>
-                <Text style={styles.folderName}>Unlisted</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.folderCard}
-            activeOpacity={0.8}
-            onPress={() => setSelectedFolder((prev) => (prev === 'archived' ? null : 'archived'))}
-          >
-            <View
-              style={[
-                styles.folderCardInner,
-                styles.folderPersonal,
-                selectedFolder === 'archived' && styles.folderSelected,
-              ]}
-            >
-              <View style={styles.folderIconRow}>
-                <Ionicons name="archive" size={24} color="#BF5AF2" />
-              </View>
-              <View style={styles.folderTextRow}>
-                <Text style={styles.folderCount}>{tabCounts.archived} items</Text>
-                <Text style={styles.folderName}>Archived</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          <View style={styles.folderCard}>
-            <View style={[styles.folderCardInner, styles.folderArchive]}>
-              <View style={styles.folderIconRow}>
-                <Ionicons name="sync" size={24} color="rgba(255,255,255,0.7)" />
-              </View>
-              <View style={styles.folderTextRow}>
-                <Text style={styles.folderCount}>{tabCounts.processing} items</Text>
-                <Text style={styles.folderName}>Processing</Text>
-              </View>
-            </View>
-          </View>
+            </TouchableOpacity>
+          )}
         </View>
-        {selectedFolder && (
-          <View style={styles.selectedFolderHint}>
-            <Ionicons name="folder-open" size={14} color={Colors.primary} />
-            <Text style={styles.selectedFolderHintText}>
-              New recordings will be saved to{' '}
-              {selectedFolder === 'favorites'
-                ? 'Favorites'
-                : selectedFolder === 'archived'
-                  ? 'Archived'
-                  : 'Unlisted'}
-              .
-            </Text>
-          </View>
-        )}
 
-        {/* Recent Recordings */}
+        {/* Recent Recordings grouped by time */}
         <Text style={styles.sectionLabel}>RECENT RECORDINGS</Text>
         {filtered.length === 0 ? (
           <Text style={styles.emptyText}>No recordings in this category.</Text>
         ) : (
-          filtered.map((recording) => (
-            <Swipeable
-              key={recording.id}
-              overshootLeft={false}
-              overshootRight={false}
-              rightThreshold={40}
-              leftThreshold={40}
-              renderRightActions={() => (
-                <View style={styles.favoriteAction}>
-                  <Ionicons
-                    name={recording.isFavorite ? 'star' : 'star-outline'}
-                    size={22}
-                    color="#FFFFFF"
+          recentSections.map((section) => (
+            <View key={section.title}>
+              <Text style={[styles.sectionLabel, { marginTop: Spacing.sm }]}>{section.title}</Text>
+              {section.data.map((recording) => (
+                <Swipeable
+                  key={recording.id}
+                  overshootLeft={false}
+                  overshootRight={false}
+                  rightThreshold={40}
+                  leftThreshold={40}
+                  renderRightActions={() => (
+                    <View style={styles.favoriteAction}>
+                      <Ionicons
+                        name={recording.isFavorite ? 'star' : 'star-outline'}
+                        size={22}
+                        color="#FFFFFF"
+                      />
+                      <Text style={styles.favoriteActionText}>
+                        {recording.isFavorite ? 'Favorited' : 'Favorite'}
+                      </Text>
+                    </View>
+                  )}
+                  renderLeftActions={() => (
+                    <View style={styles.leftActionsWrap}>
+                      <TouchableOpacity
+                        style={[styles.quickActionButton, styles.archiveAction]}
+                        onPress={() =>
+                          recording.isArchived
+                            ? removeFromArchive(recording.id)
+                            : moveToArchive(recording.id)
+                        }
+                      >
+                        <Ionicons
+                          name={recording.isArchived ? 'arrow-undo' : 'archive'}
+                          size={20}
+                          color="#FFFFFF"
+                        />
+                        <Text style={styles.quickActionText}>
+                          {recording.isArchived ? 'Unarchive' : 'Archive'}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.quickActionButton, styles.deleteAction]}
+                        onPress={() =>
+                          Alert.alert('Delete Recording', `Delete "${recording.title}"?`, [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: () => deleteRecording(recording.id),
+                            },
+                          ])
+                        }
+                      >
+                        <Ionicons name="trash" size={20} color="#FFFFFF" />
+                        <Text style={styles.quickActionText}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  onSwipeableOpen={(direction) => {
+                    if (direction === 'left') {
+                      addToFavorites(recording.id);
+                    }
+                  }}
+                >
+                  <RecordingCard
+                    recording={recording}
+                    onPress={() => navigation.navigate('Transcript', { recordingId: recording.id })}
+                    onDelete={() => deleteRecording(recording.id)}
                   />
-                  <Text style={styles.favoriteActionText}>
-                    {recording.isFavorite ? 'Favorited' : 'Favorite'}
-                  </Text>
-                </View>
-              )}
-              renderLeftActions={() => (
-                <View style={styles.leftActionsWrap}>
-                  <TouchableOpacity
-                    style={[styles.quickActionButton, styles.archiveAction]}
-                    onPress={() =>
-                      recording.isArchived
-                        ? removeFromArchive(recording.id)
-                        : moveToArchive(recording.id)
-                    }
-                  >
-                    <Ionicons
-                      name={recording.isArchived ? 'arrow-undo' : 'archive'}
-                      size={20}
-                      color="#FFFFFF"
-                    />
-                    <Text style={styles.quickActionText}>
-                      {recording.isArchived ? 'Unarchive' : 'Archive'}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.quickActionButton, styles.deleteAction]}
-                    onPress={() =>
-                      Alert.alert('Delete Recording', `Delete "${recording.title}"?`, [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Delete',
-                          style: 'destructive',
-                          onPress: () => deleteRecording(recording.id),
-                        },
-                      ])
-                    }
-                  >
-                    <Ionicons name="trash" size={20} color="#FFFFFF" />
-                    <Text style={styles.quickActionText}>Delete</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              onSwipeableOpen={(direction) => {
-                if (direction === 'left') {
-                  addToFavorites(recording.id);
-                }
-              }}
-            >
-              <RecordingCard
-                recording={recording}
-                onPress={() => navigation.navigate('Transcript', { recordingId: recording.id })}
-                onDelete={() => deleteRecording(recording.id)}
-              />
-            </Swipeable>
+                </Swipeable>
+              ))}
+            </View>
           ))
         )}
       </ScrollView>
-      <TouchableOpacity style={styles.fab} onPress={handleStartRecording}>
-        <Ionicons name="mic" size={28} color="#fff" />
-      </TouchableOpacity>
+      <RecordButton onPress={handleStartRecording} />
+
+      {/* Add folder modal (Android) */}
+      <Modal
+        visible={addFolderModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAddFolderModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setAddFolderModalVisible(false)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalContentWrap}
+          >
+            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.addFolderModal}>
+                <Text style={styles.addFolderModalTitle}>New Folder</Text>
+                <TextInput
+                  style={styles.addFolderInput}
+                  value={newFolderName}
+                  onChangeText={setNewFolderName}
+                  placeholder="Folder name"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  autoFocus
+                  onSubmitEditing={confirmAddFolder}
+                />
+                <View style={styles.addFolderModalActions}>
+                  <TouchableOpacity
+                    style={styles.addFolderModalBtn}
+                    onPress={() => setAddFolderModalVisible(false)}
+                  >
+                    <Text style={styles.addFolderModalBtnCancel}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.addFolderModalBtn, styles.addFolderModalBtnPrimary]}
+                    onPress={confirmAddFolder}
+                    disabled={!newFolderName.trim()}
+                  >
+                    <Text style={styles.addFolderModalBtnPrimaryText}>Create</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -361,10 +498,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  folderSelected: {
-    borderColor: Colors.primary,
-    borderWidth: 1.5,
-  },
   folderFavorites: {
     backgroundColor: 'rgba(255,159,10,0.08)',
   },
@@ -374,8 +507,13 @@ const styles = StyleSheet.create({
   folderPersonal: {
     backgroundColor: 'rgba(191,90,242,0.08)',
   },
-  folderArchive: {
+  folderUser: {
     backgroundColor: 'rgba(28,28,30,0.6)',
+  },
+  folderAdd: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   folderIconRow: {
     marginBottom: 8,
@@ -391,6 +529,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.9)',
+  },
+  folderAddLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.5)',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -455,31 +598,60 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  selectedFolderHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: Spacing.md,
-  },
-  selectedFolderHintText: {
-    color: Colors.primary,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 90,
-    right: Spacing.md,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.recordButton,
-    alignItems: 'center',
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
-    shadowColor: Colors.recordButton,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContentWrap: {
+    width: '100%',
+    maxWidth: 340,
+  },
+  addFolderModal: {
+    backgroundColor: '#1C1C1E',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  addFolderModalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  addFolderInput: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginBottom: 20,
+  },
+  addFolderModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  addFolderModalBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  addFolderModalBtnCancel: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '600',
+  },
+  addFolderModalBtnPrimary: {
+    backgroundColor: '#0A84FF',
+    borderRadius: 10,
+  },
+  addFolderModalBtnPrimaryText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

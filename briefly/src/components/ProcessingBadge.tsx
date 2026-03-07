@@ -7,9 +7,14 @@ import { Colors, BorderRadius } from '../utils/theme';
 interface Props {
   mode: ProcessingMode;
   size?: 'sm' | 'md';
+  /**
+   * When false, only the icon is shown (no CLOUD / ON-DEVICE label).
+   * Useful for compact list tiles where we want less visual noise.
+   */
+  showLabel?: boolean;
 }
 
-export function ProcessingBadge({ mode, size = 'md' }: Props) {
+export function ProcessingBadge({ mode, size = 'md', showLabel = true }: Props) {
   const isCloud = mode === 'cloud';
   const isSmall = size === 'sm';
 
@@ -19,17 +24,19 @@ export function ProcessingBadge({ mode, size = 'md' }: Props) {
         name={isCloud ? 'cloud' : 'shield-checkmark'}
         size={isSmall ? 10 : 12}
         color={isCloud ? Colors.primary : Colors.onDeviceText}
-        style={styles.icon}
+        style={[styles.icon, !showLabel && styles.iconOnly]}
       />
-      <Text
-        style={[
-          styles.text,
-          isCloud ? styles.cloudText : styles.onDeviceText,
-          isSmall && styles.textSmall,
-        ]}
-      >
-        {isCloud ? 'CLOUD' : 'ON-DEVICE'}
-      </Text>
+      {showLabel && (
+        <Text
+          style={[
+            styles.text,
+            isCloud ? styles.cloudText : styles.onDeviceText,
+            isSmall && styles.textSmall,
+          ]}
+        >
+          {isCloud ? 'CLOUD' : 'ON-DEVICE'}
+        </Text>
+      )}
     </View>
   );
 }
@@ -50,6 +57,9 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginRight: 4,
+  },
+  iconOnly: {
+    marginRight: 0,
   },
   text: {
     fontSize: 11,

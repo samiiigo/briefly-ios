@@ -32,7 +32,6 @@ describe('library filters', () => {
       active: 3,
       favorites: 1,
       archived: 1,
-      processing: 1,
       errors: 1,
     });
   });

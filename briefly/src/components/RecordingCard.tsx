@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '../types';
-import { ProcessingBadge } from './ProcessingBadge';
 import { formatDuration, formatDate } from '../utils';
 import { resolveRecordingFolder } from '../utils/recordingFolder';
 import { Colors, BorderRadius } from '../utils/theme';
@@ -72,35 +71,35 @@ export function RecordingCard({ recording, onPress, onDelete, onRename }: Props)
 
   return (
     <TouchableOpacity
-      style={[styles.card, isFailed && styles.cardFailed]}
+      style={styles.card}
       onPress={onPress}
       onLongPress={handleLongPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.folderBadge, folderBadgeStyle]}>
-        <Text style={styles.folderBadgeText}>{folderLabel}</Text>
-      </View>
+      {isFailed && (
+        <View style={[styles.statusIcon, styles.statusIconWarning]}>
+          <Ionicons name="warning" size={14} color={Colors.orange} />
+        </View>
+      )}
 
-      <View style={[styles.iconContainer, isFailed && styles.iconContainerFailed]}>
+      <View style={styles.iconContainer}>
         <Ionicons
-          name={isFailed ? 'warning' : 'musical-notes'}
+          name="musical-notes"
           size={24}
-          color={isFailed ? Colors.orange : '#0A84FF'}
+          color="#0A84FF"
         />
       </View>
 
-      <View style={styles.content}>
+      <View style={[styles.content, isFailed && styles.contentWithStatusIcon]}>
         <Text style={styles.title} numberOfLines={1}>
           {recording.title}
         </Text>
-        {isFailed ? (
-          <Text style={styles.failedLabel}>Transcription failed – audio only</Text>
-        ) : (
-          <Text style={styles.date}>{formatDate(recording.createdAt)}</Text>
-        )}
+        <Text style={styles.date}>{formatDate(recording.createdAt)}</Text>
         <View style={styles.metaRow}>
           <Text style={styles.duration}>{formatDuration(recording.duration)}</Text>
-          {!isFailed && <ProcessingBadge mode={recording.processingMode} />}
+          <View style={[styles.folderBadge, folderBadgeStyle]}>
+            <Text style={styles.folderBadgeText}>{folderLabel}</Text>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -119,8 +118,18 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.06)',
   },
-  cardFailed: {
-    borderColor: 'rgba(255, 159, 10, 0.25)',
+  statusIcon: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusIconWarning: {
+    backgroundColor: 'rgba(255, 159, 10, 0.2)',
   },
   iconContainer: {
     width: 64,
@@ -131,28 +140,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 14,
   },
-  iconContainerFailed: {
-    backgroundColor: 'rgba(255, 159, 10, 0.1)',
-  },
   content: {
     flex: 1,
     justifyContent: 'center',
+  },
+  contentWithStatusIcon: {
+    marginRight: 36,
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.9)',
     marginBottom: 3,
-    paddingRight: 90,
   },
   date: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.5)',
-    marginBottom: 3,
-  },
-  failedLabel: {
-    fontSize: 13,
-    color: Colors.orange,
     marginBottom: 3,
   },
   metaRow: {
@@ -165,9 +168,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.5)',
   },
   folderBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
     borderRadius: BorderRadius.full,
     paddingHorizontal: 8,
     paddingVertical: 3,
