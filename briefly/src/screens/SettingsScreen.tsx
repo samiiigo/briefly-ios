@@ -131,10 +131,10 @@ export function SettingsScreen() {
                 <View style={styles.optionText}>
                   <View style={styles.optionTitleRow}>
                     <Text style={styles.optionTitle}>Google Gemini</Text>
-                    <View style={[styles.badge, styles.badgeGemini]}><Text style={styles.badgeText}>GEMINI 1.5 FLASH</Text></View>
+                    <View style={[styles.badge, styles.badgeGemini]}><Text style={styles.badgeText}>GEMINI 2.0 FLASH</Text></View>
                   </View>
                   <Text style={styles.optionSubtitle}>
-                    Gemini 1.5 Flash for both transcription and summaries. Requires a Google AI Studio key (AIza...).
+                    Gemini 2.0 Flash for both transcription and summaries. Requires a Google AI Studio key (AIza...).
                   </Text>
                 </View>
               </TouchableOpacity>
