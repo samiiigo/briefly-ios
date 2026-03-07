@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   SectionList,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,11 +14,11 @@ import { useRecordingStore } from '../store/useRecordingStore';
 import { AudioService } from '../services/AudioService';
 import { RecordingCard } from '../components/RecordingCard';
 import { RecordButton } from '../components/RecordButton';
+import { SearchIconButton } from '../components/SearchIconButton';
 import { Recording, RootStackParamList } from '../types';
 import { ensureUniqueTitle, groupRecordingsByTime } from '../utils';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { transcriptionModeTitle } from '../utils/transcriptionMode';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -29,7 +28,7 @@ export function HomeScreen() {
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);
   const deleteRecording = useRecordingStore((s) => s.deleteRecording);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
-  const defaultTranscriptionMode = useSettingsStore((s) => s.defaultTranscriptionMode);
+  const defaultRecordingFolder = useSettingsStore((s) => s.defaultRecordingFolder);
 
   const [now, setNow] = useState(() => Date.now());
 
@@ -53,31 +52,8 @@ export function HomeScreen() {
   const handleStartRecording = useCallback(async () => {
     const granted = await AudioService.requestPermissions();
     if (!granted) return;
-    Alert.alert(
-      'Transcription for this recording',
-      'Use your default, or override just this recording.',
-      [
-        {
-          text: `Use default (${transcriptionModeTitle(defaultTranscriptionMode)})`,
-          onPress: () => navigation.navigate('Recording'),
-        },
-        {
-          text: 'Always on-device',
-          onPress: () => navigation.navigate('Recording', { transcriptionModeOverride: 'on-device' }),
-        },
-        {
-          text: 'Always cloud',
-          onPress: () => navigation.navigate('Recording', { transcriptionModeOverride: 'cloud' }),
-        },
-        {
-          text: 'On-device first, then cloud fallback',
-          onPress: () =>
-            navigation.navigate('Recording', { transcriptionModeOverride: 'on-device-first' }),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  }, [defaultTranscriptionMode, navigation]);
+    navigation.navigate('Recording', { targetFolder: defaultRecordingFolder });
+  }, [defaultRecordingFolder, navigation]);
 
   const sections = useMemo(
     () => groupRecordingsByTime(recordings),
@@ -89,9 +65,7 @@ export function HomeScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Briefly</Text>
-          <TouchableOpacity style={styles.headerIcon}>
-            <Ionicons name="search" size={22} color={Colors.textPrimary} />
-          </TouchableOpacity>
+          <SearchIconButton />
         </View>
 
         <View style={styles.emptyState}>
@@ -119,18 +93,18 @@ export function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Briefly</Text>
-        <TouchableOpacity style={styles.headerIcon}>
-          <Ionicons name="search" size={22} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <SearchIconButton />
       </View>
 
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        stickySectionHeadersEnabled={false}
+        stickySectionHeadersEnabled
         renderSectionHeader={({ section }) => (
-          <Text style={styles.sectionHeader}>{section.title}</Text>
+          <View style={styles.sectionHeaderWrap}>
+            <Text style={styles.sectionHeader}>{section.title}</Text>
+          </View>
         )}
         renderItem={({ item }) => (
           <RecordingCard
@@ -156,10 +130,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: 20,
     paddingVertical: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
   },
   headerTitle: {
     fontSize: 34,
@@ -167,26 +139,20 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     letterSpacing: 0.3,
   },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   listContent: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: 120,
+    paddingHorizontal: 20,
+    paddingTop: Spacing.contentTop,
+  },
+  sectionHeaderWrap: {
+    backgroundColor: Colors.background,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
   },
   sectionHeader: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: 'rgba(255,255,255,0.5)',
     letterSpacing: 0.5,
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.sm,
   },
   // Empty state
   emptyState: {

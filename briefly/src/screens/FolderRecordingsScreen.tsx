@@ -77,9 +77,11 @@ export function FolderRecordingsScreen() {
           sections={sections}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.content}
-          stickySectionHeadersEnabled={false}
+          stickySectionHeadersEnabled
           renderSectionHeader={({ section }) => (
-            <Text style={styles.sectionHeader}>{section.title}</Text>
+            <View style={styles.sectionHeaderWrap}>
+              <Text style={styles.sectionHeader}>{section.title}</Text>
+            </View>
           )}
           renderItem={({ item }) => (
             <RecordingCard
@@ -126,13 +128,16 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     paddingBottom: 40,
   },
+  sectionHeaderWrap: {
+    backgroundColor: Colors.background,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+  },
   sectionHeader: {
     fontSize: 13,
     fontWeight: '600',
     color: Colors.textSecondary,
     letterSpacing: 0.5,
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.sm,
   },
   emptyWrap: {
     flex: 1,

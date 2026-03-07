@@ -21,6 +21,7 @@ import { useRecordingStore } from '../store/useRecordingStore';
 import { useUserFolderStore } from '../store/useUserFolderStore';
 import { RecordingCard } from '../components/RecordingCard';
 import { RecordButton } from '../components/RecordButton';
+import { SearchIconButton } from '../components/SearchIconButton';
 import { Colors, Spacing } from '../utils/theme';
 import { RootStackParamList } from '../types';
 import { folderFlagsFor, resolveRecordingFolder } from '../utils/recordingFolder';
@@ -207,9 +208,7 @@ export function LibraryScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.pageTitle}>Library</Text>
-        <TouchableOpacity style={styles.searchIcon}>
-          <Ionicons name="search" size={20} color="rgba(255,255,255,0.7)" />
-        </TouchableOpacity>
+        <SearchIconButton />
       </View>
 
       {/* Filter tabs */}
@@ -440,9 +439,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
-  searchIcon: {
-    padding: 4,
-  },
   tabsScrollView: {
     flexGrow: 0,
   },
@@ -476,6 +472,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
+    paddingTop: Spacing.contentTop,
     paddingHorizontal: 20,
     paddingBottom: 100,
     justifyContent: 'flex-start',

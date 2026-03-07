@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { TranscriptionMode } from '../types';
+import { RecordingFolder, TranscriptionMode } from '../types';
 import { detectProvider, providerLabel } from '../utils';
 import {
   transcriptionModeDescription,
@@ -25,6 +25,8 @@ export function SettingsScreen() {
     setDefaultProcessingMode,
     defaultTranscriptionMode,
     setDefaultTranscriptionMode,
+    defaultRecordingFolder,
+    setDefaultRecordingFolder,
     cloudApiKey,
     setCloudApiKey,
   } = useSettingsStore();
@@ -33,6 +35,11 @@ export function SettingsScreen() {
   const isCloud = defaultProcessingMode === 'cloud';
   const detectedProvider = detectProvider(apiKeyInput);
   const transcriptionModes: TranscriptionMode[] = ['on-device', 'cloud', 'on-device-first'];
+  const recordingFolders: { id: RecordingFolder; label: string }[] = [
+    { id: 'unlisted', label: 'Unlisted' },
+    { id: 'favorites', label: 'Favorites' },
+    { id: 'archived', label: 'Archived' },
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -45,7 +52,7 @@ export function SettingsScreen() {
         {/* Transcription mode */}
         <Text style={styles.sectionLabel}>TRANSCRIPTION DEFAULT</Text>
         <Text style={styles.sectionDescription}>
-          Choose how each recording is transcribed by default. You can still override this per recording when you start or save.
+          Choose how each recording is transcribed by default. Override per recording from the Recording or Save screen.
         </Text>
         <View style={styles.card}>
           {transcriptionModes.map((mode, index) => {
@@ -67,6 +74,33 @@ export function SettingsScreen() {
                   </View>
                 </TouchableOpacity>
                 {index !== transcriptionModes.length - 1 && <View style={styles.divider} />}
+              </React.Fragment>
+            );
+          })}
+        </View>
+
+        {/* Default save folder */}
+        <Text style={styles.sectionLabel}>DEFAULT SAVE FOLDER</Text>
+        <Text style={styles.sectionDescription}>
+          New recordings from the Home screen are saved here. Override when recording from a specific folder.
+        </Text>
+        <View style={styles.card}>
+          {recordingFolders.map((f, index) => {
+            const selected = defaultRecordingFolder === f.id;
+            return (
+              <React.Fragment key={f.id}>
+                <TouchableOpacity
+                  style={styles.optionRow}
+                  onPress={() => setDefaultRecordingFolder(f.id)}
+                >
+                  <View style={[styles.radio, selected && styles.radioSelected]}>
+                    {selected && <View style={styles.radioDot} />}
+                  </View>
+                  <View style={styles.optionText}>
+                    <Text style={styles.optionTitle}>{f.label}</Text>
+                  </View>
+                </TouchableOpacity>
+                {index !== recordingFolders.length - 1 && <View style={styles.divider} />}
               </React.Fragment>
             );
           })}
