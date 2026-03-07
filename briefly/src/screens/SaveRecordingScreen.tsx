@@ -132,11 +132,11 @@ export function SaveRecordingScreen() {
 
           <View style={styles.processingRow}>
             <View>
-              <Text style={styles.detailLabel}>Processing Mode</Text>
+              <Text style={styles.detailLabel}>Summarization Mode</Text>
               <Text style={styles.processingSubtitle}>
                 {processingMode === 'on-device'
-                  ? 'Privacy-first local processing'
-                  : 'Cloud-powered analysis'}
+                  ? 'On-device — fully private'
+                  : 'Cloud AI — richer summaries'}
               </Text>
             </View>
             <TouchableOpacity onPress={toggleMode}>

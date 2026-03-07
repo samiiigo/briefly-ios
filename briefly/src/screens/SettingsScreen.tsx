@@ -47,14 +47,14 @@ export function SettingsScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
 
-        {/* AI Processing Engine */}
-        <Text style={styles.sectionLabel}>AI PROCESSING ENGINE</Text>
+        {/* AI Summarization Engine */}
+        <Text style={styles.sectionLabel}>SUMMARIZATION MODE</Text>
         <Text style={styles.sectionDescription}>
-          Briefly uses both local and cloud processing to offer the best transcription and meeting assistance while respecting your privacy.
+          Audio is always transcribed on-device for maximum privacy. Choose how Briefly generates your meeting summaries.
         </Text>
 
         <View style={styles.card}>
-          {/* On-Device Mode */}
+          {/* On-Device Summarization */}
           <TouchableOpacity
             style={styles.optionRow}
             onPress={() => setDefaultProcessingMode('on-device')}
@@ -63,16 +63,16 @@ export function SettingsScreen() {
               {!isCloud && <View style={styles.radioDot} />}
             </View>
             <View style={styles.optionText}>
-              <Text style={styles.optionTitle}>On-Device Mode</Text>
+              <Text style={styles.optionTitle}>On-Device</Text>
               <Text style={styles.optionSubtitle}>
-                All processing happens locally on your phone. Maximum privacy, but may consume more battery.
+                Summaries are generated locally using Apple Intelligence. Fully private, no internet required.
               </Text>
             </View>
           </TouchableOpacity>
 
           <View style={styles.divider} />
 
-          {/* Cloud Mode */}
+          {/* Cloud Summarization */}
           <TouchableOpacity
             style={styles.optionRow}
             onPress={() => setDefaultProcessingMode('cloud')}
@@ -82,13 +82,13 @@ export function SettingsScreen() {
             </View>
             <View style={styles.optionText}>
               <View style={styles.optionTitleRow}>
-                <Text style={styles.optionTitle}>Cloud Mode</Text>
+                <Text style={styles.optionTitle}>Cloud AI</Text>
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>RECOMMENDED</Text>
                 </View>
               </View>
               <Text style={styles.optionSubtitle}>
-                Uses advanced cloud AI for better accuracy and speed. Zero Data Retention (ZDR) policy strictly applies.
+                Uses your chosen cloud AI provider for richer summaries. Zero Data Retention (ZDR) policy applies.
               </Text>
             </View>
           </TouchableOpacity>

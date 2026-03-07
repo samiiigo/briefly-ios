@@ -12,15 +12,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AudioService } from '../services/AudioService';
-import { TranscriptionService } from '../services/TranscriptionService';
 import { WaveformVisualizer } from '../components/WaveformVisualizer';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
 import { RootStackParamList, TranscriptSegment } from '../types';
 import { useRecordingStore } from '../store/useRecordingStore';
-import { useSettingsStore } from '../store/useSettingsStore';
-
-// Cloud-mode fallback: how long between chunk transcriptions
-const CLOUD_CHUNK_MS = 15_000;
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -31,7 +26,6 @@ function generateSegmentId() {
 export function RecordingScreen() {
   const navigation = useNavigation<Nav>();
   const { setLiveTranscript } = useRecordingStore();
-  const { defaultProcessingMode } = useSettingsStore();
 
   const [elapsed, setElapsed] = useState(0);
   const elapsedRef = useRef(0);
@@ -43,7 +37,6 @@ export function RecordingScreen() {
   const [partialText, setPartialText] = useState('');
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const chunkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // For building preTranscript passed to SaveRecording
   const liveSegments = useRef<TranscriptSegment[]>([]);
@@ -51,9 +44,6 @@ export function RecordingScreen() {
   const prevFinalText = useRef('');
   const isStopped = useRef(false);
   const isPausedRef = useRef(false);
-
-  // Cloud-mode chunk transcripts (Android / no native module)
-  const chunkPreTranscripts = useRef<TranscriptSegment[]>([]);
 
   const useLiveTranscription = AudioService.supportsLiveTranscription;
 
@@ -74,37 +64,6 @@ export function RecordingScreen() {
       timerRef.current = null;
     }
   }, []);
-
-  // ─── Cloud chunk mechanism (Android fallback) ─────────────────────────────
-
-  const scheduleNextChunk = useCallback(() => {
-    if (defaultProcessingMode !== 'cloud') return;
-
-    chunkTimerRef.current = setTimeout(async () => {
-      if (isStopped.current || isPausedRef.current) {
-        if (!isStopped.current) scheduleNextChunk();
-        return;
-      }
-      try {
-        const result = await AudioService.stopRecording();
-        if (isStopped.current) return;
-        await AudioService.startRecording();
-        scheduleNextChunk();
-
-        TranscriptionService.transcribe(result.uri, 'cloud')
-          .then((segs) => {
-            if (isStopped.current) return;
-            chunkPreTranscripts.current.push(...segs);
-            const text = chunkPreTranscripts.current.map((s) => s.text).join(' ');
-            setFinalText(text);
-            setLiveTranscript(text);
-          })
-          .catch(() => {});
-      } catch {
-        // Recording already stopped by handleStop — no-op
-      }
-    }, CLOUD_CHUNK_MS);
-  }, [defaultProcessingMode]);
 
   // ─── Mount: start recording ───────────────────────────────────────────────
 
@@ -164,9 +123,8 @@ export function RecordingScreen() {
             },
           });
         } else {
-          // Android / no native module: use expo-av + optional cloud chunks
+          // No native module: record audio only, transcription happens after stop
           await AudioService.startRecording();
-          scheduleNextChunk();
         }
 
         setIsStarted(true);
@@ -182,7 +140,6 @@ export function RecordingScreen() {
 
     return () => {
       stopTimer();
-      if (chunkTimerRef.current) clearTimeout(chunkTimerRef.current);
     };
   }, []);
 
@@ -204,7 +161,6 @@ export function RecordingScreen() {
         await AudioService.pauseLiveTranscription();
       } else {
         await AudioService.pauseRecording();
-        if (chunkTimerRef.current) clearTimeout(chunkTimerRef.current);
       }
       stopTimer();
       setIsPaused(true);
@@ -216,7 +172,6 @@ export function RecordingScreen() {
 
   const handleStop = async () => {
     isStopped.current = true;
-    if (chunkTimerRef.current) clearTimeout(chunkTimerRef.current);
     stopTimer();
 
     let result;
@@ -228,8 +183,6 @@ export function RecordingScreen() {
         return;
       }
     } else {
-      // Small wait in case a cloud chunk stop/start is in flight
-      await new Promise((r) => setTimeout(r, 60));
       try {
         result = await AudioService.stopRecording();
       } catch {
@@ -240,9 +193,7 @@ export function RecordingScreen() {
       }
     }
 
-    const preTranscript = useLiveTranscription
-      ? liveSegments.current.length > 0 ? liveSegments.current : undefined
-      : chunkPreTranscripts.current.length > 0 ? chunkPreTranscripts.current : undefined;
+    const preTranscript = liveSegments.current.length > 0 ? liveSegments.current : undefined;
 
     navigation.replace('SaveRecording', {
       duration: result?.duration || elapsed,
@@ -262,7 +213,6 @@ export function RecordingScreen() {
         style: 'destructive',
         onPress: async () => {
           isStopped.current = true;
-          if (chunkTimerRef.current) clearTimeout(chunkTimerRef.current);
           stopTimer();
           if (useLiveTranscription) {
             await AudioService.stopLiveTranscription().catch(() => {});
@@ -286,9 +236,7 @@ export function RecordingScreen() {
 
   const livePreviewPlaceholder = useLiveTranscription
     ? 'Listening… speak naturally and your words will appear here instantly.'
-    : defaultProcessingMode === 'cloud'
-    ? 'Live transcript will appear here every ~15 seconds…'
-    : 'On-device mode — full transcript will be ready after you stop recording.';
+    : 'Transcription will run on-device after you stop recording.';
 
   // ─── Render ───────────────────────────────────────────────────────────────
 

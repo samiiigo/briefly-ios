@@ -51,8 +51,7 @@ export function SummarizingScreen() {
         // If live chunked transcription already ran, only transcribe the final chunk
         setStage('transcribing');
         const lastChunkSegments = await TranscriptionService.transcribe(
-          recording.filePath,
-          recording.processingMode
+          recording.filePath
         );
 
         if (isCancelled.current) return;
