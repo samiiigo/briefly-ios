@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  NativeModules,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,19 +15,19 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { ProcessingBadge } from '../components/ProcessingBadge';
-import { ProcessingMode, RootStackParamList } from '../types';
+import {
+  ProcessingMode,
+  RecordingFolder,
+  RootStackParamList,
+  TranscriptionMode,
+} from '../types';
 import { formatDuration, formatFileSize, generateId, generateTitle, ensureUniqueTitle } from '../utils';
+import {
+  transcriptionModeDescription,
+  transcriptionModeTitle,
+} from '../utils/transcriptionMode';
+import { folderFlagsFor } from '../utils/recordingFolder';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
-
-// On-device transcription requires the BrieflyTranscriber native module.
-// In Expo Go (no native module), force cloud mode.
-function getInitialMode(preferred: ProcessingMode): ProcessingMode {
-  if (preferred === 'on-device') {
-    const hasNativeModule = Platform.OS === 'ios' && !!NativeModules.BrieflyTranscriber;
-    if (!hasNativeModule) return 'cloud';
-  }
-  return preferred;
-}
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'SaveRecording'>;
@@ -38,14 +36,16 @@ export function SaveRecordingScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { duration, filePath, fileSize, preTranscript } = route.params;
+  const targetFolder: RecordingFolder = route.params.targetFolder ?? 'unlisted';
 
   const { addRecording, recordings } = useRecordingStore();
-  const { defaultProcessingMode } = useSettingsStore();
+  const { defaultProcessingMode, defaultTranscriptionMode } = useSettingsStore();
 
   const existingTitles = recordings.map((r) => r.title);
   const [title, setTitle] = useState(() => ensureUniqueTitle(generateTitle(), existingTitles));
-  const [processingMode, setProcessingMode] = useState<ProcessingMode>(
-    getInitialMode(defaultProcessingMode)
+  const [processingMode, setProcessingMode] = useState<ProcessingMode>(defaultProcessingMode);
+  const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>(
+    route.params.transcriptionMode ?? defaultTranscriptionMode
   );
   const [saving, setSaving] = useState(false);
 
@@ -63,7 +63,10 @@ export function SaveRecordingScreen() {
       duration,
       filePath,
       fileSize,
+      transcriptionMode,
       processingMode,
+      folder: targetFolder,
+      ...folderFlagsFor(targetFolder),
       status: 'transcribing' as const,
       transcript: preTranscript, // pre-built from live chunks (cloud mode)
     };
@@ -85,6 +88,22 @@ export function SaveRecordingScreen() {
 
   const toggleMode = () => {
     setProcessingMode((m) => (m === 'on-device' ? 'cloud' : 'on-device'));
+  };
+
+  const chooseTranscriptionMode = () => {
+    Alert.alert(
+      'Transcription mode for this recording',
+      transcriptionModeDescription(transcriptionMode),
+      [
+        { text: 'Always on-device', onPress: () => setTranscriptionMode('on-device') },
+        { text: 'Always cloud', onPress: () => setTranscriptionMode('cloud') },
+        {
+          text: 'On-device first, then cloud fallback',
+          onPress: () => setTranscriptionMode('on-device-first'),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   return (
@@ -127,6 +146,33 @@ export function SaveRecordingScreen() {
             <Text style={styles.detailLabel}>File Size</Text>
             <Text style={styles.detailValue}>{formatFileSize(fileSize)}</Text>
           </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.processingRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.detailLabel}>Folder</Text>
+              <Text style={styles.processingSubtitle}>
+                {targetFolder === 'favorites'
+                  ? 'Favorites'
+                  : targetFolder === 'archived'
+                    ? 'Archived'
+                    : 'Unlisted'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity style={styles.processingRow} onPress={chooseTranscriptionMode}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.detailLabel}>Transcription Mode</Text>
+              <Text style={styles.processingSubtitle}>
+                {transcriptionModeTitle(transcriptionMode)}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+          </TouchableOpacity>
 
           <View style={styles.divider} />
 

@@ -9,15 +9,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AudioService } from '../services/AudioService';
 import { WaveformVisualizer } from '../components/WaveformVisualizer';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
-import { RootStackParamList, TranscriptSegment } from '../types';
+import { RootStackParamList, TranscriptSegment, TranscriptionMode } from '../types';
 import { useRecordingStore } from '../store/useRecordingStore';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { transcriptionModeBadge, transcriptionModeDescription } from '../utils/transcriptionMode';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Route = RouteProp<RootStackParamList, 'Recording'>;
 
 function generateSegmentId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -25,12 +28,17 @@ function generateSegmentId() {
 
 export function RecordingScreen() {
   const navigation = useNavigation<Nav>();
+  const route = useRoute<Route>();
   const { setLiveTranscript } = useRecordingStore();
+  const { defaultTranscriptionMode } = useSettingsStore();
 
   const [elapsed, setElapsed] = useState(0);
   const elapsedRef = useRef(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
+  const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>(
+    route.params?.transcriptionModeOverride ?? defaultTranscriptionMode
+  );
 
   // Live transcript display state
   const [finalText, setFinalText] = useState('');
@@ -141,6 +149,8 @@ export function RecordingScreen() {
     return () => {
       stopTimer();
     };
+    // Intentional: this flow runs exactly once when entering Recording screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─── Pause / Resume ───────────────────────────────────────────────────────
@@ -203,6 +213,8 @@ export function RecordingScreen() {
       filePath: result?.uri ?? '',
       fileSize: result?.fileSize ?? 0,
       preTranscript,
+      transcriptionMode,
+      targetFolder: route.params?.targetFolder,
     });
   };
 
@@ -239,7 +251,27 @@ export function RecordingScreen() {
 
   const livePreviewPlaceholder = useLiveTranscription
     ? 'Listening… speak naturally and your words will appear here instantly.'
-    : 'Transcription will run on-device after you stop recording.';
+    : transcriptionMode === 'cloud'
+      ? 'Transcription will run in the cloud after you stop recording.'
+      : transcriptionMode === 'on-device-first'
+        ? 'Transcription will try on-device first, then fall back to cloud if needed.'
+        : 'Transcription will run on-device after you stop recording.';
+
+  const handleChooseTranscriptionMode = () => {
+    Alert.alert(
+      'Transcription for this recording',
+      transcriptionModeDescription(transcriptionMode),
+      [
+        { text: 'Always on-device', onPress: () => setTranscriptionMode('on-device') },
+        { text: 'Always cloud', onPress: () => setTranscriptionMode('cloud') },
+        {
+          text: 'On-device first, then cloud fallback',
+          onPress: () => setTranscriptionMode('on-device-first'),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -259,7 +291,7 @@ export function RecordingScreen() {
             </Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.headerButton}>
+        <TouchableOpacity style={styles.headerButton} onPress={handleChooseTranscriptionMode}>
           <Ionicons name="ellipsis-vertical" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
       </View>
@@ -294,11 +326,9 @@ export function RecordingScreen() {
         <View style={styles.livePreviewHeader}>
           <Ionicons name="document-text" size={14} color={Colors.primary} />
           <Text style={styles.livePreviewLabel}>Live Preview</Text>
-          {useLiveTranscription && (
-            <View style={styles.onDevicePill}>
-              <Text style={styles.onDevicePillText}>ON-DEVICE</Text>
-            </View>
-          )}
+          <View style={styles.onDevicePill}>
+            <Text style={styles.onDevicePillText}>{transcriptionModeBadge(transcriptionMode)}</Text>
+          </View>
         </View>
         <ScrollView style={styles.livePreviewScroll} showsVerticalScrollIndicator={false}>
           {showLiveText ? (

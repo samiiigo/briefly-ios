@@ -5,13 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecordingStore } from '../store/useRecordingStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 import { TranscriptionService } from '../services/TranscriptionService';
 import { SummarizationService } from '../services/SummarizationService';
 import { RootStackParamList } from '../types';
@@ -28,15 +28,18 @@ export function SummarizingScreen() {
   const { recordingId } = route.params;
 
   const { getRecordingById, updateRecording } = useRecordingStore();
+  const { defaultTranscriptionMode } = useSettingsStore();
   const recording = getRecordingById(recordingId);
 
   const [stage, setStage] = useState<Stage>('transcribing');
   const [progress] = useState(new Animated.Value(0));
   const [errorMessage, setErrorMessage] = useState('');
   const isCancelled = useRef(false);
+  const hasStarted = useRef(false);
 
   useEffect(() => {
-    if (!recording) return;
+    if (!recording || hasStarted.current) return;
+    hasStarted.current = true;
 
     // Animate progress bar
     Animated.timing(progress, {
@@ -51,7 +54,9 @@ export function SummarizingScreen() {
         // If live chunked transcription already ran, only transcribe the final chunk
         setStage('transcribing');
         const lastChunkSegments = await TranscriptionService.transcribe(
-          recording.filePath
+          recording.filePath,
+          undefined,
+          recording.transcriptionMode ?? defaultTranscriptionMode
         );
 
         if (isCancelled.current) return;
@@ -110,7 +115,7 @@ export function SummarizingScreen() {
     return () => {
       isCancelled.current = true;
     };
-  }, []);
+  }, [defaultTranscriptionMode, navigation, progress, recording, recordingId, updateRecording]);
 
   const handleRunLocally = async () => {
     if (!recording) return;
@@ -179,9 +184,11 @@ export function SummarizingScreen() {
           <View style={styles.modeBadge}>
             <Ionicons name="lock-closed" size={12} color={Colors.green} />
             <Text style={styles.modeBadgeText}>
-              {recording.processingMode === 'cloud'
-                ? 'CLOUD MODE — ZERO DATA RETENTION'
-                : 'ON-DEVICE — FULLY PRIVATE'}
+              {(recording.transcriptionMode ?? defaultTranscriptionMode) === 'cloud'
+                ? 'TRANSCRIPTION: CLOUD'
+                : (recording.transcriptionMode ?? defaultTranscriptionMode) === 'on-device'
+                  ? 'TRANSCRIPTION: ON-DEVICE'
+                  : 'TRANSCRIPTION: ON-DEVICE FIRST'}
             </Text>
           </View>
         )}

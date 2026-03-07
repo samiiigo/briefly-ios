@@ -11,13 +11,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { TranscriptionMode } from '../types';
 import { detectProvider, providerLabel } from '../utils';
-import { Colors, Spacing, BorderRadius } from '../utils/theme';
+import {
+  transcriptionModeDescription,
+  transcriptionModeTitle,
+} from '../utils/transcriptionMode';
+import { Colors, Spacing } from '../utils/theme';
 
 export function SettingsScreen() {
   const {
     defaultProcessingMode,
     setDefaultProcessingMode,
+    defaultTranscriptionMode,
+    setDefaultTranscriptionMode,
     cloudApiKey,
     setCloudApiKey,
   } = useSettingsStore();
@@ -25,6 +32,7 @@ export function SettingsScreen() {
   const [apiKeyInput, setApiKeyInput] = useState(cloudApiKey);
   const isCloud = defaultProcessingMode === 'cloud';
   const detectedProvider = detectProvider(apiKeyInput);
+  const transcriptionModes: TranscriptionMode[] = ['on-device', 'cloud', 'on-device-first'];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -34,11 +42,40 @@ export function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Transcription mode */}
+        <Text style={styles.sectionLabel}>TRANSCRIPTION DEFAULT</Text>
+        <Text style={styles.sectionDescription}>
+          Choose how each recording is transcribed by default. You can still override this per recording when you start or save.
+        </Text>
+        <View style={styles.card}>
+          {transcriptionModes.map((mode, index) => {
+            const selected = defaultTranscriptionMode === mode;
+            return (
+              <React.Fragment key={mode}>
+                <TouchableOpacity
+                  style={styles.optionRow}
+                  onPress={() => setDefaultTranscriptionMode(mode)}
+                >
+                  <View style={[styles.radio, selected && styles.radioSelected]}>
+                    {selected && <View style={styles.radioDot} />}
+                  </View>
+                  <View style={styles.optionText}>
+                    <Text style={styles.optionTitle}>{transcriptionModeTitle(mode)}</Text>
+                    <Text style={styles.optionSubtitle}>
+                      {transcriptionModeDescription(mode)}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                {index !== transcriptionModes.length - 1 && <View style={styles.divider} />}
+              </React.Fragment>
+            );
+          })}
+        </View>
 
         {/* AI Summarization Engine */}
         <Text style={styles.sectionLabel}>SUMMARIZATION MODE</Text>
         <Text style={styles.sectionDescription}>
-          Audio is always transcribed on-device for maximum privacy. Choose how Briefly generates your meeting summaries.
+          Choose how Briefly generates your final summary after transcription.
         </Text>
 
         <View style={styles.card}>

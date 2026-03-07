@@ -11,8 +11,9 @@
 
 import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
-import { TranscriptSegment } from '../types';
+import { TranscriptSegment, TranscriptionMode } from '../types';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { resolveTranscriptionRoute } from './transcriptionRouting';
 
 const { BrieflyTranscriber } = NativeModules;
 
@@ -30,15 +31,8 @@ async function transcribeOnDevice(
     return transcribeWithNativeModule(audioUri, onSegment);
   }
 
-  // Native module not available (Expo Go) — fall back to cloud if a key is set.
-  const { cloudApiKey } = useSettingsStore.getState();
-  if (cloudApiKey) {
-    return transcribeCloud(audioUri, onSegment);
-  }
-
   throw new Error(
-    'On-device transcription requires a development build.\n\n' +
-    'Add a cloud API key in Settings to transcribe in Expo Go.'
+    'On-device transcription requires a development build with native modules.'
   );
 }
 
@@ -262,8 +256,29 @@ async function transcribeWithGemini(
 export const TranscriptionService = {
   async transcribe(
     audioUri: string,
-    onSegment?: (segment: TranscriptSegment) => void
+    onSegment?: (segment: TranscriptSegment) => void,
+    mode: TranscriptionMode = 'on-device-first'
   ): Promise<TranscriptSegment[]> {
-    return transcribeOnDevice(audioUri, onSegment);
+    const route = resolveTranscriptionRoute(mode);
+    if (route === 'cloud') {
+      return transcribeCloud(audioUri, onSegment);
+    }
+
+    if (route === 'on-device') {
+      return transcribeOnDevice(audioUri, onSegment);
+    }
+
+    try {
+      return await transcribeOnDevice(audioUri, onSegment);
+    } catch (onDeviceError: any) {
+      const { cloudApiKey } = useSettingsStore.getState();
+      if (!cloudApiKey) {
+        throw new Error(
+          `${onDeviceError?.message ?? 'On-device transcription failed.'}\n\n` +
+          'Cloud fallback is configured for this recording, but no cloud API key is set in Settings.'
+        );
+      }
+      return transcribeCloud(audioUri, onSegment);
+    }
   },
 };

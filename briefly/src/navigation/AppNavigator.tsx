@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, View, StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -15,7 +15,7 @@ import { SummarizingScreen } from '../screens/SummarizingScreen';
 import { TranscriptScreen } from '../screens/TranscriptScreen';
 
 import { RootStackParamList, MainTabParamList } from '../types';
-import { Colors, BorderRadius } from '../utils/theme';
+import { Colors } from '../utils/theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();

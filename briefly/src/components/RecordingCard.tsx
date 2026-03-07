@@ -11,7 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '../types';
 import { ProcessingBadge } from './ProcessingBadge';
 import { formatDuration, formatDate } from '../utils';
-import { Colors, BorderRadius, Spacing } from '../utils/theme';
+import { resolveRecordingFolder } from '../utils/recordingFolder';
+import { Colors, BorderRadius } from '../utils/theme';
 
 interface Props {
   recording: Recording;
@@ -22,6 +23,16 @@ interface Props {
 
 export function RecordingCard({ recording, onPress, onDelete, onRename }: Props) {
   const isFailed = recording.status === 'error';
+  const folder = resolveRecordingFolder(recording);
+  const folderLabel =
+    folder === 'archived' ? 'ARCHIVED' : folder === 'favorites' ? 'FAVORITE' : 'UNLISTED';
+
+  const folderBadgeStyle =
+    folderLabel === 'ARCHIVED'
+      ? styles.folderArchived
+      : folderLabel === 'FAVORITE'
+        ? styles.folderFavorite
+        : styles.folderUnlisted;
 
   const promptRename = () => {
     if (!onRename) return;
@@ -66,6 +77,10 @@ export function RecordingCard({ recording, onPress, onDelete, onRename }: Props)
       onLongPress={handleLongPress}
       activeOpacity={0.7}
     >
+      <View style={[styles.folderBadge, folderBadgeStyle]}>
+        <Text style={styles.folderBadgeText}>{folderLabel}</Text>
+      </View>
+
       <View style={[styles.iconContainer, isFailed && styles.iconContainerFailed]}>
         <Ionicons
           name={isFailed ? 'warning' : 'musical-notes'}
@@ -94,6 +109,7 @@ export function RecordingCard({ recording, onPress, onDelete, onRename }: Props)
 
 const styles = StyleSheet.create({
   card: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(28,28,30,0.6)',
@@ -127,6 +143,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'rgba(255,255,255,0.9)',
     marginBottom: 3,
+    paddingRight: 90,
   },
   date: {
     fontSize: 13,
@@ -146,5 +163,32 @@ const styles = StyleSheet.create({
   duration: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.5)',
+  },
+  folderBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  folderUnlisted: {
+    backgroundColor: 'rgba(10,132,255,0.16)',
+    borderColor: 'rgba(10,132,255,0.35)',
+  },
+  folderFavorite: {
+    backgroundColor: 'rgba(255,159,10,0.16)',
+    borderColor: 'rgba(255,159,10,0.4)',
+  },
+  folderArchived: {
+    backgroundColor: 'rgba(191,90,242,0.18)',
+    borderColor: 'rgba(191,90,242,0.45)',
+  },
+  folderBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    color: '#FFFFFF',
   },
 });

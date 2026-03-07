@@ -1,11 +1,11 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   SectionList,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,10 +14,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { AudioService } from '../services/AudioService';
 import { RecordingCard } from '../components/RecordingCard';
-import { Recording } from '../types';
+import { Recording, RootStackParamList } from '../types';
 import { formatGroupLabel, ensureUniqueTitle } from '../utils';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
-import { RootStackParamList } from '../types';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { transcriptionModeTitle } from '../utils/transcriptionMode';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -34,7 +35,11 @@ function groupRecordings(recordings: Recording[]) {
 
 export function HomeScreen() {
   const navigation = useNavigation<Nav>();
-  const { recordings, loadRecordings, deleteRecording, updateRecording } = useRecordingStore();
+  const recordings = useRecordingStore((s) => s.recordings);
+  const loadRecordings = useRecordingStore((s) => s.loadRecordings);
+  const deleteRecording = useRecordingStore((s) => s.deleteRecording);
+  const updateRecording = useRecordingStore((s) => s.updateRecording);
+  const defaultTranscriptionMode = useSettingsStore((s) => s.defaultTranscriptionMode);
 
   const handleRename = useCallback((recording: Recording, newTitle: string) => {
     const existingTitles = recordings.filter((r) => r.id !== recording.id).map((r) => r.title);
@@ -43,15 +48,38 @@ export function HomeScreen() {
 
   useEffect(() => {
     loadRecordings();
-  }, []);
+  }, [loadRecordings]);
 
   const handleStartRecording = useCallback(async () => {
     const granted = await AudioService.requestPermissions();
     if (!granted) return;
-    navigation.navigate('Recording');
-  }, [navigation]);
+    Alert.alert(
+      'Transcription for this recording',
+      'Use your default, or override just this recording.',
+      [
+        {
+          text: `Use default (${transcriptionModeTitle(defaultTranscriptionMode)})`,
+          onPress: () => navigation.navigate('Recording'),
+        },
+        {
+          text: 'Always on-device',
+          onPress: () => navigation.navigate('Recording', { transcriptionModeOverride: 'on-device' }),
+        },
+        {
+          text: 'Always cloud',
+          onPress: () => navigation.navigate('Recording', { transcriptionModeOverride: 'cloud' }),
+        },
+        {
+          text: 'On-device first, then cloud fallback',
+          onPress: () =>
+            navigation.navigate('Recording', { transcriptionModeOverride: 'on-device-first' }),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  }, [defaultTranscriptionMode, navigation]);
 
-  const sections = groupRecordings(recordings);
+  const sections = useMemo(() => groupRecordings(recordings), [recordings]);
 
   if (recordings.length === 0) {
     return (

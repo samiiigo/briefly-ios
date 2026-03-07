@@ -1,14 +1,16 @@
 import { create } from 'zustand';
-import { Recording, RecordingStatus, TranscriptSegment, KeyInsight, ProcessingMode } from '../types';
+import { Recording } from '../types';
 import { StorageService } from '../services/StorageService';
 
 interface RecordingStore {
   recordings: Recording[];
   activeRecordingId: string | null;
   liveTranscript: string;
+  hasLoaded: boolean;
+  isLoading: boolean;
 
   // Actions
-  loadRecordings: () => Promise<void>;
+  loadRecordings: (force?: boolean) => Promise<void>;
   addRecording: (recording: Recording) => Promise<void>;
   updateRecording: (id: string, updates: Partial<Recording>) => Promise<void>;
   deleteRecording: (id: string) => Promise<void>;
@@ -21,10 +23,27 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   recordings: [],
   activeRecordingId: null,
   liveTranscript: '',
+  hasLoaded: false,
+  isLoading: false,
 
-  loadRecordings: async () => {
-    const recordings = await StorageService.loadRecordings();
-    set({ recordings });
+  loadRecordings: async (force = false) => {
+    const { hasLoaded, isLoading } = get();
+    if (!force && (hasLoaded || isLoading)) {
+      return;
+    }
+    set({ isLoading: true });
+    const start = Date.now();
+    try {
+      const recordings = await StorageService.loadRecordings();
+      if (__DEV__) {
+        console.debug(
+          `[perf] loadRecordings: ${Date.now() - start}ms (${recordings.length} recordings)`
+        );
+      }
+      set({ recordings, hasLoaded: true, isLoading: false });
+    } catch {
+      set({ isLoading: false });
+    }
   },
 
   addRecording: async (recording) => {

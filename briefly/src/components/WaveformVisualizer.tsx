@@ -64,7 +64,7 @@ export function WaveformVisualizer({ isActive, barCount = 20 }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [isActive]);
+  }, [animations, isActive]);
 
   return (
     <View style={styles.container}>

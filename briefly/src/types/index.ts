@@ -1,4 +1,6 @@
 export type ProcessingMode = 'on-device' | 'cloud';
+export type TranscriptionMode = 'on-device' | 'cloud' | 'on-device-first';
+export type RecordingFolder = 'unlisted' | 'favorites' | 'archived';
 
 export type RecordingStatus =
   | 'idle'
@@ -32,7 +34,11 @@ export interface Recording {
   duration: number; // seconds
   filePath: string;
   fileSize: number; // bytes
+  transcriptionMode?: TranscriptionMode;
   processingMode: ProcessingMode;
+  folder?: RecordingFolder;
+  isFavorite?: boolean;
+  isArchived?: boolean;
   status: RecordingStatus;
   transcript?: TranscriptSegment[];
   summary?: string;
@@ -42,12 +48,19 @@ export interface Recording {
 
 export type RootStackParamList = {
   Main: undefined;
-  Recording: undefined;
+  Recording:
+    | {
+        transcriptionModeOverride?: TranscriptionMode;
+        targetFolder?: RecordingFolder;
+      }
+    | undefined;
   SaveRecording: {
     duration: number;
     filePath: string;
     fileSize: number;
     preTranscript?: TranscriptSegment[];
+    transcriptionMode?: TranscriptionMode;
+    targetFolder?: RecordingFolder;
   };
   Summarizing: { recordingId: string };
   Transcript: { recordingId: string };
