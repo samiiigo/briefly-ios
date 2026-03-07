@@ -108,9 +108,7 @@ export function HomeScreen() {
       />
 
       <TouchableOpacity style={styles.fab} onPress={handleStartRecording}>
-        <View style={styles.fabInner}>
-          <View style={styles.fabDot} />
-        </View>
+        <Ionicons name="mic" size={28} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -173,19 +171,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  fabInner: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 3,
-    backgroundColor: '#fff',
-  },
-
   // Empty state
   emptyState: {
     flex: 1,

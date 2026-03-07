@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  GestureResponderEvent,
+  LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,6 +34,7 @@ export function TranscriptScreen() {
   const [playbackDur, setPlaybackDur] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
+  const trackWidth = useRef(0);
 
   const cycleRate = useCallback(async () => {
     const rates = [1.0, 1.5, 2.0];
@@ -77,6 +80,17 @@ export function TranscriptScreen() {
       setPlaybackPos(newPos);
     },
     [playbackPos, playbackDur]
+  );
+
+  const handleProgressTap = useCallback(
+    async (e: GestureResponderEvent) => {
+      if (!playbackDur || trackWidth.current === 0) return;
+      const ratio = Math.max(0, Math.min(1, e.nativeEvent.locationX / trackWidth.current));
+      const newPos = ratio * playbackDur;
+      await AudioService.seekTo(newPos);
+      setPlaybackPos(newPos);
+    },
+    [playbackDur]
   );
 
   if (!recording) {
@@ -147,10 +161,15 @@ export function TranscriptScreen() {
       {/* Playback bar */}
       <View style={styles.playbackBar}>
         {/* Progress */}
-        <View style={styles.progressTrack}>
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={handleProgressTap}
+          onLayout={(e: LayoutChangeEvent) => { trackWidth.current = e.nativeEvent.layout.width; }}
+          style={styles.progressTrack}
+        >
           <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
           <View style={[styles.progressThumb, { left: `${progress * 100}%` }]} />
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.timeRow}>
           <Text style={styles.timeText}>{formatDuration(playbackPos)}</Text>

@@ -25,7 +25,7 @@ type Route = RouteProp<RootStackParamList, 'SaveRecording'>;
 export function SaveRecordingScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { duration, filePath, fileSize } = route.params;
+  const { duration, filePath, fileSize, preTranscript } = route.params;
 
   const { addRecording } = useRecordingStore();
   const { defaultProcessingMode } = useSettingsStore();
@@ -48,6 +48,7 @@ export function SaveRecordingScreen() {
       fileSize,
       processingMode,
       status: 'transcribing' as const,
+      transcript: preTranscript, // pre-built from live chunks (cloud mode)
     };
 
     await addRecording(recording);

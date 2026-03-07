@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,8 +17,11 @@ export function SettingsScreen() {
   const {
     defaultProcessingMode,
     setDefaultProcessingMode,
+    cloudApiKey,
+    setCloudApiKey,
   } = useSettingsStore();
 
+  const [apiKeyInput, setApiKeyInput] = useState(cloudApiKey);
   const isCloud = defaultProcessingMode === 'cloud';
 
   return (
@@ -75,6 +79,37 @@ export function SettingsScreen() {
             </View>
           </TouchableOpacity>
         </View>
+
+        {/* Cloud API Key */}
+        {isCloud && (
+          <>
+            <Text style={styles.sectionLabel}>CLOUD API KEY</Text>
+            <Text style={styles.sectionDescription}>
+              Required for Cloud Mode. Your key is stored locally and never shared.
+            </Text>
+            <View style={styles.card}>
+              <View style={styles.apiKeyRow}>
+                <Ionicons name="key-outline" size={18} color={Colors.textSecondary} style={styles.rowIcon} />
+                <TextInput
+                  style={styles.apiKeyInput}
+                  value={apiKeyInput}
+                  onChangeText={setApiKeyInput}
+                  onBlur={() => setCloudApiKey(apiKeyInput)}
+                  placeholder="sk-..."
+                  placeholderTextColor="rgba(255,255,255,0.25)"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {apiKeyInput.length > 0 && (
+                  <TouchableOpacity onPress={() => { setApiKeyInput(''); setCloudApiKey(''); }}>
+                    <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.3)" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </>
+        )}
 
         {/* Storage Management */}
         <Text style={styles.sectionLabel}>STORAGE MANAGEMENT</Text>
@@ -270,5 +305,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: 'rgba(255,255,255,0.4)',
     marginRight: 4,
+  },
+  apiKeyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  apiKeyInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#FFFFFF',
+    paddingVertical: 4,
   },
 });

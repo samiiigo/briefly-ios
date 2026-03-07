@@ -42,7 +42,8 @@
           "microphonePermission": "Briefly needs microphone access to record audio for transcription."
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-audio"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

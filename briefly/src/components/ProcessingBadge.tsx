@@ -16,7 +16,7 @@ export function ProcessingBadge({ mode, size = 'md' }: Props) {
   return (
     <View style={[styles.badge, isCloud ? styles.cloudBadge : styles.onDeviceBadge]}>
       <Ionicons
-        name={isCloud ? 'cloud' : 'lock-closed'}
+        name={isCloud ? 'cloud' : 'shield-checkmark'}
         size={isSmall ? 10 : 12}
         color={isCloud ? Colors.primary : Colors.onDeviceText}
         style={styles.icon}

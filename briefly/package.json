@@ -24,6 +24,7 @@
     "@react-navigation/stack": "^7.8.4",
     "@shopify/flash-list": "^2.0.2",
     "expo": "^54",
+    "expo-audio": "~1.1.1",
     "expo-av": "^16.0.8",
     "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.13",

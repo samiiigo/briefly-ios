@@ -43,7 +43,12 @@ export interface Recording {
 export type RootStackParamList = {
   Main: undefined;
   Recording: undefined;
-  SaveRecording: { duration: number; filePath: string; fileSize: number };
+  SaveRecording: {
+    duration: number;
+    filePath: string;
+    fileSize: number;
+    preTranscript?: TranscriptSegment[];
+  };
   Summarizing: { recordingId: string };
   Transcript: { recordingId: string };
 };

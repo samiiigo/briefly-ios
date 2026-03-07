@@ -1,6 +1,9 @@
+// NOTE: expo-av is deprecated in SDK 54 but still works.
+// Migrate to expo-audio when building a native development build (expo run:ios).
+// expo-audio requires a native build and will NOT work in Expo Go.
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
-import { Platform } from 'react-native';
+import { getInfoAsync, deleteAsync, copyAsync, documentDirectory } from 'expo-file-system/legacy';
+import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
 
 export interface AudioRecordingResult {
   uri: string;
@@ -8,10 +11,76 @@ export interface AudioRecordingResult {
   fileSize: number;
 }
 
+interface LiveTranscriptionCallbacks {
+  onPartial: (text: string) => void;
+  onFinal: (text: string) => void;
+}
+
 class AudioServiceClass {
   private recording: Audio.Recording | null = null;
   private sound: Audio.Sound | null = null;
   private startTime: number = 0;
+
+  // Live transcription event subscriptions (iOS native module)
+  private partialSub: any = null;
+  private finalSub: any = null;
+
+  // ─── Capability check ─────────────────────────────────────────────────────
+
+  /**
+   * True on iOS when the BrieflyTranscriber native module is compiled in
+   * (i.e. running a development build, NOT Expo Go).
+   * In this mode AVAudioEngine handles recording + real-time transcription together.
+   */
+  get supportsLiveTranscription(): boolean {
+    return Platform.OS === 'ios' && !!NativeModules.BrieflyTranscriber;
+  }
+
+  // ─── Live transcription (iOS native module, development build only) ────────
+
+  async startLiveTranscription(callbacks: LiveTranscriptionCallbacks): Promise<void> {
+    const { BrieflyTranscriber } = NativeModules;
+    const emitter = new NativeEventEmitter(BrieflyTranscriber);
+
+    this.partialSub = emitter.addListener('onPartialTranscript', (e: { text: string }) => {
+      callbacks.onPartial(e.text);
+    });
+
+    this.finalSub = emitter.addListener('onFinalTranscript', (e: { text: string }) => {
+      callbacks.onFinal(e.text);
+    });
+
+    await BrieflyTranscriber.startLiveTranscription();
+    this.startTime = Date.now();
+  }
+
+  async pauseLiveTranscription(): Promise<void> {
+    await NativeModules.BrieflyTranscriber.pauseLiveTranscription();
+  }
+
+  async resumeLiveTranscription(): Promise<void> {
+    await NativeModules.BrieflyTranscriber.resumeLiveTranscription();
+  }
+
+  async stopLiveTranscription(): Promise<AudioRecordingResult> {
+    this.partialSub?.remove();
+    this.finalSub?.remove();
+    this.partialSub = null;
+    this.finalSub = null;
+
+    const result: { uri: string; duration: number } =
+      await NativeModules.BrieflyTranscriber.stopLiveTranscription();
+
+    let fileSize = 0;
+    try {
+      const info = await getInfoAsync(result.uri);
+      fileSize = info.exists ? ((info as any).size ?? 0) : 0;
+    } catch {}
+
+    return { uri: result.uri, duration: result.duration, fileSize };
+  }
+
+  // ─── Standard recording (expo-av, Expo Go compatible) ─────────────────────
 
   async requestPermissions(): Promise<boolean> {
     const { granted } = await Audio.requestPermissionsAsync();
@@ -24,9 +93,10 @@ class AudioServiceClass {
       playsInSilentModeIOS: true,
     });
 
-    const { recording } = await Audio.Recording.createAsync(
-      Audio.RecordingOptionsPresets.HIGH_QUALITY
-    );
+    const { recording } = await Audio.Recording.createAsync({
+      ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      isMeteringEnabled: true,
+    });
 
     this.recording = recording;
     this.startTime = Date.now();
@@ -49,28 +119,43 @@ class AudioServiceClass {
       throw new Error('No active recording');
     }
 
+    // Read duration BEFORE stopping — getStatusAsync() may fail after unload
+    let durationMillis = 0;
+    try {
+      const status = await this.recording.getStatusAsync();
+      durationMillis = status.durationMillis ?? 0;
+    } catch {}
+
     await this.recording.stopAndUnloadAsync();
-    const status = await this.recording.getStatusAsync();
     const uri = this.recording.getURI()!;
 
-    const fileInfo = await FileSystem.getInfoAsync(uri);
-    const fileSize = fileInfo.exists ? ((fileInfo as any).size ?? 0) : 0;
-    const duration = status.durationMillis ? status.durationMillis / 1000 : 0;
+    let fileSize = 0;
+    try {
+      const info = await getInfoAsync(uri);
+      fileSize = info.exists ? ((info as any).size ?? 0) : 0;
+    } catch {}
 
+    const duration = durationMillis / 1000;
     this.recording = null;
 
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-    });
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
 
     return { uri, duration, fileSize };
   }
 
-  async getRecordingDuration(): Promise<number> {
+  async getMetering(): Promise<number> {
     if (!this.recording) return 0;
-    const status = await this.recording.getStatusAsync();
-    return status.durationMillis ? status.durationMillis / 1000 : 0;
+    try {
+      const status = await this.recording.getStatusAsync();
+      if (!status.isRecording || status.metering === undefined) return 0;
+      // dBFS: map -60..0 → 0..1  (speech peaks typically -30 to -6 dBFS)
+      return Math.max(0, Math.min(1, (status.metering + 60) / 60));
+    } catch {
+      return 0;
+    }
   }
+
+  // ─── Playback ─────────────────────────────────────────────────────────────
 
   async playRecording(
     uri: string,
@@ -101,21 +186,15 @@ class AudioServiceClass {
   }
 
   async pausePlayback(): Promise<void> {
-    if (this.sound) {
-      await this.sound.pauseAsync();
-    }
+    if (this.sound) await this.sound.pauseAsync();
   }
 
   async resumePlayback(): Promise<void> {
-    if (this.sound) {
-      await this.sound.playAsync();
-    }
+    if (this.sound) await this.sound.playAsync();
   }
 
   async seekTo(seconds: number): Promise<void> {
-    if (this.sound) {
-      await this.sound.setPositionAsync(seconds * 1000);
-    }
+    if (this.sound) await this.sound.setPositionAsync(seconds * 1000);
   }
 
   async stopPlayback(): Promise<void> {
@@ -127,22 +206,18 @@ class AudioServiceClass {
   }
 
   async setPlaybackSpeed(rate: number): Promise<void> {
-    if (this.sound) {
-      await this.sound.setRateAsync(rate, true);
-    }
+    if (this.sound) await this.sound.setRateAsync(rate, true);
   }
 
   async deleteFile(uri: string): Promise<void> {
     try {
-      await FileSystem.deleteAsync(uri, { idempotent: true });
-    } catch {
-      // ignore
-    }
+      await deleteAsync(uri, { idempotent: true });
+    } catch {}
   }
 
   async copyToDocuments(uri: string, filename: string): Promise<string> {
-    const dest = (FileSystem as any).documentDirectory + filename;
-    await FileSystem.copyAsync({ from: uri, to: dest });
+    const dest = documentDirectory + filename;
+    await copyAsync({ from: uri, to: dest });
     return dest;
   }
 }

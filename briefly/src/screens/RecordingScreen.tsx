@@ -5,37 +5,66 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AudioService } from '../services/AudioService';
+import { TranscriptionService } from '../services/TranscriptionService';
 import { WaveformVisualizer } from '../components/WaveformVisualizer';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
-import { formatDuration } from '../utils';
-import { RootStackParamList } from '../types';
+import { RootStackParamList, TranscriptSegment } from '../types';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 
+// Cloud-mode fallback: how long between chunk transcriptions
+const CLOUD_CHUNK_MS = 15_000;
+
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+function generateSegmentId() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
 
 export function RecordingScreen() {
   const navigation = useNavigation<Nav>();
-  const { liveTranscript, setLiveTranscript } = useRecordingStore();
+  const { setLiveTranscript } = useRecordingStore();
   const { defaultProcessingMode } = useSettingsStore();
 
   const [elapsed, setElapsed] = useState(0);
+  const elapsedRef = useRef(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
-  const [title, setTitle] = useState('New Recording');
+
+  // Live transcript display state
+  const [finalText, setFinalText] = useState('');
+  const [partialText, setPartialText] = useState('');
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chunkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // For building preTranscript passed to SaveRecording
+  const liveSegments = useRef<TranscriptSegment[]>([]);
+  // Accumulated final text (so each onFinal delta can be computed)
+  const prevFinalText = useRef('');
+  const isStopped = useRef(false);
+  const isPausedRef = useRef(false);
+
+  // Cloud-mode chunk transcripts (Android / no native module)
+  const chunkPreTranscripts = useRef<TranscriptSegment[]>([]);
+
+  const useLiveTranscription = AudioService.supportsLiveTranscription;
+
+  // ─── Timer ────────────────────────────────────────────────────────────────
 
   const startTimer = useCallback(() => {
     timerRef.current = setInterval(() => {
-      setElapsed((e) => e + 1);
+      setElapsed((e) => {
+        elapsedRef.current = e + 1;
+        return e + 1;
+      });
     }, 1000);
   }, []);
 
@@ -46,51 +75,222 @@ export function RecordingScreen() {
     }
   }, []);
 
+  // ─── Cloud chunk mechanism (Android fallback) ─────────────────────────────
+
+  const scheduleNextChunk = useCallback(() => {
+    if (defaultProcessingMode !== 'cloud') return;
+
+    chunkTimerRef.current = setTimeout(async () => {
+      if (isStopped.current || isPausedRef.current) {
+        if (!isStopped.current) scheduleNextChunk();
+        return;
+      }
+      try {
+        const result = await AudioService.stopRecording();
+        if (isStopped.current) return;
+        await AudioService.startRecording();
+        scheduleNextChunk();
+
+        TranscriptionService.transcribe(result.uri, 'cloud')
+          .then((segs) => {
+            if (isStopped.current) return;
+            chunkPreTranscripts.current.push(...segs);
+            const text = chunkPreTranscripts.current.map((s) => s.text).join(' ');
+            setFinalText(text);
+            setLiveTranscript(text);
+          })
+          .catch(() => {});
+      } catch {
+        // Recording already stopped by handleStop — no-op
+      }
+    }, CLOUD_CHUNK_MS);
+  }, [defaultProcessingMode]);
+
+  // ─── Mount: start recording ───────────────────────────────────────────────
+
   useEffect(() => {
+    setLiveTranscript('');
+    setFinalText('');
+    setPartialText('');
+    liveSegments.current = [];
+    prevFinalText.current = '';
+
     (async () => {
-      setLiveTranscript('');
-      await AudioService.startRecording();
-      setIsStarted(true);
-      startTimer();
+      try {
+        if (useLiveTranscription) {
+          // iOS: AVAudioEngine handles recording + real-time transcription together
+          await AudioService.startLiveTranscription({
+            onPartial: (text) => {
+              setPartialText(text);
+              setLiveTranscript(
+                prevFinalText.current
+                  ? prevFinalText.current + ' ' + text
+                  : text
+              );
+            },
+            onFinal: (text) => {
+              // SFSpeechRecognizer returns the full text for the current task segment.
+              // Compute the delta vs. the last known final to get just the new words.
+              const prev = prevFinalText.current;
+              const newWords = prev
+                ? text.startsWith(prev)
+                  ? text.slice(prev.length).trim()
+                  : text
+                : text;
+
+              if (newWords) {
+                const seg: TranscriptSegment = {
+                  id: generateSegmentId(),
+                  text: newWords,
+                  startTime: liveSegments.current.length > 0
+                    ? liveSegments.current[liveSegments.current.length - 1].endTime
+                    : 0,
+                  endTime: 0, // updated below
+                  isFinal: true,
+                };
+                // Approximate endTime from elapsed timer (use ref to avoid stale closure)
+                seg.endTime = elapsedRef.current;
+                liveSegments.current = [...liveSegments.current, seg];
+              }
+
+              // After each final, SFSpeechRecognizer starts fresh for the next segment,
+              // so reset prevFinalText to '' for the new task window.
+              prevFinalText.current = '';
+
+              const accumulated = liveSegments.current.map((s) => s.text).join(' ');
+              setFinalText(accumulated);
+              setPartialText('');
+              setLiveTranscript(accumulated);
+            },
+          });
+        } else {
+          // Android / no native module: use expo-av + optional cloud chunks
+          await AudioService.startRecording();
+          scheduleNextChunk();
+        }
+
+        setIsStarted(true);
+        startTimer();
+      } catch (err: any) {
+        Alert.alert(
+          'Microphone Error',
+          err?.message ?? 'Could not start recording. Check microphone permissions.',
+          [{ text: 'OK', onPress: () => navigation.navigate('Main') }]
+        );
+      }
     })();
 
     return () => {
       stopTimer();
+      if (chunkTimerRef.current) clearTimeout(chunkTimerRef.current);
     };
   }, []);
 
+  // ─── Pause / Resume ───────────────────────────────────────────────────────
+
   const handlePause = async () => {
     if (isPaused) {
-      await AudioService.resumeRecording();
+      if (useLiveTranscription) {
+        await AudioService.resumeLiveTranscription();
+      } else {
+        await AudioService.resumeRecording();
+        scheduleNextChunk();
+      }
       startTimer();
       setIsPaused(false);
+      isPausedRef.current = false;
     } else {
-      await AudioService.pauseRecording();
+      if (useLiveTranscription) {
+        await AudioService.pauseLiveTranscription();
+      } else {
+        await AudioService.pauseRecording();
+        if (chunkTimerRef.current) clearTimeout(chunkTimerRef.current);
+      }
       stopTimer();
       setIsPaused(true);
+      isPausedRef.current = true;
     }
   };
 
+  // ─── Stop ─────────────────────────────────────────────────────────────────
+
   const handleStop = async () => {
+    isStopped.current = true;
+    if (chunkTimerRef.current) clearTimeout(chunkTimerRef.current);
     stopTimer();
-    const result = await AudioService.stopRecording();
+
+    let result;
+    if (useLiveTranscription) {
+      try {
+        result = await AudioService.stopLiveTranscription();
+      } catch (err: any) {
+        Alert.alert('Error', err?.message ?? 'Could not stop recording.');
+        return;
+      }
+    } else {
+      // Small wait in case a cloud chunk stop/start is in flight
+      await new Promise((r) => setTimeout(r, 60));
+      try {
+        result = await AudioService.stopRecording();
+      } catch {
+        await new Promise((r) => setTimeout(r, 300));
+        try {
+          result = await AudioService.stopRecording();
+        } catch {}
+      }
+    }
+
+    const preTranscript = useLiveTranscription
+      ? liveSegments.current.length > 0 ? liveSegments.current : undefined
+      : chunkPreTranscripts.current.length > 0 ? chunkPreTranscripts.current : undefined;
+
     navigation.replace('SaveRecording', {
-      duration: result.duration || elapsed,
-      filePath: result.uri,
-      fileSize: result.fileSize,
+      duration: result?.duration || elapsed,
+      filePath: result?.uri ?? '',
+      fileSize: result?.fileSize ?? 0,
+      preTranscript,
     });
   };
 
-  const handleDiscard = async () => {
-    stopTimer();
-    await AudioService.stopRecording().catch(() => {});
-    setLiveTranscript('');
-    navigation.goBack();
+  // ─── Discard ──────────────────────────────────────────────────────────────
+
+  const handleDiscard = () => {
+    Alert.alert('Discard Recording', 'This recording will be deleted.', [
+      { text: 'Keep Recording', style: 'cancel' },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        onPress: async () => {
+          isStopped.current = true;
+          if (chunkTimerRef.current) clearTimeout(chunkTimerRef.current);
+          stopTimer();
+          if (useLiveTranscription) {
+            await AudioService.stopLiveTranscription().catch(() => {});
+          } else {
+            await AudioService.stopRecording().catch(() => {});
+          }
+          setLiveTranscript('');
+          navigation.navigate('Main');
+        },
+      },
+    ]);
   };
+
+  // ─── Derived display values ────────────────────────────────────────────────
 
   const hours = Math.floor(elapsed / 3600);
   const minutes = Math.floor((elapsed % 3600) / 60);
   const seconds = elapsed % 60;
+
+  const showLiveText = finalText || partialText;
+
+  const livePreviewPlaceholder = useLiveTranscription
+    ? 'Listening… speak naturally and your words will appear here instantly.'
+    : defaultProcessingMode === 'cloud'
+    ? 'Live transcript will appear here every ~15 seconds…'
+    : 'On-device mode — full transcript will be ready after you stop recording.';
+
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.container}>
@@ -100,7 +300,7 @@ export function RecordingScreen() {
           <Ionicons name="close" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{title}</Text>
+          <Text style={styles.headerTitle}>New Recording</Text>
           <View style={styles.recordingIndicator}>
             <View style={[styles.dot, isPaused && styles.dotPaused]} />
             <Text style={[styles.recordingText, isPaused && styles.pausedText]}>
@@ -143,14 +343,23 @@ export function RecordingScreen() {
         <View style={styles.livePreviewHeader}>
           <Ionicons name="document-text" size={14} color={Colors.primary} />
           <Text style={styles.livePreviewLabel}>Live Preview</Text>
+          {useLiveTranscription && (
+            <View style={styles.onDevicePill}>
+              <Text style={styles.onDevicePillText}>ON-DEVICE</Text>
+            </View>
+          )}
         </View>
         <ScrollView style={styles.livePreviewScroll} showsVerticalScrollIndicator={false}>
-          {liveTranscript ? (
-            <Text style={styles.liveTranscriptText}>{liveTranscript}</Text>
-          ) : (
-            <Text style={styles.liveTranscriptPlaceholder}>
-              Transcript will appear here as you speak...
+          {showLiveText ? (
+            <Text style={styles.liveTranscriptText}>
+              {finalText}
+              {finalText && partialText ? ' ' : ''}
+              {partialText ? (
+                <Text style={styles.partialText}>{partialText}</Text>
+              ) : null}
             </Text>
+          ) : (
+            <Text style={styles.liveTranscriptPlaceholder}>{livePreviewPlaceholder}</Text>
           )}
         </ScrollView>
       </View>
@@ -292,6 +501,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: Colors.primary,
+    flex: 1,
+  },
+  onDevicePill: {
+    backgroundColor: 'rgba(52,199,89,0.15)',
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  onDevicePillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.green,
+    letterSpacing: 0.5,
   },
   livePreviewScroll: {
     flex: 1,
@@ -300,6 +522,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.textPrimary,
     lineHeight: 22,
+  },
+  partialText: {
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
   },
   liveTranscriptPlaceholder: {
     fontSize: 15,

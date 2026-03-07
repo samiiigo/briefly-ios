@@ -18,8 +18,8 @@ export const Colors = {
   textSecondary: '#8E8E93',
   textTertiary: '#48484A',
 
-  onDeviceBadge: '#3A3A3C',
-  onDeviceText: '#AEAEB2',
+  onDeviceBadge: 'rgba(52, 199, 89, 0.15)',
+  onDeviceText: '#34C759',
   cloudBadge: '#0A2A5C',
   cloudText: '#007AFF',
 

@@ -48,13 +48,19 @@ export function SummarizingScreen() {
     (async () => {
       try {
         // Step 1: Transcribe
+        // If live chunked transcription already ran, only transcribe the final chunk
         setStage('transcribing');
-        const segments = await TranscriptionService.transcribe(
+        const lastChunkSegments = await TranscriptionService.transcribe(
           recording.filePath,
           recording.processingMode
         );
 
         if (isCancelled.current) return;
+
+        // Combine pre-transcribed chunks (from live preview) with the final chunk
+        const segments = recording.transcript && recording.transcript.length > 0
+          ? [...recording.transcript, ...lastChunkSegments]
+          : lastChunkSegments;
 
         await updateRecording(recordingId, { status: 'summarizing', transcript: segments });
 

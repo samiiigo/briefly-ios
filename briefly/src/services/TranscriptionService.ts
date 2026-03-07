@@ -15,7 +15,7 @@
  */
 
 import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { TranscriptSegment } from '../types';
 import { useSettingsStore } from '../store/useSettingsStore';
 

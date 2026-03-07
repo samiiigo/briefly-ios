@@ -1,6 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
+import { AudioService } from '../services/AudioService';
 import { Colors } from '../utils/theme';
+
+const POLL_MS = 80;
+const MIN_SCALE = 0.05;
 
 interface Props {
   isActive: boolean;
@@ -9,40 +13,56 @@ interface Props {
 
 export function WaveformVisualizer({ isActive, barCount = 20 }: Props) {
   const animations = useRef<Animated.Value[]>(
-    Array.from({ length: barCount }, () => new Animated.Value(0.15))
+    Array.from({ length: barCount }, () => new Animated.Value(MIN_SCALE))
   ).current;
+
+  // Rolling buffer — newest sample at the end, rendered right-to-left
+  const buffer = useRef<number[]>(Array(barCount).fill(MIN_SCALE));
 
   useEffect(() => {
     if (!isActive) {
       animations.forEach((anim) => {
-        Animated.spring(anim, { toValue: 0.15, useNativeDriver: true }).start();
+        Animated.timing(anim, {
+          toValue: MIN_SCALE,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
       });
       return;
     }
 
-    const animateBar = (anim: Animated.Value, delay: number) => {
-      return Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(anim, {
-            toValue: 0.2 + Math.random() * 0.8,
-            duration: 300 + Math.random() * 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim, {
-            toValue: 0.1 + Math.random() * 0.3,
-            duration: 200 + Math.random() * 300,
-            useNativeDriver: true,
-          }),
-        ])
-      );
+    let cancelled = false;
+
+    const poll = async () => {
+      if (cancelled) return;
+
+      const level = await AudioService.getMetering();
+      if (cancelled) return;
+
+      // When metering returns 0 (unsupported platform or near-silence),
+      // use a subtle simulated value so bars visibly animate during recording.
+      const displayLevel = level > 0.01 ? level : 0.05 + Math.random() * 0.25;
+
+      // Shift buffer left, push new sample on the right
+      buffer.current.shift();
+      buffer.current.push(Math.max(MIN_SCALE, displayLevel));
+
+      // Drive each bar to its buffered value
+      buffer.current.forEach((val, i) => {
+        Animated.timing(animations[i], {
+          toValue: val,
+          duration: 60,
+          useNativeDriver: true,
+        }).start();
+      });
+
+      setTimeout(poll, POLL_MS);
     };
 
-    const anims = animations.map((anim, i) => animateBar(anim, (i * 60) % 400));
-    anims.forEach((a) => a.start());
+    poll();
 
     return () => {
-      anims.forEach((a) => a.stop());
+      cancelled = true;
     };
   }, [isActive]);
 
