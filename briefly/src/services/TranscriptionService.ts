@@ -200,7 +200,7 @@ async function transcribeWithGemini(
   });
 
   const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent` +
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent` +
     `?key=${cloudApiKey}`;
 
   const response = await fetch(url, {
