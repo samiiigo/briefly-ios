@@ -35,9 +35,17 @@ async function transcribeOnDevice(
     return transcribeWithNativeModule(audioUri, onSegment);
   }
 
-  // Fallback: simple placeholder that returns mock segments
-  // Replace with a bundled Whisper.cpp or Vosk model in a future sprint.
-  return transcribeFallback(audioUri);
+  // Native module not available (e.g. Expo Go).
+  // Fall through to cloud if an API key is configured.
+  const { cloudApiKey } = useSettingsStore.getState();
+  if (cloudApiKey) {
+    return transcribeCloud(audioUri, onSegment);
+  }
+
+  throw new Error(
+    'On-device transcription requires a development build.\n\n' +
+    'Add an OpenAI API key in Settings to transcribe using cloud instead.'
+  );
 }
 
 async function transcribeWithNativeModule(
@@ -79,31 +87,6 @@ async function transcribeWithNativeModule(
 
     BrieflyTranscriber.transcribeFile(audioUri);
   });
-}
-
-// Placeholder fallback — returns mock transcript for UI development
-async function transcribeFallback(audioUri: string): Promise<TranscriptSegment[]> {
-  await new Promise((r) => setTimeout(r, 2000));
-  return [
-    {
-      id: generateId(),
-      speaker: 'Speaker 1',
-      speakerInitial: 'S',
-      text: 'Transcription is running in fallback mode. Please build with the native module enabled for real on-device transcription.',
-      startTime: 0,
-      endTime: 5,
-      isFinal: true,
-    },
-    {
-      id: generateId(),
-      speaker: 'Speaker 1',
-      speakerInitial: 'S',
-      text: 'On iOS 26+, connect the BrieflyTranscriber native module for SpeechAnalyzer support.',
-      startTime: 5,
-      endTime: 10,
-      isFinal: true,
-    },
-  ];
 }
 
 // ─── Cloud ────────────────────────────────────────────────────────────────────

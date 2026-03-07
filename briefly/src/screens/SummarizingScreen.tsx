@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { TranscriptionService } from '../services/TranscriptionService';
@@ -160,6 +160,8 @@ export function SummarizingScreen() {
         <View style={styles.iconCircle}>
           {stage === 'error' ? (
             <Ionicons name="warning" size={48} color={Colors.orange} />
+          ) : stage === 'done' ? (
+            <Ionicons name="checkmark-circle" size={48} color={Colors.green} />
           ) : (
             <Ionicons name="sparkles" size={48} color={Colors.textPrimary} />
           )}
@@ -187,6 +189,24 @@ export function SummarizingScreen() {
       </View>
 
       <View style={styles.actions}>
+        {stage === 'error' && errorMessage.toLowerCase().includes('api key') && (
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => {
+              isCancelled.current = true;
+              // Navigate to the Settings tab
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'Main', params: { screen: 'Settings' } }],
+                })
+              );
+            }}
+          >
+            <Ionicons name="key-outline" size={18} color={Colors.textPrimary} />
+            <Text style={styles.secondaryButtonText}>Add API Key in Settings</Text>
+          </TouchableOpacity>
+        )}
         {recording?.processingMode === 'cloud' && stage !== 'error' && (
           <TouchableOpacity style={styles.secondaryButton} onPress={handleRunLocally}>
             <Ionicons name="hardware-chip-outline" size={18} color={Colors.textPrimary} />

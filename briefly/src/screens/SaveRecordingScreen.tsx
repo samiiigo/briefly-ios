@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  NativeModules,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +20,16 @@ import { ProcessingBadge } from '../components/ProcessingBadge';
 import { ProcessingMode, RootStackParamList } from '../types';
 import { formatDuration, formatFileSize, generateId, generateTitle } from '../utils';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
+
+// On-device transcription requires the BrieflyTranscriber native module.
+// In Expo Go (no native module), force cloud mode.
+function getInitialMode(preferred: ProcessingMode): ProcessingMode {
+  if (preferred === 'on-device') {
+    const hasNativeModule = Platform.OS === 'ios' && !!NativeModules.BrieflyTranscriber;
+    if (!hasNativeModule) return 'cloud';
+  }
+  return preferred;
+}
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'SaveRecording'>;
@@ -31,7 +43,9 @@ export function SaveRecordingScreen() {
   const { defaultProcessingMode } = useSettingsStore();
 
   const [title, setTitle] = useState(generateTitle());
-  const [processingMode, setProcessingMode] = useState<ProcessingMode>(defaultProcessingMode);
+  const [processingMode, setProcessingMode] = useState<ProcessingMode>(
+    getInitialMode(defaultProcessingMode)
+  );
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {

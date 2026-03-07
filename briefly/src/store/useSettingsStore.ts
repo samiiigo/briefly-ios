@@ -13,7 +13,7 @@ interface SettingsState {
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  defaultProcessingMode: 'on-device',
+  defaultProcessingMode: 'cloud',
   cloudApiKey: '',
   cloudApiProvider: 'openai',
   cloudApiEndpoint: 'https://api.openai.com/v1',
