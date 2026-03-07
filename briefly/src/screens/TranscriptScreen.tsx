@@ -5,13 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  FlatList,
   GestureResponderEvent,
   LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { AudioService } from '../services/AudioService';
 import { KeyInsights } from '../components/KeyInsights';
@@ -21,13 +21,15 @@ import { RootStackParamList, TranscriptSegment } from '../types';
 import { formatDuration, formatDate } from '../utils';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
 
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Transcript'>;
 
 export function TranscriptScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { recordingId } = route.params;
   const recording = useRecordingStore((s) => s.getRecordingById(recordingId));
+  const { updateRecording } = useRecordingStore();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackPos, setPlaybackPos] = useState(0);
@@ -93,6 +95,18 @@ export function TranscriptScreen() {
     [playbackDur]
   );
 
+  const handleRetry = useCallback(async () => {
+    if (!recording) return;
+    await updateRecording(recording.id, {
+      status: 'transcribing',
+      errorMessage: undefined,
+      transcript: undefined,
+      summary: undefined,
+      keyInsights: undefined,
+    });
+    navigation.replace('Summarizing', { recordingId: recording.id });
+  }, [recording, updateRecording, navigation]);
+
   if (!recording) {
     return (
       <SafeAreaView style={styles.container}>
@@ -123,6 +137,25 @@ export function TranscriptScreen() {
         <View style={styles.metaRow}>
           <ProcessingBadge mode={recording.processingMode} size="sm" />
         </View>
+
+        {/* Error banner */}
+        {recording.status === 'error' && (
+          <View style={styles.errorBanner}>
+            <View style={styles.errorBannerTop}>
+              <Ionicons name="warning" size={16} color={Colors.orange} />
+              <Text style={styles.errorBannerTitle}>Processing failed</Text>
+            </View>
+            {!!recording.errorMessage && (
+              <Text style={styles.errorBannerMessage} numberOfLines={3}>
+                {recording.errorMessage}
+              </Text>
+            )}
+            <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+              <Ionicons name="refresh" size={15} color={Colors.textPrimary} />
+              <Text style={styles.retryButtonText}>Retry Transcription & Summary</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Summary */}
         {recording.summary && (
@@ -320,4 +353,46 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   rateText: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
+
+  // Error / retry
+  errorBanner: {
+    backgroundColor: 'rgba(255, 159, 10, 0.1)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 159, 10, 0.35)',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: 8,
+  },
+  errorBannerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  errorBannerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.orange,
+  },
+  errorBannerMessage: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.md,
+    marginTop: 4,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
 });
