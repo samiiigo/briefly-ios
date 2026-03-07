@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '../types';
@@ -16,36 +17,75 @@ interface Props {
   recording: Recording;
   onPress: () => void;
   onDelete?: () => void;
+  onRename?: (newTitle: string) => void;
 }
 
-export function RecordingCard({ recording, onPress, onDelete }: Props) {
+export function RecordingCard({ recording, onPress, onDelete, onRename }: Props) {
+  const isFailed = recording.status === 'error';
+
+  const promptRename = () => {
+    if (!onRename) return;
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        'Rename Recording',
+        undefined,
+        (text) => { if (text?.trim()) onRename(text.trim()); },
+        'plain-text',
+        recording.title
+      );
+    } else {
+      // Android: rename is available from the recording detail screen
+      Alert.alert('Rename', 'Open the recording to rename it from the detail screen.');
+    }
+  };
+
   const handleLongPress = () => {
-    if (!onDelete) return;
-    Alert.alert('Delete Recording', `Delete "${recording.title}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: onDelete },
-    ]);
+    const buttons: any[] = [];
+    if (onRename) {
+      buttons.push({ text: 'Rename', onPress: promptRename });
+    }
+    if (onDelete) {
+      buttons.push({
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () =>
+          Alert.alert('Delete Recording', `Delete "${recording.title}"?`, [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: onDelete },
+          ]),
+      });
+    }
+    buttons.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert(recording.title, undefined, buttons);
   };
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, isFailed && styles.cardFailed]}
       onPress={onPress}
       onLongPress={handleLongPress}
       activeOpacity={0.7}
     >
-      <View style={styles.iconContainer}>
-        <Ionicons name="musical-notes" size={24} color="#0A84FF" />
+      <View style={[styles.iconContainer, isFailed && styles.iconContainerFailed]}>
+        <Ionicons
+          name={isFailed ? 'warning' : 'musical-notes'}
+          size={24}
+          color={isFailed ? Colors.orange : '#0A84FF'}
+        />
       </View>
 
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={1}>
           {recording.title}
         </Text>
-        <Text style={styles.date}>{formatDate(recording.createdAt)}</Text>
+        {isFailed ? (
+          <Text style={styles.failedLabel}>Transcription failed – audio only</Text>
+        ) : (
+          <Text style={styles.date}>{formatDate(recording.createdAt)}</Text>
+        )}
         <View style={styles.metaRow}>
           <Text style={styles.duration}>{formatDuration(recording.duration)}</Text>
-          <ProcessingBadge mode={recording.processingMode} />
+          {!isFailed && <ProcessingBadge mode={recording.processingMode} />}
         </View>
       </View>
     </TouchableOpacity>
@@ -63,6 +103,9 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.06)',
   },
+  cardFailed: {
+    borderColor: 'rgba(255, 159, 10, 0.25)',
+  },
   iconContainer: {
     width: 64,
     height: 64,
@@ -71,6 +114,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
+  },
+  iconContainerFailed: {
+    backgroundColor: 'rgba(255, 159, 10, 0.1)',
   },
   content: {
     flex: 1,
@@ -85,6 +131,11 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.5)',
+    marginBottom: 3,
+  },
+  failedLabel: {
+    fontSize: 13,
+    color: Colors.orange,
     marginBottom: 3,
   },
   metaRow: {

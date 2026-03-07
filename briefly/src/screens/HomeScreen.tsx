@@ -15,7 +15,7 @@ import { useRecordingStore } from '../store/useRecordingStore';
 import { AudioService } from '../services/AudioService';
 import { RecordingCard } from '../components/RecordingCard';
 import { Recording } from '../types';
-import { formatGroupLabel } from '../utils';
+import { formatGroupLabel, ensureUniqueTitle } from '../utils';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
 import { RootStackParamList } from '../types';
 
@@ -34,7 +34,12 @@ function groupRecordings(recordings: Recording[]) {
 
 export function HomeScreen() {
   const navigation = useNavigation<Nav>();
-  const { recordings, loadRecordings, deleteRecording } = useRecordingStore();
+  const { recordings, loadRecordings, deleteRecording, updateRecording } = useRecordingStore();
+
+  const handleRename = useCallback((recording: Recording, newTitle: string) => {
+    const existingTitles = recordings.filter((r) => r.id !== recording.id).map((r) => r.title);
+    updateRecording(recording.id, { title: ensureUniqueTitle(newTitle, existingTitles) });
+  }, [recordings, updateRecording]);
 
   useEffect(() => {
     loadRecordings();
@@ -103,6 +108,7 @@ export function HomeScreen() {
             recording={item}
             onPress={() => navigation.navigate('Transcript', { recordingId: item.id })}
             onDelete={() => deleteRecording(item.id)}
+            onRename={(newTitle) => handleRename(item, newTitle)}
           />
         )}
       />

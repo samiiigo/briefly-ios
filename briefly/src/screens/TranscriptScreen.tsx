@@ -5,6 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
+  Platform,
   GestureResponderEvent,
   LayoutChangeEvent,
 } from 'react-native';
@@ -18,7 +20,7 @@ import { KeyInsights } from '../components/KeyInsights';
 import { TranscriptSegmentView } from '../components/TranscriptSegmentView';
 import { ProcessingBadge } from '../components/ProcessingBadge';
 import { RootStackParamList, TranscriptSegment } from '../types';
-import { formatDuration, formatDate } from '../utils';
+import { formatDuration, formatDate, ensureUniqueTitle } from '../utils';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -29,7 +31,7 @@ export function TranscriptScreen() {
   const route = useRoute<Route>();
   const { recordingId } = route.params;
   const recording = useRecordingStore((s) => s.getRecordingById(recordingId));
-  const { updateRecording } = useRecordingStore();
+  const { updateRecording, recordings } = useRecordingStore();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackPos, setPlaybackPos] = useState(0);
@@ -95,6 +97,20 @@ export function TranscriptScreen() {
     [playbackDur]
   );
 
+  const handleRename = useCallback(() => {
+    if (!recording) return;
+    const existingTitles = recordings.filter((r) => r.id !== recording.id).map((r) => r.title);
+    const save = (text: string) => {
+      const t = text.trim();
+      if (t) updateRecording(recording.id, { title: ensureUniqueTitle(t, existingTitles) });
+    };
+    if (Platform.OS === 'ios') {
+      Alert.prompt('Rename Recording', undefined, save, 'plain-text', recording.title);
+    } else {
+      Alert.alert('Rename', 'Long-press the recording card on the home screen to rename it.');
+    }
+  }, [recording, recordings, updateRecording]);
+
   const handleRetry = useCallback(async () => {
     if (!recording) return;
     await updateRecording(recording.id, {
@@ -125,7 +141,9 @@ export function TranscriptScreen() {
           <Ionicons name="chevron-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerDate}>{formatDate(recording.createdAt)}</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={handleRename} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="pencil-outline" size={20} color={Colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
