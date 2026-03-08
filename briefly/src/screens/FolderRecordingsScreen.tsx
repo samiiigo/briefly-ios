@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AudioService } from '../services/AudioService';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { RecordingCard } from '../components/RecordingCard';
+import { RecordingSwipeableRow } from '../components/RecordingSwipeableRow';
 import { RecordButton } from '../components/RecordButton';
 import { RootStackParamList } from '../types';
 import { resolveRecordingFolder } from '../utils/recordingFolder';
@@ -22,6 +23,8 @@ export function FolderRecordingsScreen() {
   const { folderId, folderName, folderType } = route.params;
   const recordings = useRecordingStore((s) => s.recordings);
   const deleteRecording = useRecordingStore((s) => s.deleteRecording);
+  const restoreRecording = useRecordingStore((s) => s.restoreRecording);
+  const permanentDelete = useRecordingStore((s) => s.permanentDelete);
 
   const [now, setNow] = useState(() => Date.now());
 
@@ -30,11 +33,15 @@ export function FolderRecordingsScreen() {
     return () => clearInterval(intervalId);
   }, []);
 
+  const isRecentlyDeleted = folderId === 'recently-deleted';
   const filtered = useMemo(() => {
     if (folderType === 'built-in') {
-      if (folderId === 'favorites') return recordings.filter((r) => resolveRecordingFolder(r) === 'favorites');
-      if (folderId === 'unlisted') return recordings.filter((r) => resolveRecordingFolder(r) === 'unlisted');
-      if (folderId === 'archived') return recordings.filter((r) => resolveRecordingFolder(r) === 'archived');
+      if (folderId === 'archived') {
+        return recordings.filter((r) => r.deletedAt == null && r.isArchived);
+      }
+      if (folderId === 'recently-deleted') {
+        return recordings.filter((r) => r.deletedAt != null);
+      }
     }
     return recordings.filter((r) => r.userFolderId === folderId);
   }, [recordings, folderId, folderType]);
@@ -45,16 +52,17 @@ export function FolderRecordingsScreen() {
   );
 
   const handleRecordIntoFolder = useCallback(async () => {
+    if (isRecentlyDeleted) return;
     const granted = await AudioService.requestPermissions();
     if (!granted) return;
     if (folderType === 'user') {
       navigation.navigate('Recording', { targetFolder: 'unlisted', targetUserFolderId: folderId });
-    } else {
+    } else if (folderId === 'archived') {
       navigation.navigate('Recording', {
-        targetFolder: folderId as 'favorites' | 'unlisted' | 'archived',
+        targetFolder: 'archived',
       });
     }
-  }, [navigation, folderType, folderId]);
+  }, [navigation, folderType, folderId, isRecentlyDeleted]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -84,18 +92,29 @@ export function FolderRecordingsScreen() {
             </View>
           )}
           renderItem={({ item }) => (
-            <RecordingCard
+            <RecordingSwipeableRow
               recording={item}
               onPress={() => navigation.navigate('Transcript', { recordingId: item.id })}
-              onDelete={() => deleteRecording(item.id)}
-            />
+              onDelete={isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)}
+              onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
+              isRecentlyDeleted={isRecentlyDeleted}
+            >
+              <RecordingCard
+                recording={item}
+                onPress={() => navigation.navigate('Transcript', { recordingId: item.id })}
+                onDelete={isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)}
+                onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
+              />
+            </RecordingSwipeableRow>
           )}
         />
       )}
-      <RecordButton
-        onPress={handleRecordIntoFolder}
-        style={{ bottom: 40 }}
-      />
+      {!isRecentlyDeleted && (
+        <RecordButton
+          onPress={handleRecordIntoFolder}
+          style={{ bottom: 40 }}
+        />
+      )}
     </SafeAreaView>
   );
 }

@@ -1,14 +1,24 @@
 import { Recording } from '../types';
-import { resolveRecordingFolder } from './recordingFolder';
 
 export type LibraryTabId = 'all' | 'favorites' | 'archived' | 'active' | 'errors';
 
+const notDeleted = (r: Recording) => r.deletedAt == null;
+
 export const LIBRARY_TAB_PREDICATES: Record<LibraryTabId, (recording: Recording) => boolean> = {
-  all: () => true,
-  active: (r) => resolveRecordingFolder(r) === 'unlisted',
-  favorites: (r) => resolveRecordingFolder(r) === 'favorites',
-  archived: (r) => resolveRecordingFolder(r) === 'archived',
-  errors: (r) => r.status === 'error',
+  // All non-deleted recordings.
+  all: (r) => notDeleted(r),
+
+  // "Unlisted" = non-deleted, non-archived, non-favorited.
+  active: (r) => notDeleted(r) && !r.isArchived && !r.isFavorite,
+
+  // Favorites are modeled purely via the isFavorite flag.
+  favorites: (r) => notDeleted(r) && !!r.isFavorite && !r.isArchived,
+
+  // Archived recordings – favorites here are treated as archived first.
+  archived: (r) => notDeleted(r) && !!r.isArchived,
+
+  // Errors tab excludes archived recordings (archived is its own bucket).
+  errors: (r) => notDeleted(r) && r.status === 'error' && !r.isArchived,
 };
 
 export function countByLibraryTab(recordings: Recording[]): Record<LibraryTabId, number> {

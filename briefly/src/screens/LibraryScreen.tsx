@@ -15,16 +15,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { AudioService } from '../services/AudioService';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useUserFolderStore } from '../store/useUserFolderStore';
 import { RecordingCard } from '../components/RecordingCard';
+import { RecordingSwipeableRow } from '../components/RecordingSwipeableRow';
 import { RecordButton } from '../components/RecordButton';
 import { SearchIconButton } from '../components/SearchIconButton';
 import { Colors, Spacing } from '../utils/theme';
 import { RootStackParamList } from '../types';
-import { folderFlagsFor, resolveRecordingFolder } from '../utils/recordingFolder';
+import { resolveRecordingFolder } from '../utils/recordingFolder';
 import { countByLibraryTab, filterByLibraryTab, LibraryTabId } from '../utils/libraryFilters';
 import { groupRecordingsByTime } from '../utils';
 
@@ -44,9 +44,9 @@ const LIBRARY_TABS: LibraryTab[] = [
 ];
 
 const BUILT_IN_FOLDERS = [
-  { id: 'favorites', name: 'Favorites', icon: 'star' as const, color: '#FF9F0A', styleKey: 'folderFavorites' },
-  { id: 'unlisted', name: 'Unlisted', icon: 'albums' as const, color: '#0A84FF', styleKey: 'folderWork' },
+  // Only Archived and Recently Deleted are exposed as built-in folders.
   { id: 'archived', name: 'Archived', icon: 'archive' as const, color: '#BF5AF2', styleKey: 'folderPersonal' },
+  { id: 'recently-deleted', name: 'Recently Deleted', icon: 'trash' as const, color: 'rgba(255,255,255,0.6)', styleKey: 'folderRecentlyDeleted' },
 ] as const;
 
 const MAX_FOLDER_TILES = 6;
@@ -65,7 +65,6 @@ export function LibraryScreen() {
   const navigation = useNavigation<Nav>();
   const recordings = useRecordingStore((s) => s.recordings);
   const deleteRecording = useRecordingStore((s) => s.deleteRecording);
-  const updateRecording = useRecordingStore((s) => s.updateRecording);
   const { folders, loadFolders, addFolder } = useUserFolderStore();
 
   const [activeTab, setActiveTab] = useState<LibraryTabId>('all');
@@ -85,11 +84,20 @@ export function LibraryScreen() {
   const tabCounts = useMemo(() => countByLibraryTab(recordings), [recordings]);
   const filtered = useMemo(() => filterByLibraryTab(recordings, activeTab), [activeTab, recordings]);
 
+  // #region agent log
+  if (recordings.length > 0) {
+    fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a409d8'},body:JSON.stringify({sessionId:'a409d8',location:'LibraryScreen.tsx:render',message:'LibraryScreen rendering with recordings',data:{recordingsCount:recordings.length,filteredCount:filtered.length},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
+  }
+  // #endregion
+
   const countForBuiltIn = useCallback(
     (id: string) => {
-      if (id === 'favorites') return recordings.filter((r) => resolveRecordingFolder(r) === 'favorites').length;
-      if (id === 'unlisted') return recordings.filter((r) => resolveRecordingFolder(r) === 'unlisted').length;
-      if (id === 'archived') return recordings.filter((r) => resolveRecordingFolder(r) === 'archived').length;
+      if (id === 'archived') {
+        return recordings.filter((r) => r.deletedAt == null && r.isArchived).length;
+      }
+      if (id === 'recently-deleted') {
+        return recordings.filter((r) => r.deletedAt != null).length;
+      }
       return 0;
     },
     [recordings]
@@ -123,23 +131,6 @@ export function LibraryScreen() {
     // Built-in folders first in fixed order, then user folders.
     return [...builtInTiles, ...userTiles];
   }, [folders, countForBuiltIn, countForUserFolder]);
-
-  const addToFavorites = useCallback(
-    async (recordingId: string) => {
-      const target = recordings.find((r) => r.id === recordingId);
-      if (!target || target.isFavorite) return;
-      await updateRecording(recordingId, folderFlagsFor('favorites'));
-    },
-    [recordings, updateRecording]
-  );
-
-  const moveToArchive = useCallback(async (recordingId: string) => {
-    await updateRecording(recordingId, folderFlagsFor('archived'));
-  }, [updateRecording]);
-
-  const removeFromArchive = useCallback(async (recordingId: string) => {
-    await updateRecording(recordingId, folderFlagsFor('unlisted'));
-  }, [updateRecording]);
 
   const handleStartRecording = useCallback(async () => {
     const granted = await AudioService.requestPermissions();
@@ -294,73 +285,18 @@ export function LibraryScreen() {
             <View key={section.title}>
               <Text style={[styles.sectionLabel, { marginTop: Spacing.sm }]}>{section.title}</Text>
               {section.data.map((recording) => (
-                <Swipeable
+                <RecordingSwipeableRow
                   key={recording.id}
-                  overshootLeft={false}
-                  overshootRight={false}
-                  rightThreshold={40}
-                  leftThreshold={40}
-                  renderRightActions={() => (
-                    <View style={styles.favoriteAction}>
-                      <Ionicons
-                        name={recording.isFavorite ? 'star' : 'star-outline'}
-                        size={22}
-                        color="#FFFFFF"
-                      />
-                      <Text style={styles.favoriteActionText}>
-                        {recording.isFavorite ? 'Favorited' : 'Favorite'}
-                      </Text>
-                    </View>
-                  )}
-                  renderLeftActions={() => (
-                    <View style={styles.leftActionsWrap}>
-                      <TouchableOpacity
-                        style={[styles.quickActionButton, styles.archiveAction]}
-                        onPress={() =>
-                          recording.isArchived
-                            ? removeFromArchive(recording.id)
-                            : moveToArchive(recording.id)
-                        }
-                      >
-                        <Ionicons
-                          name={recording.isArchived ? 'arrow-undo' : 'archive'}
-                          size={20}
-                          color="#FFFFFF"
-                        />
-                        <Text style={styles.quickActionText}>
-                          {recording.isArchived ? 'Unarchive' : 'Archive'}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.quickActionButton, styles.deleteAction]}
-                        onPress={() =>
-                          Alert.alert('Delete Recording', `Delete "${recording.title}"?`, [
-                            { text: 'Cancel', style: 'cancel' },
-                            {
-                              text: 'Delete',
-                              style: 'destructive',
-                              onPress: () => deleteRecording(recording.id),
-                            },
-                          ])
-                        }
-                      >
-                        <Ionicons name="trash" size={20} color="#FFFFFF" />
-                        <Text style={styles.quickActionText}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                  onSwipeableOpen={(direction) => {
-                    if (direction === 'left') {
-                      addToFavorites(recording.id);
-                    }
-                  }}
+                  recording={recording}
+                  onPress={() => navigation.navigate('Transcript', { recordingId: recording.id })}
+                  onDelete={() => deleteRecording(recording.id)}
                 >
                   <RecordingCard
                     recording={recording}
                     onPress={() => navigation.navigate('Transcript', { recordingId: recording.id })}
                     onDelete={() => deleteRecording(recording.id)}
                   />
-                </Swipeable>
+                </RecordingSwipeableRow>
               ))}
             </View>
           ))
@@ -504,6 +440,9 @@ const styles = StyleSheet.create({
   folderPersonal: {
     backgroundColor: 'rgba(191,90,242,0.08)',
   },
+  folderRecentlyDeleted: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
   folderUser: {
     backgroundColor: 'rgba(28,28,30,0.6)',
   },
@@ -555,45 +494,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     marginTop: 40,
-  },
-  favoriteAction: {
-    width: 120,
-    marginBottom: 12,
-    borderRadius: 16,
-    backgroundColor: '#FF9F0A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  favoriteActionText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  leftActionsWrap: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  quickActionButton: {
-    width: 104,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  archiveAction: {
-    backgroundColor: '#5E5CE6',
-  },
-  deleteAction: {
-    backgroundColor: '#FF3B30',
-  },
-  quickActionText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.3,
   },
   modalOverlay: {
     flex: 1,

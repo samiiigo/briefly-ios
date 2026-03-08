@@ -34,6 +34,10 @@ export const StorageService = {
     await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(updated));
   },
 
+  async saveAllRecordings(recordings: Recording[]): Promise<void> {
+    await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(recordings));
+  },
+
   async loadUserFolders(): Promise<UserFolder[]> {
     try {
       const json = await AsyncStorage.getItem(USER_FOLDERS_KEY);

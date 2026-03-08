@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Share,
   GestureResponderEvent,
   LayoutChangeEvent,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +27,7 @@ import { RootStackParamList } from '../types';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { transcriptionModeTitle } from '../utils/transcriptionMode';
 import { formatDuration, formatDate, ensureUniqueTitle } from '../utils';
-import { Colors, Spacing, BorderRadius } from '../utils/theme';
+import { Colors, Spacing, BorderRadius, SliderAnimation } from '../utils/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Transcript'>;
@@ -36,7 +37,7 @@ export function TranscriptScreen() {
   const route = useRoute<Route>();
   const { recordingId } = route.params;
   const recording = useRecordingStore((s) => s.getRecordingById(recordingId));
-  const { updateRecording, recordings } = useRecordingStore();
+  const { updateRecording, recordings, restoreRecording } = useRecordingStore();
   const { defaultTranscriptionMode } = useSettingsStore();
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -46,6 +47,17 @@ export function TranscriptScreen() {
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const trackWidth = useRef(0);
+  const animatedProgress = useRef(new Animated.Value(0)).current;
+
+  const progress = playbackDur > 0 ? playbackPos / playbackDur : 0;
+  useEffect(() => {
+    Animated.timing(animatedProgress, {
+      toValue: progress,
+      duration: SliderAnimation.duration,
+      easing: SliderAnimation.easing,
+      useNativeDriver: false,
+    }).start();
+  }, [progress, animatedProgress]);
 
   const cycleRate = useCallback(async () => {
     const rates = [1.0, 1.5, 2.0];
@@ -255,7 +267,42 @@ export function TranscriptScreen() {
     );
   }
 
-  const progress = playbackDur > 0 ? playbackPos / playbackDur : 0;
+  if (recording.deletedAt != null) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerDate}>{formatDate(recording.createdAt)}</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.deletedOverlay}>
+          <Ionicons name="trash-outline" size={48} color={Colors.textSecondary} style={{ marginBottom: 16 }} />
+          <Text style={styles.deletedOverlayTitle}>Recording in Recently Deleted</Text>
+          <Text style={styles.deletedOverlayMessage}>
+            Restore this recording to another folder to open it or listen to it.
+          </Text>
+          <TouchableOpacity
+            style={styles.restoreButton}
+            onPress={() => restoreRecording(recording.id).then(() => navigation.goBack())}
+          >
+            <Ionicons name="arrow-undo" size={20} color={Colors.textPrimary} />
+            <Text style={styles.restoreButtonText}>Restore recording</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const progressFillWidth = animatedProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+  const progressThumbLeft = animatedProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
   const transcriptionModeLabel = transcriptionModeTitle(
     recording.transcriptionMode ?? defaultTranscriptionMode
   );
@@ -348,8 +395,8 @@ export function TranscriptScreen() {
           onLayout={(e: LayoutChangeEvent) => { trackWidth.current = e.nativeEvent.layout.width; }}
           style={styles.progressTrack}
         >
-          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-          <View style={[styles.progressThumb, { left: `${progress * 100}%` }]} />
+          <Animated.View style={[styles.progressFill, { width: progressFillWidth }]} />
+          <Animated.View style={[styles.progressThumb, { left: progressThumbLeft }]} />
         </TouchableOpacity>
 
         <View style={styles.timeRow}>
@@ -401,6 +448,40 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
   },
   headerDate: { fontSize: 14, color: Colors.textSecondary },
+  deletedOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  deletedOverlayTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  deletedOverlayMessage: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Spacing.xl,
+  },
+  restoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.surface,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+  },
+  restoreButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
   scroll: { flex: 1 },
   scrollContent: {
     padding: Spacing.md,

@@ -15,6 +15,8 @@ import { SummarizingScreen } from '../screens/SummarizingScreen';
 import { TranscriptScreen } from '../screens/TranscriptScreen';
 import { FolderListScreen } from '../screens/FolderListScreen';
 import { FolderRecordingsScreen } from '../screens/FolderRecordingsScreen';
+import { TranscriptionModePickerScreen } from '../screens/TranscriptionModePickerScreen';
+import { ProcessingModePickerScreen } from '../screens/ProcessingModePickerScreen';
 
 import { RootStackParamList, MainTabParamList } from '../types';
 import { Colors } from '../utils/theme';
@@ -92,6 +94,14 @@ export function AppNavigator() {
         />
         <Stack.Screen name="FolderList" component={FolderListScreen} />
         <Stack.Screen name="FolderRecordings" component={FolderRecordingsScreen} />
+        <Stack.Screen
+          name="TranscriptionModePicker"
+          component={TranscriptionModePickerScreen}
+        />
+        <Stack.Screen
+          name="ProcessingModePicker"
+          component={ProcessingModePickerScreen}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

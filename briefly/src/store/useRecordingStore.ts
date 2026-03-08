@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { Recording } from '../types';
 import { StorageService } from '../services/StorageService';
+import { folderFlagsFor } from '../utils/recordingFolder';
+
+const RECENTLY_DELETED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 interface RecordingStore {
   recordings: Recording[];
@@ -9,11 +12,15 @@ interface RecordingStore {
   hasLoaded: boolean;
   isLoading: boolean;
 
-  // Actions
   loadRecordings: (force?: boolean) => Promise<void>;
   addRecording: (recording: Recording) => Promise<void>;
   updateRecording: (id: string, updates: Partial<Recording>) => Promise<void>;
+  /** Moves recording to Recently Deleted (soft delete). */
   deleteRecording: (id: string) => Promise<void>;
+  /** Restores a recording from Recently Deleted. */
+  restoreRecording: (id: string) => Promise<void>;
+  /** Permanently removes a recording (e.g. from Recently Deleted). */
+  permanentDelete: (id: string) => Promise<void>;
   setActiveRecordingId: (id: string | null) => void;
   setLiveTranscript: (text: string) => void;
   getRecordingById: (id: string) => Recording | undefined;
@@ -34,13 +41,26 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
     set({ isLoading: true });
     const start = Date.now();
     try {
-      const recordings = await StorageService.loadRecordings();
+      let recordings = await StorageService.loadRecordings();
+      const cutoff = Date.now() - RECENTLY_DELETED_RETENTION_MS;
+      const kept = recordings.filter((r) => !r.deletedAt || r.deletedAt > cutoff);
+      if (kept.length < recordings.length) {
+        await StorageService.saveAllRecordings(kept);
+        recordings = kept;
+      }
       if (__DEV__) {
         console.debug(
           `[perf] loadRecordings: ${Date.now() - start}ms (${recordings.length} recordings)`
         );
       }
       set({ recordings, hasLoaded: true, isLoading: false });
+      // #region agent log
+      if (recordings.length > 0) {
+        const first = recordings[0] as Record<string, unknown>;
+        const keys = Object.keys(first);
+        fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a409d8'},body:JSON.stringify({sessionId:'a409d8',location:'useRecordingStore.ts:loadRecordings',message:'after set recordings',data:{count:recordings.length,firstRecordingKeys:keys,hasTranscriptionModes:keys.includes('transcriptionModes')},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
+      }
+      // #endregion
     } catch {
       set({ isLoading: false });
     }
@@ -61,6 +81,20 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   },
 
   deleteRecording: async (id) => {
+    const flags = folderFlagsFor('recently-deleted');
+    await StorageService.updateRecording(id, flags);
+    set((state) => ({
+      recordings: state.recordings.map((r) =>
+        r.id === id ? { ...r, ...flags } : r
+      ),
+    }));
+  },
+
+  restoreRecording: async (id) => {
+    await get().updateRecording(id, { deletedAt: undefined });
+  },
+
+  permanentDelete: async (id) => {
     await StorageService.deleteRecording(id);
     set((state) => ({
       recordings: state.recordings.filter((r) => r.id !== id),

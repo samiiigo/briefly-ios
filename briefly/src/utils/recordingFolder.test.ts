@@ -18,30 +18,37 @@ function mkRecording(overrides: Partial<Recording> = {}): Recording {
 }
 
 describe('recording folder helpers', () => {
-  it('resolves explicit folder first', () => {
-    const recording = mkRecording({ folder: 'favorites', isArchived: true });
-    assert.equal(resolveRecordingFolder(recording), 'favorites');
+  it('resolves recently-deleted first when deletedAt is set', () => {
+    assert.equal(resolveRecordingFolder(mkRecording({ deletedAt: Date.now() })), 'recently-deleted');
   });
 
-  it('falls back to archived/favorite flags for legacy recordings', () => {
+  it('resolves archived bucket when isArchived is true', () => {
     assert.equal(resolveRecordingFolder(mkRecording({ isArchived: true })), 'archived');
-    assert.equal(resolveRecordingFolder(mkRecording({ isFavorite: true })), 'favorites');
   });
 
   it('defaults to unlisted when no folder metadata exists', () => {
     assert.equal(resolveRecordingFolder(mkRecording()), 'unlisted');
   });
 
+  it('ignores legacy favorites folder and treats it as unlisted', () => {
+    const recording = mkRecording({ folder: 'favorites' as any, isFavorite: true });
+    assert.equal(resolveRecordingFolder(recording), 'unlisted');
+  });
+
   it('maps folder to persisted flags consistently', () => {
-    assert.deepEqual(folderFlagsFor('favorites'), {
-      folder: 'favorites',
-      isFavorite: true,
-      isArchived: false,
-    });
     assert.deepEqual(folderFlagsFor('archived'), {
       folder: 'archived',
       isFavorite: false,
       isArchived: true,
+      deletedAt: undefined,
     });
+  });
+
+  it('folderFlagsFor(recently-deleted) sets deletedAt and clears folder flags', () => {
+    const out = folderFlagsFor('recently-deleted');
+    assert.equal(out.folder, 'unlisted');
+    assert.equal(out.isFavorite, false);
+    assert.equal(out.isArchived, false);
+    assert.ok(typeof out.deletedAt === 'number' && out.deletedAt > 0);
   });
 });

@@ -15,7 +15,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { TranscriptionService } from '../services/TranscriptionService';
 import { SummarizationService } from '../services/SummarizationService';
 import { RootStackParamList } from '../types';
-import { Colors, Spacing, BorderRadius } from '../utils/theme';
+import { Colors, Spacing, BorderRadius, SliderAnimation } from '../utils/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Summarizing'>;
@@ -40,11 +40,15 @@ export function SummarizingScreen() {
   useEffect(() => {
     if (!recording || hasStarted.current) return;
     hasStarted.current = true;
+    // #region agent log
+    fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizingScreen.tsx:useEffect-start',message:'useEffect started',data:{hasRecording:!!recording,recordingId},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
-    // Animate progress bar
+    // Animate progress bar (consistent slider easing)
     Animated.timing(progress, {
       toValue: 0.4,
       duration: 1500,
+      easing: SliderAnimation.easing,
       useNativeDriver: false,
     }).start();
 
@@ -70,9 +74,13 @@ export function SummarizingScreen() {
 
         // Step 2: Summarize
         setStage('summarizing');
+        // #region agent log
+        fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizingScreen.tsx:before-summarize',message:'entering summarization',data:{recordingId,processingMode:recording.processingMode,segmentCount:segments.length},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         Animated.timing(progress, {
           toValue: 0.75,
           duration: 1000,
+          easing: SliderAnimation.easing,
           useNativeDriver: false,
         }).start();
 
@@ -81,11 +89,15 @@ export function SummarizingScreen() {
           recording.processingMode
         );
 
+        // #region agent log
+        fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizingScreen.tsx:summarize-complete',message:'summarize returned',data:{summaryLen:summary?.length,insightCount:keyInsights?.length},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         if (isCancelled.current) return;
 
         Animated.timing(progress, {
           toValue: 1,
           duration: 500,
+          easing: SliderAnimation.easing,
           useNativeDriver: false,
         }).start();
 
@@ -102,6 +114,9 @@ export function SummarizingScreen() {
           }
         }, 600);
       } catch (err: any) {
+        // #region agent log
+        fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizingScreen.tsx:catch',message:'error caught',data:{errMsg:err?.message,isCancelled:isCancelled.current},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         if (isCancelled.current) return;
         setErrorMessage(err.message ?? 'Unknown error');
         setStage('error');
@@ -121,6 +136,17 @@ export function SummarizingScreen() {
     if (!recording) return;
     await updateRecording(recordingId, { processingMode: 'on-device', status: 'transcribing' });
     // Re-mount will restart
+    navigation.replace('Summarizing', { recordingId });
+  };
+
+  const handleRetry = async () => {
+    if (!recording) return;
+    await updateRecording(recordingId, { status: 'transcribing', errorMessage: undefined });
+    hasStarted.current = false;
+    isCancelled.current = false;
+    setStage('transcribing');
+    setErrorMessage('');
+    progress.setValue(0);
     navigation.replace('Summarizing', { recordingId });
   };
 
@@ -195,6 +221,12 @@ export function SummarizingScreen() {
       </View>
 
       <View style={styles.actions}>
+        {stage === 'error' && (
+          <TouchableOpacity style={styles.primaryButton} onPress={handleRetry}>
+            <Ionicons name="refresh" size={18} color="#fff" />
+            <Text style={styles.primaryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        )}
         {stage === 'error' && errorMessage.toLowerCase().includes('api key') && (
           <TouchableOpacity
             style={styles.secondaryButton}
@@ -303,6 +335,18 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     alignItems: 'center',
   },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: 16,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.sm,
+    width: '100%',
+  },
+  primaryButtonText: { fontSize: 17, fontWeight: '600', color: '#fff' },
   secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',

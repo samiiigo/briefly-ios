@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, Easing } from 'react-native';
 
 export const Colors = {
   background: '#000000',
@@ -59,6 +59,12 @@ export const BorderRadius = {
   lg: 16,
   xl: 20,
   full: 9999,
+};
+
+/** Short, unobtrusive animation for sliders/progress (iOS HIG). */
+export const SliderAnimation = {
+  duration: 220,
+  easing: Easing.out(Easing.cubic),
 };
 
 // Liquid glass simulation — uses blur + translucency on iOS,

@@ -11,7 +11,7 @@ describe('transcription route resolution', () => {
     assert.equal(resolveTranscriptionRoute('cloud'), 'cloud');
   });
 
-  it('maps on-device-first mode to fallback route', () => {
-    assert.equal(resolveTranscriptionRoute('on-device-first'), 'on-device-first');
+  it('maps legacy on-device-first to on-device', () => {
+    assert.equal(resolveTranscriptionRoute('on-device-first' as any), 'on-device');
   });
 });

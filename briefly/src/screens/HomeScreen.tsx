@@ -13,12 +13,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { AudioService } from '../services/AudioService';
 import { RecordingCard } from '../components/RecordingCard';
+import { RecordingSwipeableRow } from '../components/RecordingSwipeableRow';
 import { RecordButton } from '../components/RecordButton';
 import { SearchIconButton } from '../components/SearchIconButton';
 import { Recording, RootStackParamList } from '../types';
 import { ensureUniqueTitle, groupRecordingsByTime } from '../utils';
+import { resolveRecordingFolder } from '../utils/recordingFolder';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
-import { useSettingsStore } from '../store/useSettingsStore';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -28,7 +29,6 @@ export function HomeScreen() {
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);
   const deleteRecording = useRecordingStore((s) => s.deleteRecording);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
-  const defaultRecordingFolder = useSettingsStore((s) => s.defaultRecordingFolder);
 
   const [now, setNow] = useState(() => Date.now());
 
@@ -52,15 +52,28 @@ export function HomeScreen() {
   const handleStartRecording = useCallback(async () => {
     const granted = await AudioService.requestPermissions();
     if (!granted) return;
-    navigation.navigate('Recording', { targetFolder: defaultRecordingFolder });
-  }, [defaultRecordingFolder, navigation]);
+    navigation.navigate('Recording', { targetFolder: 'unlisted' });
+  }, [navigation]);
 
-  const sections = useMemo(
-    () => groupRecordingsByTime(recordings),
-    [recordings, now]
+  const visibleRecordings = useMemo(
+    () => recordings.filter(
+      (r) => r.deletedAt == null && resolveRecordingFolder(r) !== 'archived'
+    ),
+    [recordings]
   );
 
-  if (recordings.length === 0) {
+  const sections = useMemo(
+    () => groupRecordingsByTime(visibleRecordings),
+    [visibleRecordings, now]
+  );
+
+  // #region agent log
+  if (recordings.length > 0 && sections.length > 0) {
+    fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a409d8'},body:JSON.stringify({sessionId:'a409d8',location:'HomeScreen.tsx:render',message:'HomeScreen rendering with recordings',data:{recordingsCount:recordings.length,sectionsCount:sections.length},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
+  }
+  // #endregion
+
+  if (visibleRecordings.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -107,12 +120,18 @@ export function HomeScreen() {
           </View>
         )}
         renderItem={({ item }) => (
-          <RecordingCard
+          <RecordingSwipeableRow
             recording={item}
             onPress={() => navigation.navigate('Transcript', { recordingId: item.id })}
             onDelete={() => deleteRecording(item.id)}
-            onRename={(newTitle) => handleRename(item, newTitle)}
-          />
+          >
+            <RecordingCard
+              recording={item}
+              onPress={() => navigation.navigate('Transcript', { recordingId: item.id })}
+              onDelete={() => deleteRecording(item.id)}
+              onRename={(newTitle) => handleRename(item, newTitle)}
+            />
+          </RecordingSwipeableRow>
         )}
       />
 

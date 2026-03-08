@@ -76,18 +76,20 @@ export function generateId(): string {
 
 // ─── Cloud provider detection ─────────────────────────────────────────────────
 
-export type CloudProvider = 'openai' | 'gemini' | 'anthropic' | 'github';
+export type CloudProvider = 'openai' | 'gemini' | 'anthropic' | 'github' | 'openrouter';
 
 /**
  * Detects the cloud provider from an API key based on its prefix format:
- *   sk-ant-…       → Anthropic Claude
+ *   sk-or-…          → OpenRouter
+ *   sk-ant-…         → Anthropic Claude
  *   sk-proj-… / sk-… → OpenAI
- *   AIza…          → Google Gemini
+ *   AIza…            → Google Gemini
  *   github_pat_… / ghp_… → GitHub Models (OpenAI-compatible)
  */
 export function detectProvider(key: string): CloudProvider | null {
   const k = key.trim();
   if (!k) return null;
+  if (k.startsWith('sk-or-')) return 'openrouter';
   if (k.startsWith('sk-ant-')) return 'anthropic';
   if (k.startsWith('sk-proj-') || k.startsWith('sk-')) return 'openai';
   if (k.startsWith('AIza')) return 'gemini';
@@ -97,19 +99,21 @@ export function detectProvider(key: string): CloudProvider | null {
 
 export function providerEndpoint(provider: CloudProvider): string {
   switch (provider) {
-    case 'openai':    return 'https://api.openai.com/v1';
-    case 'gemini':    return 'https://generativelanguage.googleapis.com/v1beta';
-    case 'anthropic': return 'https://api.anthropic.com/v1';
-    case 'github':    return 'https://models.inference.ai.azure.com';
+    case 'openai':     return 'https://api.openai.com/v1';
+    case 'gemini':     return 'https://generativelanguage.googleapis.com/v1beta';
+    case 'anthropic':  return 'https://api.anthropic.com/v1';
+    case 'github':     return 'https://models.inference.ai.azure.com';
+    case 'openrouter': return 'https://openrouter.ai/api/v1';
   }
 }
 
 export function providerLabel(provider: CloudProvider): string {
   switch (provider) {
-    case 'openai':    return 'OpenAI';
-    case 'gemini':    return 'Google Gemini';
-    case 'anthropic': return 'Anthropic Claude';
-    case 'github':    return 'GitHub Models';
+    case 'openai':     return 'OpenAI';
+    case 'gemini':     return 'Google Gemini';
+    case 'anthropic':  return 'Anthropic Claude';
+    case 'github':     return 'GitHub Models';
+    case 'openrouter': return 'OpenRouter';
   }
 }
 

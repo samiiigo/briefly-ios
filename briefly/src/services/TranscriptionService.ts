@@ -87,9 +87,19 @@ async function transcribeCloud(
   if (cloudApiProvider === 'gemini') {
     return transcribeWithGemini(audioUri, onSegment);
   }
-  if (cloudApiProvider === 'anthropic' || cloudApiProvider === 'github') {
+  if (
+    cloudApiProvider === 'anthropic' ||
+    cloudApiProvider === 'github' ||
+    cloudApiProvider === 'openrouter'
+  ) {
     throw new Error(
-      `${cloudApiProvider === 'anthropic' ? 'Anthropic Claude' : 'GitHub Models'} does not support audio transcription.\n\n` +
+      `${
+        cloudApiProvider === 'anthropic'
+          ? 'Anthropic Claude'
+          : cloudApiProvider === 'github'
+          ? 'GitHub Models'
+          : 'OpenRouter'
+      } does not support audio transcription.\n\n` +
       'Use a development build for on-device transcription, or switch to an OpenAI or Gemini key.'
     );
   }
@@ -257,7 +267,7 @@ export const TranscriptionService = {
   async transcribe(
     audioUri: string,
     onSegment?: (segment: TranscriptSegment) => void,
-    mode: TranscriptionMode = 'on-device-first'
+    mode: TranscriptionMode = 'on-device'
   ): Promise<TranscriptSegment[]> {
     const route = resolveTranscriptionRoute(mode);
     if (route === 'cloud') {

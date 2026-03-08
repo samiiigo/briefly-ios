@@ -254,21 +254,15 @@ export function RecordingScreen() {
     ? 'Listening… speak naturally and your words will appear here instantly.'
     : transcriptionMode === 'cloud'
       ? 'Transcription will run in the cloud after you stop recording.'
-      : transcriptionMode === 'on-device-first'
-        ? 'Transcription will try on-device first, then fall back to cloud if needed.'
-        : 'Transcription will run on-device after you stop recording.';
+      : 'Transcription will run on-device after you stop recording.';
 
   const handleChooseTranscriptionMode = () => {
     Alert.alert(
       'Transcription for this recording',
       transcriptionModeDescription(transcriptionMode),
       [
-        { text: 'Always on-device', onPress: () => setTranscriptionMode('on-device') },
-        { text: 'Always cloud', onPress: () => setTranscriptionMode('cloud') },
-        {
-          text: 'On-device first, then cloud fallback',
-          onPress: () => setTranscriptionMode('on-device-first'),
-        },
+        { text: 'On-device', onPress: () => setTranscriptionMode('on-device') },
+        { text: 'Cloud', onPress: () => setTranscriptionMode('cloud') },
         { text: 'Cancel', style: 'cancel' },
       ]
     );

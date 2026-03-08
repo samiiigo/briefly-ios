@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,41 +6,30 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  TextInput,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { RecordingFolder, TranscriptionMode } from '../types';
-import { detectProvider, providerLabel } from '../utils';
-import {
-  transcriptionModeDescription,
-  transcriptionModeTitle,
-} from '../utils/transcriptionMode';
+import { RootStackParamList } from '../types';
+import { transcriptionModeTitle } from '../utils/transcriptionMode';
+import { processingModeTitle } from '../utils/processingMode';
 import { Colors, Spacing } from '../utils/theme';
 
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+
 export function SettingsScreen() {
+  const navigation = useNavigation<Nav>();
   const {
     defaultProcessingMode,
-    setDefaultProcessingMode,
     defaultTranscriptionMode,
-    setDefaultTranscriptionMode,
-    defaultRecordingFolder,
-    setDefaultRecordingFolder,
-    cloudApiKey,
-    setCloudApiKey,
   } = useSettingsStore();
 
-  const [apiKeyInput, setApiKeyInput] = useState(cloudApiKey);
-  const isCloud = defaultProcessingMode === 'cloud';
-  const detectedProvider = detectProvider(apiKeyInput);
-  const transcriptionModes: TranscriptionMode[] = ['on-device', 'cloud', 'on-device-first'];
-  const recordingFolders: { id: RecordingFolder; label: string }[] = [
-    { id: 'unlisted', label: 'Unlisted' },
-    { id: 'favorites', label: 'Favorites' },
-    { id: 'archived', label: 'Archived' },
-  ];
-
+  // #region agent log
+  fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a409d8'},body:JSON.stringify({sessionId:'a409d8',location:'SettingsScreen.tsx:afterStore',message:'SettingsScreen after useSettingsStore',data:{defaultTranscriptionMode},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -48,153 +37,48 @@ export function SettingsScreen() {
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, styles.contentGrow]}>
         {/* Transcription mode */}
-        <Text style={styles.sectionLabel}>TRANSCRIPTION DEFAULT</Text>
-        <Text style={styles.sectionDescription}>
-          Choose how each recording is transcribed by default. Override per recording from the Recording or Save screen.
-        </Text>
+        <Text style={styles.sectionLabel}>TRANSCRIPTION</Text>
         <View style={styles.card}>
-          {transcriptionModes.map((mode, index) => {
-            const selected = defaultTranscriptionMode === mode;
-            return (
-              <React.Fragment key={mode}>
-                <TouchableOpacity
-                  style={styles.optionRow}
-                  onPress={() => setDefaultTranscriptionMode(mode)}
-                >
-                  <View style={[styles.radio, selected && styles.radioSelected]}>
-                    {selected && <View style={styles.radioDot} />}
-                  </View>
-                  <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>{transcriptionModeTitle(mode)}</Text>
-                    <Text style={styles.optionSubtitle}>
-                      {transcriptionModeDescription(mode)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                {index !== transcriptionModes.length - 1 && <View style={styles.divider} />}
-              </React.Fragment>
-            );
-          })}
-        </View>
-
-        {/* Default save folder */}
-        <Text style={styles.sectionLabel}>DEFAULT SAVE FOLDER</Text>
-        <Text style={styles.sectionDescription}>
-          New recordings from the Home screen are saved here. Override when recording from a specific folder.
-        </Text>
-        <View style={styles.card}>
-          {recordingFolders.map((f, index) => {
-            const selected = defaultRecordingFolder === f.id;
-            return (
-              <React.Fragment key={f.id}>
-                <TouchableOpacity
-                  style={styles.optionRow}
-                  onPress={() => setDefaultRecordingFolder(f.id)}
-                >
-                  <View style={[styles.radio, selected && styles.radioSelected]}>
-                    {selected && <View style={styles.radioDot} />}
-                  </View>
-                  <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>{f.label}</Text>
-                  </View>
-                </TouchableOpacity>
-                {index !== recordingFolders.length - 1 && <View style={styles.divider} />}
-              </React.Fragment>
-            );
-          })}
-        </View>
-
-        {/* AI Summarization Engine */}
-        <Text style={styles.sectionLabel}>SUMMARIZATION MODE</Text>
-        <Text style={styles.sectionDescription}>
-          Choose how Briefly generates your final summary after transcription.
-        </Text>
-
-        <View style={styles.card}>
-          {/* On-Device Summarization */}
           <TouchableOpacity
-            style={styles.optionRow}
-            onPress={() => setDefaultProcessingMode('on-device')}
+            style={styles.row}
+            onPress={() => navigation.navigate('TranscriptionModePicker')}
           >
-            <View style={[styles.radio, !isCloud && styles.radioSelected]}>
-              {!isCloud && <View style={styles.radioDot} />}
-            </View>
-            <View style={styles.optionText}>
-              <Text style={styles.optionTitle}>On-Device</Text>
-              <Text style={styles.optionSubtitle}>
-                Summaries are generated locally using Apple Intelligence. Fully private, no internet required.
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-
-          {/* Cloud Summarization */}
-          <TouchableOpacity
-            style={styles.optionRow}
-            onPress={() => setDefaultProcessingMode('cloud')}
-          >
-            <View style={[styles.radio, isCloud && styles.radioSelected]}>
-              {isCloud && <View style={styles.radioDot} />}
-            </View>
-            <View style={styles.optionText}>
-              <View style={styles.optionTitleRow}>
-                <Text style={styles.optionTitle}>Cloud AI</Text>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>RECOMMENDED</Text>
-                </View>
-              </View>
-              <Text style={styles.optionSubtitle}>
-                Uses your chosen cloud AI provider for richer summaries. Zero Data Retention (ZDR) policy applies.
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Cloud API Key */}
-        {isCloud && (
-          <>
-            <Text style={styles.sectionLabel}>API KEY</Text>
-            <Text style={styles.sectionDescription}>
-              Paste any supported key — OpenAI, Google Gemini, Anthropic Claude, or a GitHub PAT. The provider is detected automatically. Stored locally on your device and never shared.
+            <Ionicons
+              name="mic-outline"
+              size={20}
+              color={Colors.textPrimary}
+              style={styles.rowIcon}
+            />
+            <Text style={styles.rowTitle}>Transcription mode</Text>
+            <Text style={styles.rowValue}>
+              {transcriptionModeTitle(defaultTranscriptionMode)}
             </Text>
-            <View style={styles.card}>
-              <View style={styles.apiKeyRow}>
-                <Ionicons name="key-outline" size={18} color={Colors.textSecondary} style={styles.rowIcon} />
-                <TextInput
-                  style={styles.apiKeyInput}
-                  value={apiKeyInput}
-                  onChangeText={setApiKeyInput}
-                  onBlur={() => setCloudApiKey(apiKeyInput)}
-                  placeholder="sk-… · AIza… · sk-ant-… · github_pat_…"
-                  placeholderTextColor="rgba(255,255,255,0.25)"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                {apiKeyInput.length > 0 && (
-                  <TouchableOpacity onPress={() => { setApiKeyInput(''); setCloudApiKey(''); }}>
-                    <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.3)" />
-                  </TouchableOpacity>
-                )}
-              </View>
-              {detectedProvider && (
-                <View style={styles.detectedRow}>
-                  <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
-                  <Text style={styles.detectedText}>{providerLabel(detectedProvider)} detected</Text>
-                </View>
-              )}
-              {apiKeyInput.trim().length > 0 && !detectedProvider && (
-                <View style={styles.detectedRow}>
-                  <Ionicons name="help-circle" size={14} color={Colors.orange} />
-                  <Text style={[styles.detectedText, { color: Colors.orange }]}>Provider not recognised</Text>
-                </View>
-              )}
-            </View>
-          </>
-        )}
+            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Summarization mode */}
+        <Text style={styles.sectionLabel}>SUMMARIZATION</Text>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => navigation.navigate('ProcessingModePicker')}
+          >
+            <Ionicons
+              name="sparkles-outline"
+              size={20}
+              color={Colors.textPrimary}
+              style={styles.rowIcon}
+            />
+            <Text style={styles.rowTitle}>Summarization mode</Text>
+            <Text style={styles.rowValue}>
+              {processingModeTitle(defaultProcessingMode)}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
 
         {/* Storage Management */}
         <Text style={styles.sectionLabel}>STORAGE MANAGEMENT</Text>
@@ -256,6 +140,11 @@ export function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.versionSpacer} />
+        <Text style={styles.versionText}>
+          {Constants.expoConfig?.name ?? 'Briefly'}{' '}
+          {Constants.expoConfig?.version ?? '1.0.0'}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -279,7 +168,21 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
-    paddingBottom: 100,
+    paddingBottom: 24,
+  },
+  contentGrow: {
+    flexGrow: 1,
+  },
+  versionSpacer: {
+    flex: 1,
+    minHeight: 40,
+  },
+  versionText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    textAlign: 'center',
+    paddingVertical: 16,
+    paddingBottom: 88,
   },
   sectionLabel: {
     fontSize: 12,
@@ -307,68 +210,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)',
     marginLeft: 16,
   },
-  // Processing options
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 16,
-    gap: 12,
-  },
-  radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  radioSelected: {
-    borderColor: '#0A84FF',
-    backgroundColor: '#0A84FF',
-  },
-  radioDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFFFFF',
-  },
-  optionText: {
-    flex: 1,
-  },
-  optionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  optionSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  badge: {
-    backgroundColor: '#0A84FF',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-  badgeGemini: {
-    backgroundColor: '#1A73E8',
-  },
   // Storage / Preference rows
   row: {
     flexDirection: 'row',
@@ -393,29 +234,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: 'rgba(255,255,255,0.4)',
     marginRight: 4,
-  },
-  apiKeyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  apiKeyInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#FFFFFF',
-    paddingVertical: 4,
-  },
-  detectedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  detectedText: {
-    fontSize: 13,
-    color: Colors.primary,
   },
 });

@@ -18,19 +18,63 @@ interface Props {
   onPress: () => void;
   onDelete?: () => void;
   onRename?: (newTitle: string) => void;
+  /** When set, card is in Recently Deleted: shows Restore and Delete permanently. */
+  onRestore?: () => void;
 }
 
-export function RecordingCard({ recording, onPress, onDelete, onRename }: Props) {
+function getContentEmoji(recording: Recording): string {
+  const parts: string[] = [recording.title ?? ''];
+  if (recording.summary) parts.push(recording.summary);
+  if (recording.keyInsights) parts.push(...recording.keyInsights.map((k) => k.text));
+  const text = parts.join(' ').toLowerCase();
+
+  if (/\b(lecture|class|course|lesson|seminar|webinar|workshop|tutorial)\b/.test(text)) {
+    return '🎓';
+  }
+  if (/\b(podcast|episode|show|stream)\b/.test(text)) {
+    return '🎧';
+  }
+  if (/\b(brainstorm|idea|ideas|strategy|roadmap|vision|concept)\b/.test(text)) {
+    return '💡';
+  }
+  if (/\b(meeting|sync|standup|stand-up|retro|retrospective|planning|check-in|checkin)\b/.test(text)) {
+    return '📊';
+  }
+  if (/\b(1:1|one-on-one|one on one)\b/.test(text)) {
+    return '🤝';
+  }
+  if (/\b(call|zoom|teams|google meet|meet|hangouts|phone)\b/.test(text)) {
+    return '📞';
+  }
+  if (/\b(journal|diary|reflection|reflections|therapy|counseling|counselling|mood|feelings)\b/.test(text)) {
+    return '🧠';
+  }
+  if (/\b(sales|deal|pipeline|crm|client|customer|prospect|proposal|contract|invoice|quote)\b/.test(text)) {
+    return '💼';
+  }
+
+  return '📄';
+}
+
+export function RecordingCard({ recording, onPress, onDelete, onRename, onRestore }: Props) {
   const isFailed = recording.status === 'error';
+  const isFavorite = !!recording.isFavorite;
   const folder = resolveRecordingFolder(recording);
+  const isRecentlyDeleted = folder === 'recently-deleted';
+  const isArchived = folder === 'archived';
+  const iconEmoji = getContentEmoji(recording);
   const folderLabel =
-    folder === 'archived' ? 'ARCHIVED' : folder === 'favorites' ? 'FAVORITE' : 'UNLISTED';
+    isRecentlyDeleted
+      ? 'DELETED'
+      : isArchived
+        ? 'ARCHIVED'
+        : 'UNLISTED';
 
   const folderBadgeStyle =
     folderLabel === 'ARCHIVED'
       ? styles.folderArchived
-      : folderLabel === 'FAVORITE'
-        ? styles.folderFavorite
+      : folderLabel === 'DELETED'
+        ? styles.folderRecentlyDeleted
         : styles.folderUnlisted;
 
   const promptRename = () => {
@@ -51,56 +95,91 @@ export function RecordingCard({ recording, onPress, onDelete, onRename }: Props)
 
   const handleLongPress = () => {
     const buttons: any[] = [];
-    if (onRename) {
-      buttons.push({ text: 'Rename', onPress: promptRename });
-    }
-    if (onDelete) {
+    if (onRestore) {
+      buttons.push({ text: 'Restore', onPress: onRestore });
       buttons.push({
-        text: 'Delete',
+        text: 'Delete permanently',
         style: 'destructive',
         onPress: () =>
-          Alert.alert('Delete Recording', `Delete "${recording.title}"?`, [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete', style: 'destructive', onPress: onDelete },
-          ]),
+          Alert.alert(
+            'Delete permanently',
+            `"${recording.title}" will be removed and cannot be recovered.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: onDelete },
+            ]
+          ),
       });
+    } else {
+      if (onRename) {
+        buttons.push({ text: 'Rename', onPress: promptRename });
+      }
+      if (onDelete) {
+        buttons.push({
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () =>
+            Alert.alert('Delete Recording', `Delete "${recording.title}"?`, [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: onDelete },
+            ]),
+        });
+      }
     }
     buttons.push({ text: 'Cancel', style: 'cancel' });
     Alert.alert(recording.title, undefined, buttons);
   };
 
+  const handlePress = () => {
+    if (onRestore) {
+      handleLongPress();
+    } else {
+      onPress();
+    }
+  };
+
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={onPress}
+      onPress={handlePress}
       onLongPress={handleLongPress}
       activeOpacity={0.7}
     >
-      {isFailed && (
-        <View style={[styles.statusIcon, styles.statusIconWarning]}>
-          <Ionicons name="warning" size={14} color={Colors.orange} />
+      {(isFailed || isFavorite) && (
+        <View style={styles.statusRow}>
+          {isFailed && (
+            <View style={[styles.statusIcon, styles.statusIconWarning]}>
+              <Ionicons name="warning" size={14} color={Colors.orange} />
+            </View>
+          )}
+          {isFavorite && !isRecentlyDeleted && (
+            <View style={[styles.statusIcon, styles.favoriteIcon]}>
+              <Ionicons name="star" size={14} color="#FFD60A" />
+            </View>
+          )}
         </View>
       )}
 
       <View style={styles.iconContainer}>
-        <Ionicons
-          name="musical-notes"
-          size={24}
-          color="#0A84FF"
-        />
+        <Text style={styles.iconEmoji}>{iconEmoji}</Text>
       </View>
 
-      <View style={[styles.content, isFailed && styles.contentWithStatusIcon]}>
+      <View style={styles.content}>
         <Text style={styles.title} numberOfLines={1}>
           {recording.title}
         </Text>
-        <Text style={styles.date}>{formatDate(recording.createdAt)}</Text>
+        <Text style={styles.date}>
+          {isRecentlyDeleted && recording.deletedAt
+            ? `Deleted ${formatDate(recording.deletedAt)}`
+            : formatDate(recording.createdAt)}
+        </Text>
         <View style={styles.metaRow}>
           <Text style={styles.duration}>{formatDuration(recording.duration)}</Text>
-          <View style={[styles.folderBadge, folderBadgeStyle]}>
-            <Text style={styles.folderBadgeText}>{folderLabel}</Text>
-          </View>
         </View>
+      </View>
+
+      <View style={[styles.folderBadge, folderBadgeStyle, styles.folderBadgeRight]}>
+        <Text style={styles.folderBadgeText}>{folderLabel}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -118,10 +197,15 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.06)',
   },
-  statusIcon: {
+  statusRow: {
     position: 'absolute',
     top: 10,
     right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusIcon: {
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -130,6 +214,9 @@ const styles = StyleSheet.create({
   },
   statusIconWarning: {
     backgroundColor: 'rgba(255, 159, 10, 0.2)',
+  },
+  favoriteIcon: {
+    backgroundColor: 'rgba(255,159,10,0.16)',
   },
   iconContainer: {
     width: 64,
@@ -140,12 +227,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 14,
   },
+  iconEmoji: {
+    fontSize: 30,
+  },
   content: {
     flex: 1,
+    minWidth: 0,
     justifyContent: 'center',
-  },
-  contentWithStatusIcon: {
-    marginRight: 36,
+    marginRight: 8,
   },
   title: {
     fontSize: 16,
@@ -173,17 +262,20 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderWidth: StyleSheet.hairlineWidth,
   },
+  folderBadgeRight: {
+    alignSelf: 'flex-end',
+  },
   folderUnlisted: {
     backgroundColor: 'rgba(10,132,255,0.16)',
     borderColor: 'rgba(10,132,255,0.35)',
   },
-  folderFavorite: {
-    backgroundColor: 'rgba(255,159,10,0.16)',
-    borderColor: 'rgba(255,159,10,0.4)',
-  },
   folderArchived: {
     backgroundColor: 'rgba(191,90,242,0.18)',
     borderColor: 'rgba(191,90,242,0.45)',
+  },
+  folderRecentlyDeleted: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   folderBadgeText: {
     fontSize: 10,

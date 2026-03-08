@@ -24,9 +24,9 @@ import { Colors, Spacing } from '../utils/theme';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const BUILT_IN_FOLDERS = [
-  { id: 'favorites', name: 'Favorites', icon: 'star' as const, color: '#FF9F0A' },
-  { id: 'unlisted', name: 'Unlisted', icon: 'albums' as const, color: '#0A84FF' },
+  // Only Archived and Recently Deleted are exposed as built-in folders.
   { id: 'archived', name: 'Archived', icon: 'archive' as const, color: '#BF5AF2' },
+  { id: 'recently-deleted', name: 'Recently Deleted', icon: 'trash' as const, color: 'rgba(255,255,255,0.6)' },
 ] as const;
 
 export function FolderListScreen() {
@@ -71,9 +71,12 @@ export function FolderListScreen() {
   }, [addFolder, newFolderName]);
 
   const countForBuiltIn = (id: string) => {
-    if (id === 'favorites') return recordings.filter((r) => resolveRecordingFolder(r) === 'favorites').length;
-    if (id === 'unlisted') return recordings.filter((r) => resolveRecordingFolder(r) === 'unlisted').length;
-    if (id === 'archived') return recordings.filter((r) => resolveRecordingFolder(r) === 'archived').length;
+    if (id === 'archived') {
+      return recordings.filter((r) => r.deletedAt == null && r.isArchived).length;
+    }
+    if (id === 'recently-deleted') {
+      return recordings.filter((r) => r.deletedAt != null).length;
+    }
     return 0;
   };
 

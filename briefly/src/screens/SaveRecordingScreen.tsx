@@ -97,12 +97,8 @@ export function SaveRecordingScreen() {
       'Transcription mode for this recording',
       transcriptionModeDescription(transcriptionMode),
       [
-        { text: 'Always on-device', onPress: () => setTranscriptionMode('on-device') },
-        { text: 'Always cloud', onPress: () => setTranscriptionMode('cloud') },
-        {
-          text: 'On-device first, then cloud fallback',
-          onPress: () => setTranscriptionMode('on-device-first'),
-        },
+        { text: 'On-device', onPress: () => setTranscriptionMode('on-device') },
+        { text: 'Cloud', onPress: () => setTranscriptionMode('cloud') },
         { text: 'Cancel', style: 'cancel' },
       ]
     );
@@ -157,11 +153,9 @@ export function SaveRecordingScreen() {
               <Text style={styles.processingSubtitle}>
                 {targetUserFolderId
                   ? 'User folder'
-                  : targetFolder === 'favorites'
-                    ? 'Favorites'
-                    : targetFolder === 'archived'
-                      ? 'Archived'
-                      : 'Unlisted'}
+                  : targetFolder === 'archived'
+                    ? 'Archived'
+                    : 'Unlisted'}
               </Text>
             </View>
           </View>

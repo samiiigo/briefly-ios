@@ -1,6 +1,12 @@
 export type ProcessingMode = 'on-device' | 'cloud';
-export type TranscriptionMode = 'on-device' | 'cloud' | 'on-device-first';
-export type RecordingFolder = 'unlisted' | 'favorites' | 'archived';
+export type TranscriptionMode = 'on-device' | 'cloud';
+/**
+ * System-managed storage buckets for recordings.
+ *
+ * Favorites are modeled as a boolean flag (`isFavorite`) rather than a folder;
+ * "unlisted" represents the default, non-archived, non-deleted bucket.
+ */
+export type RecordingFolder = 'unlisted' | 'archived' | 'recently-deleted';
 
 export interface UserFolder {
   id: string;
@@ -45,6 +51,8 @@ export interface Recording {
   userFolderId?: string;
   isFavorite?: boolean;
   isArchived?: boolean;
+  /** Set when moved to Recently Deleted; cleared on restore. Used for purge after retention. */
+  deletedAt?: number;
   status: RecordingStatus;
   transcript?: TranscriptSegment[];
   summary?: string;
@@ -78,6 +86,8 @@ export type RootStackParamList = {
     folderName: string;
     folderType: 'built-in' | 'user';
   };
+  TranscriptionModePicker: undefined;
+  ProcessingModePicker: undefined;
 };
 
 export type MainTabParamList = {
