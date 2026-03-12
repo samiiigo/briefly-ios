@@ -40,9 +40,13 @@ export function HomeScreen() {
     return () => clearInterval(intervalId);
   }, []);
 
-  const handleRename = useCallback((recording: Recording, newTitle: string) => {
+  const handleRename = useCallback(async (recording: Recording, newTitle: string) => {
     const existingTitles = recordings.filter((r) => r.id !== recording.id).map((r) => r.title);
-    updateRecording(recording.id, { title: ensureUniqueTitle(newTitle, existingTitles) });
+    try {
+      await updateRecording(recording.id, { title: ensureUniqueTitle(newTitle, existingTitles) });
+    } catch (err) {
+      console.error('Failed to rename recording:', err);
+    }
   }, [recordings, updateRecording]);
 
   useEffect(() => {
