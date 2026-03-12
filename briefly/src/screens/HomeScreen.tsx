@@ -67,11 +67,6 @@ export function HomeScreen() {
     [visibleRecordings, now]
   );
 
-  // #region agent log
-  if (recordings.length > 0 && sections.length > 0) {
-    fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a409d8'},body:JSON.stringify({sessionId:'a409d8',location:'HomeScreen.tsx:render',message:'HomeScreen rendering with recordings',data:{recordingsCount:recordings.length,sectionsCount:sections.length},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
-  }
-  // #endregion
 
   if (visibleRecordings.length === 0) {
     return (

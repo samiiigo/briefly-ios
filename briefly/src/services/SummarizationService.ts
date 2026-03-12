@@ -32,11 +32,11 @@ function fetchWithTimeout(
   const fetchPromise = fetch(url, { ...options, signal: controller.signal }).finally(() =>
     clearTimeout(timeoutId)
   );
-  // Fallback: Promise.race ensures we timeout even if AbortController isn't supported
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('timeout')), timeoutMs)
-  );
-  return Promise.race([fetchPromise, timeoutPromise]);
+  let fallbackTimeoutId: ReturnType<typeof setTimeout>;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    fallbackTimeoutId = setTimeout(() => reject(new Error('timeout')), timeoutMs);
+  });
+  return Promise.race([fetchPromise, timeoutPromise]).finally(() => clearTimeout(fallbackTimeoutId!));
 }
 
 function generateId(): string {
@@ -78,13 +78,7 @@ async function summarizeOnDevice(
 
   if (Platform.OS === 'ios' && BrieflyTranscriber?.summarize) {
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizationService.ts:ios-summarize-start',message:'iOS native summarize starting',data:{textLen:text.length},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       const result = await BrieflyTranscriber.summarize(text);
-      // #region agent log
-      fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizationService.ts:ios-summarize-done',message:'iOS native summarize completed',data:{},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       return {
         summary: result.summary,
         keyInsights: (result.keyInsights as string[]).map((t) => ({
@@ -138,9 +132,6 @@ async function summarizeWithOpenAI(
 
   const text = segmentsToText(segments);
 
-  // #region agent log
-  fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizationService.ts:openai-fetch-start',message:'OpenAI fetch starting',data:{textLen:text.length},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const fetchOptions: RequestInit = {
     method: 'POST',
     headers: {
@@ -175,9 +166,6 @@ async function summarizeWithOpenAI(
     throw new Error(`OpenAI summarization failed: ${response!.status} ${err}`);
   }
 
-  // #region agent log
-  fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizationService.ts:openai-fetch-done',message:'OpenAI fetch completed',data:{ok:response.ok},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const data = await response!.json();
   return parseJsonSummary(data.choices?.[0]?.message?.content ?? '{}', segmentsToText(segments));
 }
@@ -221,9 +209,6 @@ async function summarizeWithOpenRouter(
     'Briefly';
   headers['X-OpenRouter-Title'] = title;
 
-  // #region agent log
-  fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizationService.ts:openrouter-fetch-start',message:'OpenRouter fetch starting',data:{textLen:text.length},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const fetchOptions: RequestInit = {
     method: 'POST',
     headers,
@@ -254,9 +239,6 @@ async function summarizeWithOpenRouter(
     throw new Error(`OpenRouter summarization failed: ${response!.status} ${err}`);
   }
 
-  // #region agent log
-  fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizationService.ts:openrouter-fetch-done',message:'OpenRouter fetch completed',data:{ok:response.ok},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const data = await response!.json();
   return parseJsonSummary(data.choices?.[0]?.message?.content ?? '{}', text);
 }
@@ -277,9 +259,6 @@ async function summarizeWithGemini(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent` +
     `?key=${cloudApiKey}`;
 
-  // #region agent log
-  fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizationService.ts:gemini-fetch-start',message:'Gemini fetch starting',data:{textLen:text.length},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const fetchOptions: RequestInit = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -306,9 +285,6 @@ async function summarizeWithGemini(
     throw new Error(`Gemini summarization failed: ${response!.status} ${err}`);
   }
 
-  // #region agent log
-  fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizationService.ts:gemini-fetch-done',message:'Gemini fetch completed',data:{ok:response.ok},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const data = await response!.json();
   const content: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
   return parseJsonSummary(content, text);
@@ -327,9 +303,6 @@ async function summarizeWithAnthropic(
 
   const text = segmentsToText(segments);
 
-  // #region agent log
-  fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizationService.ts:anthropic-fetch-start',message:'Anthropic fetch starting',data:{textLen:text.length},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const fetchOptions: RequestInit = {
     method: 'POST',
     headers: {
@@ -361,9 +334,6 @@ async function summarizeWithAnthropic(
     throw new Error(`Anthropic summarization failed: ${response!.status} ${err}`);
   }
 
-  // #region agent log
-  fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizationService.ts:anthropic-fetch-done',message:'Anthropic fetch completed',data:{ok:response.ok},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const data = await response!.json();
   const content: string = data.content?.[0]?.text ?? '{}';
   return parseJsonSummary(content, text);
@@ -399,10 +369,6 @@ export const SummarizationService = {
     segments: TranscriptSegment[],
     mode: 'on-device' | 'cloud'
   ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
-    // #region agent log
-    const cloudProvider = mode === 'cloud' ? useSettingsStore.getState().cloudApiProvider : null;
-    fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizationService.ts:summarize-entry',message:'summarize called',data:{mode,cloudProvider,segmentCount:segments.length},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (mode === 'cloud') {
       return summarizeCloud(segments);
     }

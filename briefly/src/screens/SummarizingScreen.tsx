@@ -38,13 +38,17 @@ export function SummarizingScreen() {
   const hasStarted = useRef(false);
 
   useEffect(() => {
-    if (!recording || hasStarted.current) return;
-    hasStarted.current = true;
-    // #region agent log
-    fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizingScreen.tsx:useEffect-start',message:'useEffect started',data:{hasRecording:!!recording,recordingId},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
+    if (hasStarted.current) return;
 
-    // Animate progress bar (consistent slider easing)
+    const rec = getRecordingById(recordingId);
+    if (!rec) return;
+    hasStarted.current = true;
+
+    const transcriptionMode = rec.transcriptionMode ?? defaultTranscriptionMode;
+    const processingMode = rec.processingMode;
+    const filePath = rec.filePath;
+    const preTranscript = rec.transcript;
+
     Animated.timing(progress, {
       toValue: 0.4,
       duration: 1500,
@@ -54,29 +58,22 @@ export function SummarizingScreen() {
 
     (async () => {
       try {
-        // Step 1: Transcribe
-        // If live chunked transcription already ran, only transcribe the final chunk
         setStage('transcribing');
         const lastChunkSegments = await TranscriptionService.transcribe(
-          recording.filePath,
+          filePath,
           undefined,
-          recording.transcriptionMode ?? defaultTranscriptionMode
+          transcriptionMode
         );
 
         if (isCancelled.current) return;
 
-        // Combine pre-transcribed chunks (from live preview) with the final chunk
-        const segments = recording.transcript && recording.transcript.length > 0
-          ? [...recording.transcript, ...lastChunkSegments]
+        const segments = preTranscript && preTranscript.length > 0
+          ? [...preTranscript, ...lastChunkSegments]
           : lastChunkSegments;
 
         await updateRecording(recordingId, { status: 'summarizing', transcript: segments });
 
-        // Step 2: Summarize
         setStage('summarizing');
-        // #region agent log
-        fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizingScreen.tsx:before-summarize',message:'entering summarization',data:{recordingId,processingMode:recording.processingMode,segmentCount:segments.length},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         Animated.timing(progress, {
           toValue: 0.75,
           duration: 1000,
@@ -86,12 +83,9 @@ export function SummarizingScreen() {
 
         const { summary, keyInsights } = await SummarizationService.summarize(
           segments,
-          recording.processingMode
+          processingMode
         );
 
-        // #region agent log
-        fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizingScreen.tsx:summarize-complete',message:'summarize returned',data:{summaryLen:summary?.length,insightCount:keyInsights?.length},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         if (isCancelled.current) return;
 
         Animated.timing(progress, {
@@ -114,9 +108,6 @@ export function SummarizingScreen() {
           }
         }, 600);
       } catch (err: any) {
-        // #region agent log
-        fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'47357b'},body:JSON.stringify({sessionId:'47357b',location:'SummarizingScreen.tsx:catch',message:'error caught',data:{errMsg:err?.message,isCancelled:isCancelled.current},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         if (isCancelled.current) return;
         setErrorMessage(err.message ?? 'Unknown error');
         setStage('error');
@@ -130,12 +121,16 @@ export function SummarizingScreen() {
     return () => {
       isCancelled.current = true;
     };
-  }, [defaultTranscriptionMode, navigation, progress, recording, recordingId, updateRecording]);
+    // recordingId is the only true dependency — the effect captures everything
+    // else at invocation time via getRecordingById / store snapshots. Including
+    // `recording` would cause cleanup→isCancelled on every store update, which
+    // is the root cause of the bug this fixes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordingId]);
 
   const handleRunLocally = async () => {
     if (!recording) return;
     await updateRecording(recordingId, { processingMode: 'on-device', status: 'transcribing' });
-    // Re-mount will restart
     navigation.replace('Summarizing', { recordingId });
   };
 
@@ -232,7 +227,6 @@ export function SummarizingScreen() {
             style={styles.secondaryButton}
             onPress={() => {
               isCancelled.current = true;
-              // Navigate to the Settings tab
               navigation.dispatch(
                 CommonActions.reset({
                   index: 0,

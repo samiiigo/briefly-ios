@@ -27,9 +27,6 @@ export function SettingsScreen() {
     defaultTranscriptionMode,
   } = useSettingsStore();
 
-  // #region agent log
-  fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a409d8'},body:JSON.stringify({sessionId:'a409d8',location:'SettingsScreen.tsx:afterStore',message:'SettingsScreen after useSettingsStore',data:{defaultTranscriptionMode},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}

@@ -37,7 +37,7 @@ export function ProcessingModePickerScreen() {
   const detectedProvider = detectProvider(apiKeyInput);
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

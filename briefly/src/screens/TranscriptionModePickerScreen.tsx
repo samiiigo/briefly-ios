@@ -23,15 +23,12 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 const TRANSCRIPTION_MODES: TranscriptionMode[] = ['on-device', 'cloud'];
 
 export function TranscriptionModePickerScreen() {
-  // #region agent log
-  fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a409d8'},body:JSON.stringify({sessionId:'a409d8',location:'TranscriptionModePickerScreen.tsx:mount',message:'TranscriptionModePickerScreen mounted',data:{modesLen:TRANSCRIPTION_MODES.length},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const navigation = useNavigation<Nav>();
   const { defaultTranscriptionMode, setDefaultTranscriptionMode } =
     useSettingsStore();
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

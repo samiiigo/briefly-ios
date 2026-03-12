@@ -54,13 +54,6 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
         );
       }
       set({ recordings, hasLoaded: true, isLoading: false });
-      // #region agent log
-      if (recordings.length > 0) {
-        const first = recordings[0] as Record<string, unknown>;
-        const keys = Object.keys(first);
-        fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a409d8'},body:JSON.stringify({sessionId:'a409d8',location:'useRecordingStore.ts:loadRecordings',message:'after set recordings',data:{count:recordings.length,firstRecordingKeys:keys,hasTranscriptionModes:keys.includes('transcriptionModes')},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
-      }
-      // #endregion
     } catch {
       set({ isLoading: false });
     }

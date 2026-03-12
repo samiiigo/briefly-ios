@@ -84,11 +84,6 @@ export function LibraryScreen() {
   const tabCounts = useMemo(() => countByLibraryTab(recordings), [recordings]);
   const filtered = useMemo(() => filterByLibraryTab(recordings, activeTab), [activeTab, recordings]);
 
-  // #region agent log
-  if (recordings.length > 0) {
-    fetch('http://127.0.0.1:7276/ingest/3b8a80c6-5c97-439c-93c0-97e4ed6ba274',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'a409d8'},body:JSON.stringify({sessionId:'a409d8',location:'LibraryScreen.tsx:render',message:'LibraryScreen rendering with recordings',data:{recordingsCount:recordings.length,filteredCount:filtered.length},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
-  }
-  // #endregion
 
   const countForBuiltIn = useCallback(
     (id: string) => {
