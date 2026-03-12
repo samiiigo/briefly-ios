@@ -44,7 +44,17 @@ async function transcribeWithNativeModule(
     const emitter = new NativeEventEmitter(BrieflyTranscriber);
     const segments: TranscriptSegment[] = [];
 
-    const segmentSub = emitter.addListener('onTranscriptSegment', (event: any) => {
+    let segmentSub: ReturnType<typeof emitter.addListener>;
+    let doneSub: ReturnType<typeof emitter.addListener>;
+    let errSub: ReturnType<typeof emitter.addListener>;
+
+    const cleanup = () => {
+      segmentSub?.remove();
+      doneSub?.remove();
+      errSub?.remove();
+    };
+
+    segmentSub = emitter.addListener('onTranscriptSegment', (event: any) => {
       const seg: TranscriptSegment = {
         id: generateId(),
         speaker: event.speaker,
@@ -60,16 +70,13 @@ async function transcribeWithNativeModule(
       }
     });
 
-    const doneSub = emitter.addListener('onTranscriptionComplete', () => {
-      segmentSub.remove();
-      doneSub.remove();
+    doneSub = emitter.addListener('onTranscriptionComplete', () => {
+      cleanup();
       resolve(segments);
     });
 
-    const errSub = emitter.addListener('onTranscriptionError', (event: any) => {
-      segmentSub.remove();
-      doneSub.remove();
-      errSub.remove();
+    errSub = emitter.addListener('onTranscriptionError', (event: any) => {
+      cleanup();
       reject(new Error(event.message));
     });
 
