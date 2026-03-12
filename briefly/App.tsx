@@ -11,7 +11,7 @@ export default function App() {
 
   useEffect(() => {
     loadRecordings();
-  }, []);
+  }, [loadRecordings]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
