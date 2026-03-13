@@ -15,6 +15,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { TranscriptionService } from '../services/TranscriptionService';
 import { SummarizationService } from '../services/SummarizationService';
 import { RootStackParamList } from '../types';
+import { transcriptionModeTitle } from '../utils/transcriptionMode';
 import { Colors, Spacing, BorderRadius, SliderAnimation } from '../utils/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -213,11 +214,9 @@ export function SummarizingScreen() {
           <View style={styles.modeBadge}>
             <Ionicons name="lock-closed" size={12} color={Colors.green} />
             <Text style={styles.modeBadgeText}>
-              {(recording.transcriptionMode ?? defaultTranscriptionMode) === 'cloud'
-                ? 'TRANSCRIPTION: CLOUD'
-                : (recording.transcriptionMode ?? defaultTranscriptionMode) === 'on-device'
-                  ? 'TRANSCRIPTION: ON-DEVICE'
-                  : 'TRANSCRIPTION: ON-DEVICE FIRST'}
+              {`TRANSCRIPTION: ${transcriptionModeTitle(
+                recording.transcriptionMode ?? defaultTranscriptionMode
+              ).toUpperCase()}`}
             </Text>
           </View>
         )}

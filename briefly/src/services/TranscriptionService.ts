@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { TranscriptSegment, TranscriptionMode } from '../types';
 import { AssemblyAIConfig, requireAssemblyAISharedApiKey } from '../config/assemblyAI';
+import { normalizeTranscriptionMode } from '../utils/transcriptionMode';
 
 function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -151,9 +152,15 @@ export const TranscriptionService = {
   async transcribe(
     audioUri: string,
     onSegment?: (segment: TranscriptSegment) => void,
-    mode: TranscriptionMode = 'on-device'
+    mode: TranscriptionMode = 'post-assemblyai'
   ): Promise<TranscriptSegment[]> {
-    void mode;
+    const normalizedMode = normalizeTranscriptionMode(mode as unknown as string);
+    if (normalizedMode === 'local-on-device') {
+      throw new Error(
+        'Local (on-device) mode does not upload audio. In this build, local transcripts must be captured live during recording. If no local transcript was captured, retry in Live Local mode with native transcription enabled.'
+      );
+    }
+
     return transcribeWithAssemblyAI(audioUri, onSegment);
   },
 };

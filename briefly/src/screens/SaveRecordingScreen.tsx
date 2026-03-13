@@ -22,6 +22,7 @@ import {
 } from '../types';
 import { formatDuration, formatFileSize, generateId, generateTitle, ensureUniqueTitle } from '../utils';
 import {
+  normalizeTranscriptionMode,
   transcriptionModeDescription,
   transcriptionModeTitle,
 } from '../utils/transcriptionMode';
@@ -45,7 +46,7 @@ export function SaveRecordingScreen() {
   const existingTitles = recordings.map((r) => r.title);
   const [title, setTitle] = useState(() => ensureUniqueTitle(generateTitle(), existingTitles));
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>(
-    route.params.transcriptionMode ?? defaultTranscriptionMode
+    normalizeTranscriptionMode(route.params.transcriptionMode ?? defaultTranscriptionMode)
   );
   const [saving, setSaving] = useState(false);
 
@@ -69,7 +70,7 @@ export function SaveRecordingScreen() {
       ...folderFlagsFor(targetFolder),
       userFolderId: targetUserFolderId,
       status: 'transcribing' as const,
-      transcript: preTranscript, // pre-built from live chunks (cloud mode)
+      transcript: preTranscript, // pre-built from live/local chunks captured during recording
     };
 
     await addRecording(recording);
@@ -92,8 +93,9 @@ export function SaveRecordingScreen() {
       'Transcription mode for this recording',
       transcriptionModeDescription(transcriptionMode),
       [
-        { text: 'On-device', onPress: () => setTranscriptionMode('on-device') },
-        { text: 'Cloud', onPress: () => setTranscriptionMode('cloud') },
+        { text: 'Live (AssemblyAI)', onPress: () => setTranscriptionMode('live-assemblyai') },
+        { text: 'Post-recording (AssemblyAI)', onPress: () => setTranscriptionMode('post-assemblyai') },
+        { text: 'Local (on-device)', onPress: () => setTranscriptionMode('local-on-device') },
         { text: 'Cancel', style: 'cancel' },
       ]
     );

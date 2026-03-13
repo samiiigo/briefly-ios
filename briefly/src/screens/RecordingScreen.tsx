@@ -6,7 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -17,7 +19,11 @@ import { Colors, Spacing, BorderRadius } from '../utils/theme';
 import { RootStackParamList, TranscriptSegment, TranscriptionMode } from '../types';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { transcriptionModeBadge, transcriptionModeDescription } from '../utils/transcriptionMode';
+import {
+  normalizeTranscriptionMode,
+  transcriptionModeBadge,
+  transcriptionModeDescription,
+} from '../utils/transcriptionMode';
 import type { AssemblyAIConnectionState } from '../services/AssemblyAILiveTranscription';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -38,7 +44,7 @@ export function RecordingScreen() {
   const [isPaused, setIsPaused] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>(
-    route.params?.transcriptionModeOverride ?? defaultTranscriptionMode
+    normalizeTranscriptionMode(route.params?.transcriptionModeOverride ?? defaultTranscriptionMode)
   );
   const [streamingState, setStreamingState] = useState<AssemblyAIConnectionState>('idle');
 
@@ -63,9 +69,15 @@ export function RecordingScreen() {
 
   const canCloudLive = AudioService.supportsLiveTranscription;
   const canOnDeviceLive = AudioService.supportsOnDeviceLiveTranscription;
-  const shouldUseCloudLive = transcriptionMode === 'cloud' && canCloudLive;
-  const shouldUseOnDeviceLive = transcriptionMode === 'on-device' && canOnDeviceLive;
-  const useLiveTranscription = shouldUseCloudLive || shouldUseOnDeviceLive;
+  const selectedMode = normalizeTranscriptionMode(transcriptionMode);
+  const isAssemblyAiLiveMode = selectedMode === 'live-assemblyai';
+  const isLocalMode = selectedMode === 'local-on-device';
+  const liveEngine: 'cloud' | 'on-device' | 'none' = isAssemblyAiLiveMode
+    ? (canCloudLive ? 'cloud' : 'none')
+    : isLocalMode
+      ? (canOnDeviceLive ? 'on-device' : 'none')
+      : 'none';
+  const useLiveTranscription = liveEngine !== 'none';
 
   // ─── Timer ────────────────────────────────────────────────────────────────
 
@@ -96,7 +108,7 @@ export function RecordingScreen() {
 
     (async () => {
       try {
-        if (shouldUseCloudLive || shouldUseOnDeviceLive) {
+        if (useLiveTranscription) {
           const callbacks = {
             onPartial: (text: string) => {
               pendingPartialRef.current = text;
@@ -159,11 +171,11 @@ export function RecordingScreen() {
             },
           };
 
-          if (shouldUseCloudLive) {
+          if (liveEngine === 'cloud') {
             // Native module handles recording + AssemblyAI real-time transcription together.
             await AudioService.startLiveTranscription(callbacks);
           } else {
-            // On-device Speech / SpeechRecognizer live transcription.
+            // Native module handles recording + on-device real-time transcription.
             await AudioService.startOnDeviceLiveTranscription(callbacks);
           }
         } else {
@@ -199,7 +211,7 @@ export function RecordingScreen() {
     try {
       if (isPaused) {
         if (useLiveTranscription) {
-          if (shouldUseCloudLive) {
+          if (liveEngine === 'cloud') {
             await AudioService.resumeLiveTranscription();
           } else {
             await AudioService.resumeOnDeviceLiveTranscription();
@@ -212,7 +224,7 @@ export function RecordingScreen() {
         isPausedRef.current = false;
       } else {
         if (useLiveTranscription) {
-          if (shouldUseCloudLive) {
+          if (liveEngine === 'cloud') {
             await AudioService.pauseLiveTranscription();
           } else {
             await AudioService.pauseOnDeviceLiveTranscription();
@@ -242,11 +254,9 @@ export function RecordingScreen() {
     let result;
     if (useLiveTranscription) {
       try {
-        if (shouldUseCloudLive) {
-          result = await AudioService.stopLiveTranscription();
-        } else {
-          result = await AudioService.stopOnDeviceLiveTranscription();
-        }
+        result = liveEngine === 'cloud'
+          ? await AudioService.stopLiveTranscription()
+          : await AudioService.stopOnDeviceLiveTranscription();
       } catch (err: any) {
         Alert.alert('Error', err?.message ?? 'Could not stop recording.');
         return;
@@ -281,12 +291,18 @@ export function RecordingScreen() {
 
     const preTranscript = liveSegments.current.length > 0 ? liveSegments.current : undefined;
 
+    const fallbackToPostRecording = (isAssemblyAiLiveMode && !canCloudLive)
+      || (isLocalMode && !canOnDeviceLive);
+    const effectiveTranscriptionMode: TranscriptionMode = fallbackToPostRecording
+      ? 'post-assemblyai'
+      : selectedMode;
+
     navigation.replace('SaveRecording', {
       duration: result?.duration || elapsed,
       filePath: result?.uri ?? '',
       fileSize: result?.fileSize ?? 0,
       preTranscript,
-      transcriptionMode,
+      transcriptionMode: effectiveTranscriptionMode,
       targetFolder: route.params?.targetFolder,
       targetUserFolderId: route.params?.targetUserFolderId,
     });
@@ -308,7 +324,7 @@ export function RecordingScreen() {
             partialFlushTimerRef.current = null;
           }
           if (useLiveTranscription) {
-            if (shouldUseCloudLive) {
+            if (liveEngine === 'cloud') {
               await AudioService.stopLiveTranscription().catch(() => {});
             } else {
               await AudioService.stopOnDeviceLiveTranscription().catch(() => {});
@@ -331,21 +347,35 @@ export function RecordingScreen() {
 
   const hasAnyText = finalText.length > 0 || partialText.length > 0;
 
+  const liveUnavailableMessage = (() => {
+    const modeLabel = isAssemblyAiLiveMode ? 'Live (AssemblyAI)' : 'Local (on-device)';
+    const capabilityLabel = isAssemblyAiLiveMode
+      ? 'AssemblyAI live streaming with BrieflyTranscriber'
+      : 'native on-device speech recognition with BrieflyTranscriber';
+    const fallbackLine = 'This recording will fall back to post-recording AssemblyAI transcription after you stop.';
+    if (Constants.appOwnership === 'expo') {
+      return `${modeLabel} requires ${capabilityLabel}. This run is in Expo Go, which does not include the native transcription module. Next steps: run npx expo run:ios or npx expo run:android and retry. ${fallbackLine}`;
+    }
+    return `${modeLabel} requires ${capabilityLabel} on ${Platform.OS}. This build is missing that capability. Next steps: enable the native transcription module and rebuild the app. ${fallbackLine}`;
+  })();
+
   const livePreviewPlaceholder = useLiveTranscription
-    ? transcriptionMode === 'cloud'
+    ? isAssemblyAiLiveMode
       ? 'Listening with AssemblyAI... your words will appear live.'
-      : 'Listening on this device... your words will appear live.'
-    : transcriptionMode === 'cloud'
-      ? 'Transcription will be generated after you stop recording.'
-      : 'Transcription will run on-device after you stop recording.';
+      : 'Listening on-device... your words will appear live.'
+    : isAssemblyAiLiveMode || isLocalMode
+      ? liveUnavailableMessage
+      : 'Transcription will be generated after you stop recording.';
+  const showLivePreview = selectedMode !== 'post-assemblyai';
 
   const handleChooseTranscriptionMode = () => {
     Alert.alert(
       'Transcription for this recording',
-      transcriptionModeDescription(transcriptionMode),
+      transcriptionModeDescription(selectedMode),
       [
-        { text: 'On-device', onPress: () => setTranscriptionMode('on-device') },
-        { text: 'Cloud', onPress: () => setTranscriptionMode('cloud') },
+        { text: 'Live (AssemblyAI)', onPress: () => setTranscriptionMode('live-assemblyai') },
+        { text: 'Post-recording (AssemblyAI)', onPress: () => setTranscriptionMode('post-assemblyai') },
+        { text: 'Local (on-device)', onPress: () => setTranscriptionMode('local-on-device') },
         { text: 'Cancel', style: 'cancel' },
       ]
     );
@@ -399,47 +429,48 @@ export function RecordingScreen() {
         <WaveformVisualizer isActive={isStarted && !isPaused} barCount={24} />
       </View>
 
-      {/* Live Preview */}
-      <View style={styles.livePreviewContainer}>
-        <View style={styles.livePreviewHeader}>
-          <Ionicons name="document-text" size={14} color={Colors.primary} />
-          <Text style={styles.livePreviewLabel}>Live Preview</Text>
-          {useLiveTranscription && (
-            <Text style={styles.streamingStatusText}>
-              {streamingState === 'reconnecting'
-                ? 'Reconnecting...'
-                : streamingState === 'open'
-                  ? 'Live'
-                  : streamingState === 'connecting'
-                    ? 'Connecting...'
-                    : ''}
-            </Text>
-          )}
-          <View style={styles.onDevicePill}>
-            <Text style={styles.onDevicePillText}>{transcriptionModeBadge(transcriptionMode)}</Text>
+      {showLivePreview && (
+        <View style={styles.livePreviewContainer}>
+          <View style={styles.livePreviewHeader}>
+            <Ionicons name="document-text" size={14} color={Colors.primary} />
+            <Text style={styles.livePreviewLabel}>Live Preview</Text>
+            {useLiveTranscription && (
+              <Text style={styles.streamingStatusText}>
+                {streamingState === 'reconnecting'
+                  ? 'Reconnecting...'
+                  : streamingState === 'open'
+                    ? 'Live'
+                    : streamingState === 'connecting'
+                      ? 'Connecting...'
+                      : ''}
+              </Text>
+            )}
+            <View style={styles.onDevicePill}>
+              <Text style={styles.onDevicePillText}>{transcriptionModeBadge(selectedMode)}</Text>
+            </View>
           </View>
+          <ScrollView
+            ref={livePreviewScrollRef}
+            style={styles.livePreviewScroll}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => {
+              livePreviewScrollRef.current?.scrollToEnd({ animated: true });
+            }}
+          >
+            {hasAnyText ? (
+              <Text style={styles.liveTranscriptText}>
+                {finalText}
+                {finalText && partialText ? ' ' : ''}
+                {partialText ? (
+                  <Text style={styles.partialText}>{partialText}</Text>
+                ) : null}
+              </Text>
+            ) : (
+              <Text style={styles.liveTranscriptPlaceholder}>{livePreviewPlaceholder}</Text>
+            )}
+          </ScrollView>
         </View>
-        <ScrollView
-          ref={livePreviewScrollRef}
-          style={styles.livePreviewScroll}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => {
-            livePreviewScrollRef.current?.scrollToEnd({ animated: true });
-          }}
-        >
-          {hasAnyText ? (
-            <Text style={styles.liveTranscriptText}>
-              {finalText}
-              {finalText && partialText ? ' ' : ''}
-              {partialText ? (
-                <Text style={styles.partialText}>{partialText}</Text>
-              ) : null}
-            </Text>
-          ) : (
-            <Text style={styles.liveTranscriptPlaceholder}>{livePreviewPlaceholder}</Text>
-          )}
-        </ScrollView>
-      </View>
+      )}
 
       {/* Controls */}
       <View style={styles.controls}>

@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { RootStackParamList, TranscriptionMode } from '../types';
 import {
+  normalizeTranscriptionMode,
   transcriptionModeDescription,
   transcriptionModeTitle,
 } from '../utils/transcriptionMode';
@@ -20,12 +21,17 @@ import { Colors, Spacing } from '../utils/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const TRANSCRIPTION_MODES: TranscriptionMode[] = ['on-device', 'cloud'];
+const TRANSCRIPTION_MODES: TranscriptionMode[] = [
+  'live-assemblyai',
+  'post-assemblyai',
+  'local-on-device',
+];
 
 export function TranscriptionModePickerScreen() {
   const navigation = useNavigation<Nav>();
   const { defaultTranscriptionMode, setDefaultTranscriptionMode } =
     useSettingsStore();
+  const selectedMode = normalizeTranscriptionMode(defaultTranscriptionMode);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -48,7 +54,7 @@ export function TranscriptionModePickerScreen() {
         </Text>
         <View style={styles.card}>
           {TRANSCRIPTION_MODES.map((mode, index) => {
-            const selected = defaultTranscriptionMode === mode;
+            const selected = selectedMode === mode;
             return (
               <React.Fragment key={mode}>
                 <TouchableOpacity
