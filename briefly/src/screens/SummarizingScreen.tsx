@@ -230,7 +230,7 @@ export function SummarizingScreen() {
             <Text style={styles.primaryButtonText}>Retry</Text>
           </TouchableOpacity>
         )}
-        {recording?.processingMode === 'cloud' && stage !== 'error' && (
+        {recording?.processingMode !== 'on-device' && stage !== 'error' && (
           <TouchableOpacity style={styles.secondaryButton} onPress={handleRunLocally}>
             <Ionicons name="hardware-chip-outline" size={18} color={Colors.textPrimary} />
             <Text style={styles.secondaryButtonText}>Run Locally Instead</Text>

@@ -14,8 +14,9 @@
 
 import { Platform, NativeModules } from 'react-native';
 import Constants from 'expo-constants';
-import { TranscriptSegment, KeyInsight } from '../types';
+import { TranscriptSegment, KeyInsight, ProcessingMode } from '../types';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { OpenRouterConfig, requireOpenRouterSharedApiKey } from '../config/openRouter';
 
 const { BrieflyTranscriber } = NativeModules;
 
@@ -188,7 +189,7 @@ async function summarizeWithOpenRouter(
   const model: string =
     extra.openRouterModelId ??
     extra.OPENROUTER_MODEL_ID ??
-    'openai/gpt-4.1-mini';
+    OpenRouterConfig.model;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -225,6 +226,75 @@ async function summarizeWithOpenRouter(
   let response: Response;
   try {
     response = await fetchWithTimeout(`${cloudApiEndpoint}/chat/completions`, fetchOptions);
+  } catch (e: any) {
+    if (e?.name === 'AbortError' || e?.message === 'timeout') {
+      throw new Error(
+        'Summarization timed out. The server may be slow or unreachable. Try again or use on-device processing.'
+      );
+    }
+    throw e;
+  }
+
+  if (!response!.ok) {
+    const err = await response!.text();
+    throw new Error(`OpenRouter summarization failed: ${response!.status} ${err}`);
+  }
+
+  const data = await response!.json();
+  return parseJsonSummary(data.choices?.[0]?.message?.content ?? '{}', text);
+}
+
+async function summarizeWithSharedOpenRouter(
+  segments: TranscriptSegment[]
+): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
+  const apiKey = requireOpenRouterSharedApiKey();
+  const text = segmentsToText(segments);
+
+  const expoConfig: any = Constants.expoConfig ?? {};
+  const extra: any = expoConfig.extra ?? {};
+  const model: string =
+    extra.openRouterModelId ??
+    extra.OPENROUTER_MODEL_ID ??
+    OpenRouterConfig.model;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`,
+  };
+
+  const referer: string | undefined =
+    extra.openRouterReferer ??
+    extra.OPENROUTER_REFERER;
+  if (referer) {
+    headers['HTTP-Referer'] = referer;
+  }
+
+  const title: string =
+    extra.openRouterTitle ??
+    extra.OPENROUTER_TITLE ??
+    expoConfig.name ??
+    'Briefly';
+  headers['X-OpenRouter-Title'] = title;
+
+  const fetchOptions: RequestInit = {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `Transcript:\n${text}` },
+      ],
+      temperature: 0.3,
+      max_tokens: 800,
+    }),
+  };
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(
+      `${OpenRouterConfig.apiBaseUrl}/chat/completions`,
+      fetchOptions
+    );
   } catch (e: any) {
     if (e?.name === 'AbortError' || e?.message === 'timeout') {
       throw new Error(
@@ -367,9 +437,15 @@ function parseJsonSummary(
 export const SummarizationService = {
   async summarize(
     segments: TranscriptSegment[],
-    mode: 'on-device' | 'cloud'
+    mode: ProcessingMode
   ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
-    if (mode === 'cloud') {
+    if (mode === 'on-device') {
+      return summarizeOnDevice(segments);
+    }
+    if (mode === 'cloud-shared-openrouter') {
+      return summarizeWithSharedOpenRouter(segments);
+    }
+    if (mode === 'cloud-user-key' || mode === 'cloud') {
       return summarizeCloud(segments);
     }
     return summarizeOnDevice(segments);

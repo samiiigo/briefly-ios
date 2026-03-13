@@ -46,6 +46,8 @@ export function RecordingScreen() {
   const [finalText, setFinalText] = useState('');
   const [partialText, setPartialText] = useState('');
 
+  const livePreviewScrollRef = useRef<ScrollView | null>(null);
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // For building preTranscript passed to SaveRecording
@@ -54,6 +56,10 @@ export function RecordingScreen() {
   const prevFinalText = useRef('');
   const isStopped = useRef(false);
   const isPausedRef = useRef(false);
+
+  // Buffered partial text to coalesce rapid onPartial events into ~80ms batches
+  const pendingPartialRef = useRef('');
+  const partialFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canCloudLive = AudioService.supportsLiveTranscription;
   const canOnDeviceLive = AudioService.supportsOnDeviceLiveTranscription;
@@ -93,16 +99,25 @@ export function RecordingScreen() {
         if (shouldUseCloudLive || shouldUseOnDeviceLive) {
           const callbacks = {
             onPartial: (text: string) => {
-              setPartialText(text);
-              setLiveTranscript(
-                prevFinalText.current
-                  ? prevFinalText.current + ' ' + text
-                  : text
-              );
+              pendingPartialRef.current = text;
+              if (!partialFlushTimerRef.current) {
+                partialFlushTimerRef.current = setTimeout(() => {
+                  partialFlushTimerRef.current = null;
+                  if (isStopped.current) return;
+                  const buffered = pendingPartialRef.current;
+                  setPartialText(buffered);
+                  const accFinal = liveSegments.current.map((s) => s.text).join(' ');
+                  setLiveTranscript(accFinal ? `${accFinal} ${buffered}` : buffered);
+                }, 80);
+              }
             },
             onFinal: (text: string) => {
-              // AssemblyAI / on-device final turns are appended to the session transcript.
-              // Compute the delta vs. the last final snapshot to capture only new words.
+              if (partialFlushTimerRef.current) {
+                clearTimeout(partialFlushTimerRef.current);
+                partialFlushTimerRef.current = null;
+              }
+              pendingPartialRef.current = '';
+
               const prev = prevFinalText.current;
               const newWords = prev
                 ? text.startsWith(prev)
@@ -125,8 +140,7 @@ export function RecordingScreen() {
                 liveSegments.current = [...liveSegments.current, seg];
               }
 
-              // Reset the final snapshot for the next turn window.
-              prevFinalText.current = '';
+              prevFinalText.current = text;
 
               const accumulated = liveSegments.current.map((s) => s.text).join(' ');
               setFinalText(accumulated);
@@ -170,6 +184,10 @@ export function RecordingScreen() {
 
     return () => {
       stopTimer();
+      if (partialFlushTimerRef.current) {
+        clearTimeout(partialFlushTimerRef.current);
+        partialFlushTimerRef.current = null;
+      }
     };
     // Intentional: this flow runs exactly once when entering Recording screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -216,6 +234,10 @@ export function RecordingScreen() {
   const handleStop = async () => {
     isStopped.current = true;
     stopTimer();
+    if (partialFlushTimerRef.current) {
+      clearTimeout(partialFlushTimerRef.current);
+      partialFlushTimerRef.current = null;
+    }
 
     let result;
     if (useLiveTranscription) {
@@ -240,7 +262,7 @@ export function RecordingScreen() {
       }
     }
 
-    const trimmedPartial = partialText.trim();
+    const trimmedPartial = (pendingPartialRef.current || partialText).trim();
     if (trimmedPartial) {
       liveSegments.current = [
         ...liveSegments.current,
@@ -281,6 +303,10 @@ export function RecordingScreen() {
         onPress: async () => {
           isStopped.current = true;
           stopTimer();
+          if (partialFlushTimerRef.current) {
+            clearTimeout(partialFlushTimerRef.current);
+            partialFlushTimerRef.current = null;
+          }
           if (useLiveTranscription) {
             if (shouldUseCloudLive) {
               await AudioService.stopLiveTranscription().catch(() => {});
@@ -303,14 +329,14 @@ export function RecordingScreen() {
   const minutes = Math.floor((elapsed % 3600) / 60);
   const seconds = elapsed % 60;
 
-  const showLiveText = finalText || partialText;
+  const hasAnyText = finalText.length > 0 || partialText.length > 0;
 
   const livePreviewPlaceholder = useLiveTranscription
     ? transcriptionMode === 'cloud'
       ? 'Listening with AssemblyAI... your words will appear live.'
       : 'Listening on this device... your words will appear live.'
     : transcriptionMode === 'cloud'
-      ? 'Transcription will run in the cloud after you stop recording.'
+      ? 'Transcription will be generated after you stop recording.'
       : 'Transcription will run on-device after you stop recording.';
 
   const handleChooseTranscriptionMode = () => {
@@ -393,8 +419,15 @@ export function RecordingScreen() {
             <Text style={styles.onDevicePillText}>{transcriptionModeBadge(transcriptionMode)}</Text>
           </View>
         </View>
-        <ScrollView style={styles.livePreviewScroll} showsVerticalScrollIndicator={false}>
-          {showLiveText ? (
+        <ScrollView
+          ref={livePreviewScrollRef}
+          style={styles.livePreviewScroll}
+          showsVerticalScrollIndicator={false}
+          onContentSizeChange={() => {
+            livePreviewScrollRef.current?.scrollToEnd({ animated: true });
+          }}
+        >
+          {hasAnyText ? (
             <Text style={styles.liveTranscriptText}>
               {finalText}
               {finalText && partialText ? ' ' : ''}

@@ -16,7 +16,6 @@ import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { ProcessingBadge } from '../components/ProcessingBadge';
 import {
-  ProcessingMode,
   RecordingFolder,
   RootStackParamList,
   TranscriptionMode,
@@ -26,6 +25,7 @@ import {
   transcriptionModeDescription,
   transcriptionModeTitle,
 } from '../utils/transcriptionMode';
+import { processingModeTitle } from '../utils/processingMode';
 import { folderFlagsFor } from '../utils/recordingFolder';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
 
@@ -44,7 +44,6 @@ export function SaveRecordingScreen() {
 
   const existingTitles = recordings.map((r) => r.title);
   const [title, setTitle] = useState(() => ensureUniqueTitle(generateTitle(), existingTitles));
-  const [processingMode, setProcessingMode] = useState<ProcessingMode>(defaultProcessingMode);
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>(
     route.params.transcriptionMode ?? defaultTranscriptionMode
   );
@@ -65,7 +64,7 @@ export function SaveRecordingScreen() {
       filePath,
       fileSize,
       transcriptionMode,
-      processingMode,
+      processingMode: defaultProcessingMode,
       folder: targetFolder,
       ...folderFlagsFor(targetFolder),
       userFolderId: targetUserFolderId,
@@ -86,10 +85,6 @@ export function SaveRecordingScreen() {
         onPress: () => navigation.navigate('Main'),
       },
     ]);
-  };
-
-  const toggleMode = () => {
-    setProcessingMode((m) => (m === 'on-device' ? 'cloud' : 'on-device'));
   };
 
   const chooseTranscriptionMode = () => {
@@ -178,13 +173,11 @@ export function SaveRecordingScreen() {
             <View>
               <Text style={styles.detailLabel}>Summarization Mode</Text>
               <Text style={styles.processingSubtitle}>
-                {processingMode === 'on-device'
-                  ? 'On-device — fully private'
-                  : 'Cloud AI — richer summaries'}
+                {processingModeTitle(defaultProcessingMode)}
               </Text>
             </View>
-            <TouchableOpacity onPress={toggleMode}>
-              <ProcessingBadge mode={processingMode} />
+            <TouchableOpacity onPress={() => navigation.navigate('ProcessingModePicker')}>
+              <ProcessingBadge mode={defaultProcessingMode} />
             </TouchableOpacity>
           </View>
         </View>

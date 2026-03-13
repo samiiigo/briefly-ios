@@ -14,7 +14,7 @@ interface SettingsState {
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
-  defaultProcessingMode: 'cloud',
+  defaultProcessingMode: 'cloud-shared-openrouter',
   defaultTranscriptionMode: 'on-device',
   cloudApiKey: '',
   cloudApiProvider: null,

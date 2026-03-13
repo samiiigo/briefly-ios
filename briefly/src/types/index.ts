@@ -1,4 +1,4 @@
-export type ProcessingMode = 'on-device' | 'cloud';
+export type ProcessingMode = 'on-device' | 'cloud' | 'cloud-shared-openrouter' | 'cloud-user-key';
 export type TranscriptionMode = 'on-device' | 'cloud';
 /**
  * System-managed storage buckets for recordings.

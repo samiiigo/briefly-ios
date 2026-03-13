@@ -22,7 +22,11 @@ import { Colors, Spacing } from '../utils/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const PROCESSING_MODES: ProcessingMode[] = ['on-device', 'cloud'];
+const PROCESSING_MODES: ProcessingMode[] = [
+  'cloud-shared-openrouter',
+  'cloud-user-key',
+  'on-device',
+];
 
 export function ProcessingModePickerScreen() {
   const navigation = useNavigation<Nav>();
@@ -33,7 +37,8 @@ export function ProcessingModePickerScreen() {
     setCloudApiKey,
   } = useSettingsStore();
   const [apiKeyInput, setApiKeyInput] = useState(cloudApiKey);
-  const isCloud = defaultProcessingMode === 'cloud';
+  const isCloudUserKey =
+    defaultProcessingMode === 'cloud-user-key' || defaultProcessingMode === 'cloud';
   const detectedProvider = detectProvider(apiKeyInput);
 
   return (
@@ -83,8 +88,8 @@ export function ProcessingModePickerScreen() {
           })}
         </View>
 
-        {/* API Key — shown when Cloud AI is selected */}
-        {isCloud && (
+        {/* API Key — shown for Cloud (use your own key) */}
+        {isCloudUserKey && (
           <React.Fragment>
             <Text style={styles.sectionLabel}>API KEY</Text>
             <Text style={styles.sectionDescription}>
