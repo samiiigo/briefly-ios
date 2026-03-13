@@ -3,7 +3,12 @@
 // expo-audio requires a native build and will NOT work in Expo Go.
 import { Audio } from 'expo-av';
 import { getInfoAsync, deleteAsync, copyAsync, documentDirectory } from 'expo-file-system/legacy';
-import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
+import { Platform } from 'react-native';
+import {
+  AssemblyAIConnectionState,
+  AssemblyAILiveTranscriptionClient,
+} from './AssemblyAILiveTranscription';
+import { AssemblyAIConfig } from '../config/assemblyAI';
 
 export interface AudioRecordingResult {
   uri: string;
@@ -14,6 +19,8 @@ export interface AudioRecordingResult {
 interface LiveTranscriptionCallbacks {
   onPartial: (text: string) => void;
   onFinal: (text: string) => void;
+  onConnectionState?: (state: AssemblyAIConnectionState, reason?: string) => void;
+  onError?: (message: string) => void;
 }
 
 class AudioServiceClass {
@@ -22,63 +29,107 @@ class AudioServiceClass {
   private sound: Audio.Sound | null = null;
   private startTime: number = 0;
 
-  // Live transcription event subscriptions (iOS native module)
-  private partialSub: any = null;
-  private finalSub: any = null;
+  private assemblyAiLiveClient: AssemblyAILiveTranscriptionClient | null = null;
 
   // ─── Capability check ─────────────────────────────────────────────────────
 
   /**
-   * True on iOS when the BrieflyTranscriber native module is compiled in
-   * (i.e. running a development build, NOT Expo Go).
-   * In this mode AVAudioEngine handles recording + real-time transcription together.
+   * True when the native BrieflyTranscriber module is compiled in
+   * (i.e. running a development build, NOT Expo Go) and AssemblyAI live
+   * streaming is available through the native bridge.
    */
   get supportsLiveTranscription(): boolean {
-    return Platform.OS === 'ios' && !!NativeModules.BrieflyTranscriber;
+    return (Platform.OS === 'ios' || Platform.OS === 'android') &&
+      AssemblyAILiveTranscriptionClient.isSupported;
   }
 
-  // ─── Live transcription (iOS native module, development build only) ────────
+  /**
+   * True when the native BrieflyTranscriber module is compiled in and the
+   * on-device live transcription path is available. The native side will
+   * fall back with an error if the current OS / locale does not support
+   * fully on-device recognition.
+   */
+  get supportsOnDeviceLiveTranscription(): boolean {
+    return (Platform.OS === 'ios' || Platform.OS === 'android') &&
+      AssemblyAILiveTranscriptionClient.isOnDeviceSupported;
+  }
+
+  // ─── Live transcription (AssemblyAI via iOS native module) ─────────────────
 
   async startLiveTranscription(callbacks: LiveTranscriptionCallbacks): Promise<void> {
-    const { BrieflyTranscriber } = NativeModules;
-    const emitter = new NativeEventEmitter(BrieflyTranscriber);
-
-    this.partialSub = emitter.addListener('onPartialTranscript', (e: { text: string }) => {
-      callbacks.onPartial(e.text);
+    this.assemblyAiLiveClient?.dispose();
+    this.assemblyAiLiveClient = new AssemblyAILiveTranscriptionClient({
+      onPartial: callbacks.onPartial,
+      onFinal: callbacks.onFinal,
+      onConnectionState: callbacks.onConnectionState,
+      onError: callbacks.onError,
     });
 
-    this.finalSub = emitter.addListener('onFinalTranscript', (e: { text: string }) => {
-      callbacks.onFinal(e.text);
+    await this.assemblyAiLiveClient.start({
+      sampleRate: AssemblyAIConfig.streamSampleRate,
+      speechModel: AssemblyAIConfig.streamModel,
+      mode: 'cloud',
     });
-
-    await BrieflyTranscriber.startLiveTranscription();
     this.startTime = Date.now();
   }
 
   async pauseLiveTranscription(): Promise<void> {
-    await NativeModules.BrieflyTranscriber.pauseLiveTranscription();
+    await this.assemblyAiLiveClient?.pause();
   }
 
   async resumeLiveTranscription(): Promise<void> {
-    await NativeModules.BrieflyTranscriber.resumeLiveTranscription();
+    await this.assemblyAiLiveClient?.resume();
   }
 
   async stopLiveTranscription(): Promise<AudioRecordingResult> {
-    this.partialSub?.remove();
-    this.finalSub?.remove();
-    this.partialSub = null;
-    this.finalSub = null;
-
-    const result: { uri: string; duration: number } =
-      await NativeModules.BrieflyTranscriber.stopLiveTranscription();
+    const result = await this.assemblyAiLiveClient?.stop();
+    this.assemblyAiLiveClient = null;
 
     let fileSize = 0;
     try {
-      const info = await getInfoAsync(result.uri);
+      const info = await getInfoAsync(result?.uri ?? '');
       fileSize = info.exists ? ((info as any).size ?? 0) : 0;
     } catch {}
 
-    return { uri: result.uri, duration: result.duration, fileSize };
+    return { uri: result?.uri ?? '', duration: result?.duration ?? 0, fileSize };
+  }
+
+  async startOnDeviceLiveTranscription(callbacks: LiveTranscriptionCallbacks): Promise<void> {
+    this.assemblyAiLiveClient?.dispose();
+    this.assemblyAiLiveClient = new AssemblyAILiveTranscriptionClient({
+      onPartial: callbacks.onPartial,
+      onFinal: callbacks.onFinal,
+      onConnectionState: callbacks.onConnectionState,
+      onError: callbacks.onError,
+    });
+
+    await this.assemblyAiLiveClient.start({
+      sampleRate: AssemblyAIConfig.streamSampleRate,
+      speechModel: AssemblyAIConfig.streamModel,
+      mode: 'on-device',
+    });
+    this.startTime = Date.now();
+  }
+
+  async pauseOnDeviceLiveTranscription(): Promise<void> {
+    await this.assemblyAiLiveClient?.pause();
+  }
+
+  async resumeOnDeviceLiveTranscription(): Promise<void> {
+    await this.assemblyAiLiveClient?.resume();
+  }
+
+  async stopOnDeviceLiveTranscription(): Promise<AudioRecordingResult> {
+    const result = await this.assemblyAiLiveClient?.stop();
+    this.assemblyAiLiveClient = null;
+
+    let fileSize = 0;
+    try {
+      const info = await getInfoAsync(result?.uri ?? '');
+      fileSize = info.exists ? ((info as any).size ?? 0) : 0;
+    } catch {}
+
+    return { uri: result?.uri ?? '', duration: result?.duration ?? 0, fileSize };
   }
 
   // ─── Standard recording (expo-av, Expo Go compatible) ─────────────────────

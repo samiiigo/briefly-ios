@@ -96,6 +96,7 @@ android {
         versionName "1.0.0"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+        buildConfigField "String", "ASSEMBLYAI_API_KEY", "\"${(findProperty('ASSEMBLYAI_API_KEY') ?: System.getenv('ASSEMBLYAI_API_KEY') ?: '').toString().replace('\\', '\\\\').replace('\"', '\\\"')}\""
     }
     signingConfigs {
         debug {

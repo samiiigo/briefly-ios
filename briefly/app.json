@@ -50,6 +50,7 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
+      "assemblyAiApiKey": "",
       "eas": {
         "projectId": "briefly-app"
       }

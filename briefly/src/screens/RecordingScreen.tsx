@@ -18,6 +18,7 @@ import { RootStackParamList, TranscriptSegment, TranscriptionMode } from '../typ
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { transcriptionModeBadge, transcriptionModeDescription } from '../utils/transcriptionMode';
+import type { AssemblyAIConnectionState } from '../services/AssemblyAILiveTranscription';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Recording'>;
@@ -39,6 +40,7 @@ export function RecordingScreen() {
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>(
     route.params?.transcriptionModeOverride ?? defaultTranscriptionMode
   );
+  const [streamingState, setStreamingState] = useState<AssemblyAIConnectionState>('idle');
 
   // Live transcript display state
   const [finalText, setFinalText] = useState('');
@@ -53,7 +55,11 @@ export function RecordingScreen() {
   const isStopped = useRef(false);
   const isPausedRef = useRef(false);
 
-  const useLiveTranscription = AudioService.supportsLiveTranscription;
+  const canCloudLive = AudioService.supportsLiveTranscription;
+  const canOnDeviceLive = AudioService.supportsOnDeviceLiveTranscription;
+  const shouldUseCloudLive = transcriptionMode === 'cloud' && canCloudLive;
+  const shouldUseOnDeviceLive = transcriptionMode === 'on-device' && canOnDeviceLive;
+  const useLiveTranscription = shouldUseCloudLive || shouldUseOnDeviceLive;
 
   // ─── Timer ────────────────────────────────────────────────────────────────
 
@@ -84,10 +90,9 @@ export function RecordingScreen() {
 
     (async () => {
       try {
-        if (useLiveTranscription) {
-          // iOS: AVAudioEngine handles recording + real-time transcription together
-          await AudioService.startLiveTranscription({
-            onPartial: (text) => {
+        if (shouldUseCloudLive || shouldUseOnDeviceLive) {
+          const callbacks = {
+            onPartial: (text: string) => {
               setPartialText(text);
               setLiveTranscript(
                 prevFinalText.current
@@ -95,9 +100,9 @@ export function RecordingScreen() {
                   : text
               );
             },
-            onFinal: (text) => {
-              // SFSpeechRecognizer returns the full text for the current task segment.
-              // Compute the delta vs. the last known final to get just the new words.
+            onFinal: (text: string) => {
+              // AssemblyAI / on-device final turns are appended to the session transcript.
+              // Compute the delta vs. the last final snapshot to capture only new words.
               const prev = prevFinalText.current;
               const newWords = prev
                 ? text.startsWith(prev)
@@ -120,8 +125,7 @@ export function RecordingScreen() {
                 liveSegments.current = [...liveSegments.current, seg];
               }
 
-              // After each final, SFSpeechRecognizer starts fresh for the next segment,
-              // so reset prevFinalText to '' for the new task window.
+              // Reset the final snapshot for the next turn window.
               prevFinalText.current = '';
 
               const accumulated = liveSegments.current.map((s) => s.text).join(' ');
@@ -129,7 +133,25 @@ export function RecordingScreen() {
               setPartialText('');
               setLiveTranscript(accumulated);
             },
-          });
+            onConnectionState: (state: AssemblyAIConnectionState) => {
+              setStreamingState(state);
+            },
+            onError: (message: string) => {
+              setStreamingState('reconnecting');
+              if (liveSegments.current.length === 0) {
+                setLiveTranscript('Reconnecting live transcription...');
+              }
+              console.warn('[Transcription] live transcription error:', message);
+            },
+          };
+
+          if (shouldUseCloudLive) {
+            // Native module handles recording + AssemblyAI real-time transcription together.
+            await AudioService.startLiveTranscription(callbacks);
+          } else {
+            // On-device Speech / SpeechRecognizer live transcription.
+            await AudioService.startOnDeviceLiveTranscription(callbacks);
+          }
         } else {
           // No native module: record audio only, transcription happens after stop
           await AudioService.startRecording();
@@ -159,7 +181,11 @@ export function RecordingScreen() {
     try {
       if (isPaused) {
         if (useLiveTranscription) {
-          await AudioService.resumeLiveTranscription();
+          if (shouldUseCloudLive) {
+            await AudioService.resumeLiveTranscription();
+          } else {
+            await AudioService.resumeOnDeviceLiveTranscription();
+          }
         } else {
           await AudioService.resumeRecording();
         }
@@ -168,7 +194,11 @@ export function RecordingScreen() {
         isPausedRef.current = false;
       } else {
         if (useLiveTranscription) {
-          await AudioService.pauseLiveTranscription();
+          if (shouldUseCloudLive) {
+            await AudioService.pauseLiveTranscription();
+          } else {
+            await AudioService.pauseOnDeviceLiveTranscription();
+          }
         } else {
           await AudioService.pauseRecording();
         }
@@ -190,7 +220,11 @@ export function RecordingScreen() {
     let result;
     if (useLiveTranscription) {
       try {
-        result = await AudioService.stopLiveTranscription();
+        if (shouldUseCloudLive) {
+          result = await AudioService.stopLiveTranscription();
+        } else {
+          result = await AudioService.stopOnDeviceLiveTranscription();
+        }
       } catch (err: any) {
         Alert.alert('Error', err?.message ?? 'Could not stop recording.');
         return;
@@ -204,6 +238,23 @@ export function RecordingScreen() {
           result = await AudioService.stopRecording();
         } catch {}
       }
+    }
+
+    const trimmedPartial = partialText.trim();
+    if (trimmedPartial) {
+      liveSegments.current = [
+        ...liveSegments.current,
+        {
+          id: generateSegmentId(),
+          text: trimmedPartial,
+          startTime: liveSegments.current.length > 0
+            ? liveSegments.current[liveSegments.current.length - 1].endTime
+            : 0,
+          endTime: elapsedRef.current,
+          isFinal: true,
+        },
+      ];
+      setPartialText('');
     }
 
     const preTranscript = liveSegments.current.length > 0 ? liveSegments.current : undefined;
@@ -231,7 +282,11 @@ export function RecordingScreen() {
           isStopped.current = true;
           stopTimer();
           if (useLiveTranscription) {
-            await AudioService.stopLiveTranscription().catch(() => {});
+            if (shouldUseCloudLive) {
+              await AudioService.stopLiveTranscription().catch(() => {});
+            } else {
+              await AudioService.stopOnDeviceLiveTranscription().catch(() => {});
+            }
           } else {
             await AudioService.stopRecording().catch(() => {});
           }
@@ -251,7 +306,9 @@ export function RecordingScreen() {
   const showLiveText = finalText || partialText;
 
   const livePreviewPlaceholder = useLiveTranscription
-    ? 'Listening… speak naturally and your words will appear here instantly.'
+    ? transcriptionMode === 'cloud'
+      ? 'Listening with AssemblyAI... your words will appear live.'
+      : 'Listening on this device... your words will appear live.'
     : transcriptionMode === 'cloud'
       ? 'Transcription will run in the cloud after you stop recording.'
       : 'Transcription will run on-device after you stop recording.';
@@ -321,6 +378,17 @@ export function RecordingScreen() {
         <View style={styles.livePreviewHeader}>
           <Ionicons name="document-text" size={14} color={Colors.primary} />
           <Text style={styles.livePreviewLabel}>Live Preview</Text>
+          {useLiveTranscription && (
+            <Text style={styles.streamingStatusText}>
+              {streamingState === 'reconnecting'
+                ? 'Reconnecting...'
+                : streamingState === 'open'
+                  ? 'Live'
+                  : streamingState === 'connecting'
+                    ? 'Connecting...'
+                    : ''}
+            </Text>
+          )}
           <View style={styles.onDevicePill}>
             <Text style={styles.onDevicePillText}>{transcriptionModeBadge(transcriptionMode)}</Text>
           </View>
@@ -478,6 +546,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.primary,
     flex: 1,
+  },
+  streamingStatusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.orange,
+    marginRight: 6,
   },
   onDevicePill: {
     backgroundColor: 'rgba(52,199,89,0.15)',

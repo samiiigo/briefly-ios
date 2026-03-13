@@ -1,23 +1,23 @@
 import { TranscriptionMode } from '../types';
 
 export function transcriptionModeTitle(mode: TranscriptionMode): string {
-  if (mode === 'on-device') return 'On-device';
-  if (mode === 'cloud') return 'Cloud';
-  return 'On-device'; // fallback for legacy data
+  if (mode === 'on-device') return 'Live (AssemblyAI)';
+  if (mode === 'cloud') return 'Post-recording (AssemblyAI)';
+  return 'Live (AssemblyAI)'; // fallback for legacy data
 }
 
 export function transcriptionModeDescription(mode: TranscriptionMode): string {
   if (mode === 'on-device') {
-    return 'Best privacy and low latency. Uses local processing and keeps audio on-device.';
+    return 'Streams microphone audio live to AssemblyAI for real-time transcript updates while recording.';
   }
   if (mode === 'cloud') {
-    return 'Potentially better accuracy and language coverage. Requires internet and sends audio to your AI provider.';
+    return 'Records first, then transcribes with AssemblyAI after you stop recording.';
   }
-  return 'Best privacy and low latency. Uses local processing and keeps audio on-device.'; // fallback for legacy data
+  return 'Streams microphone audio live to AssemblyAI for real-time transcript updates while recording.'; // fallback for legacy data
 }
 
 export function transcriptionModeBadge(mode: TranscriptionMode): string {
-  if (mode === 'on-device') return 'ON-DEVICE';
-  if (mode === 'cloud') return 'CLOUD';
-  return 'ON-DEVICE'; // fallback for legacy data
+  if (mode === 'on-device') return 'LIVE';
+  if (mode === 'cloud') return 'POST';
+  return 'LIVE'; // fallback for legacy data
 }

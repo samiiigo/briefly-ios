@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -59,17 +59,25 @@ export function SummarizingScreen() {
     (async () => {
       try {
         setStage('transcribing');
-        const lastChunkSegments = await TranscriptionService.transcribe(
-          filePath,
-          undefined,
-          transcriptionMode
-        );
+        const hasLiveTranscript = !!(preTranscript && preTranscript.length > 0);
+        let segments = preTranscript ?? [];
 
-        if (isCancelled.current) return;
-
-        const segments = preTranscript && preTranscript.length > 0
-          ? [...preTranscript, ...lastChunkSegments]
-          : lastChunkSegments;
+        if (!hasLiveTranscript) {
+          const lastChunkSegments = await TranscriptionService.transcribe(
+            filePath,
+            undefined,
+            transcriptionMode
+          );
+          if (isCancelled.current) return;
+          segments = lastChunkSegments;
+        } else {
+          Animated.timing(progress, {
+            toValue: 0.55,
+            duration: 500,
+            easing: SliderAnimation.easing,
+            useNativeDriver: false,
+          }).start();
+        }
 
         await updateRecording(recordingId, { status: 'summarizing', transcript: segments });
 
@@ -220,23 +228,6 @@ export function SummarizingScreen() {
           <TouchableOpacity style={styles.primaryButton} onPress={handleRetry}>
             <Ionicons name="refresh" size={18} color="#fff" />
             <Text style={styles.primaryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        )}
-        {stage === 'error' && errorMessage.toLowerCase().includes('api key') && (
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => {
-              isCancelled.current = true;
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'Main', params: { screen: 'Settings' } }],
-                })
-              );
-            }}
-          >
-            <Ionicons name="key-outline" size={18} color={Colors.textPrimary} />
-            <Text style={styles.secondaryButtonText}>Add API Key in Settings</Text>
           </TouchableOpacity>
         )}
         {recording?.processingMode === 'cloud' && stage !== 'error' && (
