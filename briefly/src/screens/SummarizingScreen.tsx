@@ -35,6 +35,7 @@ export function SummarizingScreen() {
   const [stage, setStage] = useState<Stage>('transcribing');
   const [progress] = useState(new Animated.Value(0));
   const [errorMessage, setErrorMessage] = useState('');
+  const [retrySummaryOnly, setRetrySummaryOnly] = useState(false);
   const isCancelled = useRef(false);
   const hasStarted = useRef(false);
 
@@ -49,6 +50,7 @@ export function SummarizingScreen() {
     const processingMode = rec.processingMode;
     const filePath = rec.filePath;
     const preTranscript = rec.transcript;
+    setRetrySummaryOnly(!!(preTranscript && preTranscript.length > 0));
 
     Animated.timing(progress, {
       toValue: 0.4,
@@ -120,6 +122,9 @@ export function SummarizingScreen() {
         if (isCancelled.current) return;
         setErrorMessage(err.message ?? 'Unknown error');
         setStage('error');
+        const latest = getRecordingById(recordingId);
+        const hasTranscript = !!(latest?.transcript && latest.transcript.length > 0);
+        setRetrySummaryOnly(hasTranscript);
         await updateRecording(recordingId, {
           status: 'error',
           errorMessage: err.message,
@@ -145,7 +150,19 @@ export function SummarizingScreen() {
 
   const handleRetry = async () => {
     if (!recording) return;
-    await updateRecording(recordingId, { status: 'transcribing', errorMessage: undefined });
+    if (retrySummaryOnly || (recording.transcript?.length ?? 0) > 0) {
+      await updateRecording(recordingId, {
+        status: 'summarizing',
+        errorMessage: undefined,
+        summary: undefined,
+        keyInsights: undefined,
+      });
+    } else {
+      await updateRecording(recordingId, {
+        status: 'transcribing',
+        errorMessage: undefined,
+      });
+    }
     hasStarted.current = false;
     isCancelled.current = false;
     setStage('transcribing');
@@ -226,7 +243,9 @@ export function SummarizingScreen() {
         {stage === 'error' && (
           <TouchableOpacity style={styles.primaryButton} onPress={handleRetry}>
             <Ionicons name="refresh" size={18} color="#fff" />
-            <Text style={styles.primaryButtonText}>Retry</Text>
+            <Text style={styles.primaryButtonText}>
+              {retrySummaryOnly || (recording?.transcript?.length ?? 0) > 0 ? 'Retry Summary' : 'Retry'}
+            </Text>
           </TouchableOpacity>
         )}
         {recording?.processingMode !== 'on-device' && stage !== 'error' && (

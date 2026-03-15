@@ -33,6 +33,42 @@ function generateSegmentId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+const SENTENCE_BOUNDARY_REGEX = /[^.!?]+[.!?]+["')\]]*(?=\s|$)/g;
+
+function appendChunk(base: string, chunk: string): string {
+  const left = base.trim();
+  const right = chunk.trim();
+  if (!left) return right;
+  if (!right) return left;
+  return `${left} ${right}`;
+}
+
+function splitCompleteSentences(text: string): { sentences: string[]; remainder: string } {
+  const source = text.trim();
+  if (!source) {
+    return { sentences: [], remainder: '' };
+  }
+
+  const sentences: string[] = [];
+  let lastBoundary = 0;
+  SENTENCE_BOUNDARY_REGEX.lastIndex = 0;
+
+  let match = SENTENCE_BOUNDARY_REGEX.exec(source);
+  while (match) {
+    const sentence = match[0].trim();
+    if (sentence) {
+      sentences.push(sentence);
+    }
+    lastBoundary = match.index + match[0].length;
+    match = SENTENCE_BOUNDARY_REGEX.exec(source);
+  }
+
+  return {
+    sentences,
+    remainder: source.slice(lastBoundary).trim(),
+  };
+}
+
 export function RecordingScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
@@ -60,6 +96,7 @@ export function RecordingScreen() {
   const liveSegments = useRef<TranscriptSegment[]>([]);
   // Accumulated final text (so each onFinal delta can be computed)
   const prevFinalText = useRef('');
+  const finalSentenceBufferRef = useRef('');
   const isStopped = useRef(false);
   const isPausedRef = useRef(false);
 
@@ -105,6 +142,7 @@ export function RecordingScreen() {
     setPartialText('');
     liveSegments.current = [];
     prevFinalText.current = '';
+    finalSentenceBufferRef.current = '';
 
     (async () => {
       try {
@@ -138,26 +176,43 @@ export function RecordingScreen() {
                 : text;
 
               if (newWords) {
-                const seg: TranscriptSegment = {
-                  id: generateSegmentId(),
-                  text: newWords,
-                  startTime: liveSegments.current.length > 0
+                const merged = appendChunk(finalSentenceBufferRef.current, newWords);
+                const { sentences, remainder } = splitCompleteSentences(merged);
+
+                if (sentences.length > 0) {
+                  const endTime = elapsedRef.current;
+                  let cursorStart = liveSegments.current.length > 0
                     ? liveSegments.current[liveSegments.current.length - 1].endTime
-                    : 0,
-                  endTime: 0, // updated below
-                  isFinal: true,
-                };
-                // Approximate endTime from elapsed timer (use ref to avoid stale closure)
-                seg.endTime = elapsedRef.current;
-                liveSegments.current = [...liveSegments.current, seg];
+                    : 0;
+                  liveSegments.current = [
+                    ...liveSegments.current,
+                    ...sentences.map((sentence) => {
+                      const segment: TranscriptSegment = {
+                        id: generateSegmentId(),
+                        text: sentence,
+                        startTime: cursorStart,
+                        endTime,
+                        isFinal: true,
+                      };
+                      cursorStart = endTime;
+                      return segment;
+                    }),
+                  ];
+                }
+
+                finalSentenceBufferRef.current = remainder;
               }
 
               prevFinalText.current = text;
 
               const accumulated = liveSegments.current.map((s) => s.text).join(' ');
               setFinalText(accumulated);
-              setPartialText('');
-              setLiveTranscript(accumulated);
+              setPartialText(finalSentenceBufferRef.current);
+              setLiveTranscript(
+                finalSentenceBufferRef.current
+                  ? appendChunk(accumulated, finalSentenceBufferRef.current)
+                  : accumulated
+              );
             },
             onConnectionState: (state: AssemblyAIConnectionState) => {
               setStreamingState(state);
@@ -273,12 +328,13 @@ export function RecordingScreen() {
     }
 
     const trimmedPartial = (pendingPartialRef.current || partialText).trim();
-    if (trimmedPartial) {
+    const trailingText = appendChunk(finalSentenceBufferRef.current, trimmedPartial);
+    if (trailingText) {
       liveSegments.current = [
         ...liveSegments.current,
         {
           id: generateSegmentId(),
-          text: trimmedPartial,
+          text: trailingText,
           startTime: liveSegments.current.length > 0
             ? liveSegments.current[liveSegments.current.length - 1].endTime
             : 0,
@@ -287,6 +343,7 @@ export function RecordingScreen() {
         },
       ];
       setPartialText('');
+      finalSentenceBufferRef.current = '';
     }
 
     const preTranscript = liveSegments.current.length > 0 ? liveSegments.current : undefined;

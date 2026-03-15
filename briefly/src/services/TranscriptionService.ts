@@ -11,6 +11,97 @@ const API_BASE_URL = 'https://api.assemblyai.com/v2';
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLL_ATTEMPTS = 180;
 
+const SENTENCE_BOUNDARY_REGEX = /[^.!?]+[.!?]+["')\]]*(?=\s|$)/g;
+
+type AssemblyAIWord = { text: string; start?: number; end?: number };
+
+function splitCompleteSentences(text: string): { sentences: string[]; remainder: string } {
+  const source = text.trim();
+  if (!source) {
+    return { sentences: [], remainder: '' };
+  }
+
+  const sentences: string[] = [];
+  let lastBoundary = 0;
+  SENTENCE_BOUNDARY_REGEX.lastIndex = 0;
+
+  let match = SENTENCE_BOUNDARY_REGEX.exec(source);
+  while (match) {
+    const sentence = match[0].trim();
+    if (sentence) {
+      sentences.push(sentence);
+    }
+    lastBoundary = match.index + match[0].length;
+    match = SENTENCE_BOUNDARY_REGEX.exec(source);
+  }
+
+  return {
+    sentences,
+    remainder: source.slice(lastBoundary).trim(),
+  };
+}
+
+function splitTextIntoSentenceSegments(text: string): string[] {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return [];
+  }
+  const { sentences, remainder } = splitCompleteSentences(normalized);
+  return remainder ? [...sentences, remainder] : sentences;
+}
+
+function buildSentenceSegmentsFromWords(words: AssemblyAIWord[]): TranscriptSegment[] {
+  const segments: TranscriptSegment[] = [];
+
+  let buffer = '';
+  let sentenceStart = 0;
+  let sentenceEnd = 0;
+  let hasTime = false;
+
+  const flush = () => {
+    const text = buffer.trim();
+    if (!text) {
+      return;
+    }
+    segments.push({
+      id: generateId(),
+      text,
+      startTime: sentenceStart,
+      endTime: sentenceEnd,
+      isFinal: true,
+    });
+    buffer = '';
+    sentenceStart = sentenceEnd;
+    hasTime = false;
+  };
+
+  words.forEach((word) => {
+    const text = (word.text ?? '').trim();
+    if (!text) {
+      return;
+    }
+
+    const start = typeof word.start === 'number' ? word.start / 1000 : undefined;
+    const end = typeof word.end === 'number' ? word.end / 1000 : undefined;
+    if (!hasTime && typeof start === 'number') {
+      sentenceStart = start;
+      hasTime = true;
+    }
+    if (typeof end === 'number') {
+      sentenceEnd = end;
+    }
+
+    buffer = buffer ? `${buffer} ${text}` : text;
+
+    if (/[.!?]["')\]]*$/.test(text)) {
+      flush();
+    }
+  });
+
+  flush();
+  return segments;
+}
+
 async function uploadAudioToAssemblyAI(audioUri: string, apiKey: string): Promise<string> {
   const upload = await FileSystem.uploadAsync(`${API_BASE_URL}/upload`, audioUri, {
     uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
@@ -109,23 +200,8 @@ async function transcribeWithAssemblyAI(
 
   const words = payload.words ?? [];
   if (words.length > 0) {
-    const segments = words
-      .map((word) => {
-        const text = (word.text ?? '').trim();
-        if (!text) {
-          return null;
-        }
-        const segment: TranscriptSegment = {
-          id: generateId(),
-          text,
-          startTime: typeof word.start === 'number' ? word.start / 1000 : 0,
-          endTime: typeof word.end === 'number' ? word.end / 1000 : 0,
-          isFinal: true,
-        };
-        onSegment?.(segment);
-        return segment;
-      })
-      .filter((segment): segment is TranscriptSegment => !!segment);
+    const segments = buildSentenceSegmentsFromWords(words);
+    segments.forEach((segment) => onSegment?.(segment));
     if (segments.length > 0) {
       return segments;
     }
@@ -135,15 +211,15 @@ async function transcribeWithAssemblyAI(
   if (!fallback) {
     throw new Error('AssemblyAI returned an empty transcript.');
   }
-  const single: TranscriptSegment = {
+  const fallbackSegments = splitTextIntoSentenceSegments(fallback).map((text) => ({
     id: generateId(),
-    text: fallback,
+    text,
     startTime: 0,
     endTime: 0,
     isFinal: true,
-  };
-  onSegment?.(single);
-  return [single];
+  }));
+  fallbackSegments.forEach((segment) => onSegment?.(segment));
+  return fallbackSegments;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
