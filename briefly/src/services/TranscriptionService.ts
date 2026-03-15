@@ -14,6 +14,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { TranscriptSegment, TranscriptionMode } from '../types';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { resolveTranscriptionRoute } from './transcriptionRouting';
+import { logger } from '../utils/logger';
 
 const { BrieflyTranscriber } = NativeModules;
 
@@ -27,6 +28,11 @@ async function transcribeOnDevice(
   audioUri: string,
   onSegment?: (segment: TranscriptSegment) => void
 ): Promise<TranscriptSegment[]> {
+  logger.info('TRANSCRIPTION', 'On-device transcription requested', {
+    platform: Platform.OS,
+    hasNativeModule: !!BrieflyTranscriber,
+    audioUri,
+  });
   if (Platform.OS === 'ios' && BrieflyTranscriber) {
     return transcribeWithNativeModule(audioUri, onSegment);
   }
@@ -41,6 +47,7 @@ async function transcribeWithNativeModule(
   onSegment?: (segment: TranscriptSegment) => void
 ): Promise<TranscriptSegment[]> {
   return new Promise((resolve, reject) => {
+    logger.info('TRANSCRIPTION', 'Native transcription started', { audioUri });
     const emitter = new NativeEventEmitter(BrieflyTranscriber);
     const segments: TranscriptSegment[] = [];
 
@@ -66,17 +73,27 @@ async function transcribeWithNativeModule(
       };
       if (event.isFinal) {
         segments.push(seg);
+        logger.debug('TRANSCRIPTION', 'Native final segment captured', {
+          segmentCount: segments.length,
+          chars: seg.text.length,
+        });
         onSegment?.(seg);
       }
     });
 
     doneSub = emitter.addListener('onTranscriptionComplete', () => {
       cleanup();
+      logger.info('TRANSCRIPTION', 'Native transcription complete', {
+        segmentCount: segments.length,
+      });
       resolve(segments);
     });
 
     errSub = emitter.addListener('onTranscriptionError', (event: any) => {
       cleanup();
+      logger.error('TRANSCRIPTION', 'Native transcription error', {
+        error: event?.message ?? 'unknown error',
+      });
       reject(new Error(event.message));
     });
 
@@ -91,6 +108,10 @@ async function transcribeCloud(
   onSegment?: (segment: TranscriptSegment) => void
 ): Promise<TranscriptSegment[]> {
   const { cloudApiProvider } = useSettingsStore.getState();
+  logger.info('TRANSCRIPTION', 'Cloud transcription requested', {
+    provider: cloudApiProvider ?? 'openai(default)',
+    audioUri,
+  });
   if (cloudApiProvider === 'gemini') {
     return transcribeWithGemini(audioUri, onSegment);
   }
@@ -127,8 +148,13 @@ async function transcribeWithOpenAI(
 
   const fileInfo = await FileSystem.getInfoAsync(audioUri);
   if (!fileInfo.exists) {
+    logger.error('TRANSCRIPTION', 'OpenAI transcription failed: audio file missing', { audioUri });
     throw new Error('Audio file not found');
   }
+
+  logger.info('TRANSCRIPTION', 'OpenAI transcription upload starting', {
+    endpoint: `${cloudApiEndpoint}/audio/transcriptions`,
+  });
 
   const formData = new FormData();
   formData.append('file', {
@@ -151,6 +177,10 @@ async function transcribeWithOpenAI(
 
   if (!response.ok) {
     const err = await response.text();
+    logger.error('TRANSCRIPTION', 'OpenAI transcription request failed', {
+      status: response.status,
+      error: err,
+    });
     throw new Error(`OpenAI transcription failed: ${response.status} ${err}`);
   }
 
@@ -166,6 +196,11 @@ async function transcribeWithOpenAI(
     };
     onSegment?.(seg);
     return seg;
+  });
+
+  logger.info('TRANSCRIPTION', 'OpenAI transcription completed', {
+    segmentCount: segments.length,
+    hasPlainTextFallback: !!data.text,
   });
 
   if (segments.length === 0 && data.text) {
@@ -209,6 +244,7 @@ async function transcribeWithGemini(
 
   const fileInfo = await FileSystem.getInfoAsync(audioUri);
   if (!fileInfo.exists) {
+    logger.error('TRANSCRIPTION', 'Gemini transcription failed: audio file missing', { audioUri });
     throw new Error('Audio file not found');
   }
 
@@ -219,6 +255,11 @@ async function transcribeWithGemini(
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent` +
     `?key=${cloudApiKey}`;
+
+  logger.info('TRANSCRIPTION', 'Gemini transcription request starting', {
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent',
+    mimeType: audioMimeType(audioUri),
+  });
 
   const response = await fetch(url, {
     method: 'POST',
@@ -247,6 +288,10 @@ async function transcribeWithGemini(
 
   if (!response.ok) {
     const err = await response.text();
+    logger.error('TRANSCRIPTION', 'Gemini transcription request failed', {
+      status: response.status,
+      error: err,
+    });
     throw new Error(`Gemini transcription failed: ${response.status} ${err}`);
   }
 
@@ -254,6 +299,7 @@ async function transcribeWithGemini(
   const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
   if (!text.trim()) {
+    logger.error('TRANSCRIPTION', 'Gemini returned empty transcription');
     throw new Error('Gemini returned an empty transcription. Check your API key and audio file.');
   }
 
@@ -265,6 +311,9 @@ async function transcribeWithGemini(
     isFinal: true,
   };
   onSegment?.(seg);
+  logger.info('TRANSCRIPTION', 'Gemini transcription completed', {
+    chars: seg.text.length,
+  });
   return [seg];
 }
 
@@ -277,6 +326,7 @@ export const TranscriptionService = {
     mode: TranscriptionMode = 'on-device'
   ): Promise<TranscriptSegment[]> {
     const route = resolveTranscriptionRoute(mode);
+    logger.info('TRANSCRIPTION', 'Route resolved', { mode, route });
     if (route === 'cloud') {
       return transcribeCloud(audioUri, onSegment);
     }
@@ -286,8 +336,12 @@ export const TranscriptionService = {
     }
 
     try {
+      logger.info('TRANSCRIPTION', 'Attempting on-device first (auto mode)');
       return await transcribeOnDevice(audioUri, onSegment);
     } catch (onDeviceError: any) {
+      logger.warn('TRANSCRIPTION', 'On-device failed; evaluating cloud fallback', {
+        error: onDeviceError?.message ?? String(onDeviceError),
+      });
       const { cloudApiKey } = useSettingsStore.getState();
       if (!cloudApiKey) {
         throw new Error(
@@ -295,6 +349,7 @@ export const TranscriptionService = {
           'Cloud fallback is configured for this recording, but no cloud API key is set in Settings.'
         );
       }
+      logger.info('TRANSCRIPTION', 'Cloud fallback selected');
       return transcribeCloud(audioUri, onSegment);
     }
   },

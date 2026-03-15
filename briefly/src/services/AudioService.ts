@@ -4,6 +4,7 @@
 import { Audio } from 'expo-av';
 import { getInfoAsync, deleteAsync, copyAsync, documentDirectory } from 'expo-file-system/legacy';
 import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
+import { logger } from '../utils/logger';
 
 export interface AudioRecordingResult {
   uri: string;
@@ -40,30 +41,37 @@ class AudioServiceClass {
   // ─── Live transcription (iOS native module, development build only) ────────
 
   async startLiveTranscription(callbacks: LiveTranscriptionCallbacks): Promise<void> {
+    logger.info('AUDIO', 'Starting live transcription session');
     const { BrieflyTranscriber } = NativeModules;
     const emitter = new NativeEventEmitter(BrieflyTranscriber);
 
     this.partialSub = emitter.addListener('onPartialTranscript', (e: { text: string }) => {
+      logger.debug('AUDIO', 'Live partial transcript received', { chars: e.text?.length ?? 0 });
       callbacks.onPartial(e.text);
     });
 
     this.finalSub = emitter.addListener('onFinalTranscript', (e: { text: string }) => {
+      logger.info('AUDIO', 'Live final transcript received', { chars: e.text?.length ?? 0 });
       callbacks.onFinal(e.text);
     });
 
     await BrieflyTranscriber.startLiveTranscription();
     this.startTime = Date.now();
+    logger.info('AUDIO', 'Live transcription started');
   }
 
   async pauseLiveTranscription(): Promise<void> {
+    logger.info('AUDIO', 'Pausing live transcription');
     await NativeModules.BrieflyTranscriber.pauseLiveTranscription();
   }
 
   async resumeLiveTranscription(): Promise<void> {
+    logger.info('AUDIO', 'Resuming live transcription');
     await NativeModules.BrieflyTranscriber.resumeLiveTranscription();
   }
 
   async stopLiveTranscription(): Promise<AudioRecordingResult> {
+    logger.info('AUDIO', 'Stopping live transcription');
     this.partialSub?.remove();
     this.finalSub?.remove();
     this.partialSub = null;
@@ -76,8 +84,17 @@ class AudioServiceClass {
     try {
       const info = await getInfoAsync(result.uri);
       fileSize = info.exists ? ((info as any).size ?? 0) : 0;
-    } catch {}
+    } catch (error: any) {
+      logger.warn('AUDIO', 'Failed to read live recording file metadata', {
+        error: error?.message ?? String(error),
+      });
+    }
 
+    logger.info('AUDIO', 'Live transcription stopped', {
+      uri: result.uri,
+      durationSec: result.duration,
+      fileSize,
+    });
     return { uri: result.uri, duration: result.duration, fileSize };
   }
 
@@ -85,10 +102,12 @@ class AudioServiceClass {
 
   async requestPermissions(): Promise<boolean> {
     const { granted } = await Audio.requestPermissionsAsync();
+    logger.info('AUDIO', 'Microphone permission request completed', { granted });
     return granted;
   }
 
   async startRecording(): Promise<void> {
+    logger.info('AUDIO', 'Starting local recording');
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: true,
       playsInSilentModeIOS: true,
@@ -102,12 +121,14 @@ class AudioServiceClass {
     this.recording = recording;
     this._recordingPaused = false;
     this.startTime = Date.now();
+    logger.info('AUDIO', 'Local recording started');
   }
 
   async pauseRecording(): Promise<void> {
     if (this.recording) {
       await this.recording.pauseAsync();
       this._recordingPaused = true;
+      logger.info('AUDIO', 'Local recording paused');
     }
   }
 
@@ -121,10 +142,12 @@ class AudioServiceClass {
     });
     await this.recording.startAsync();
     this._recordingPaused = false;
+    logger.info('AUDIO', 'Local recording resumed');
   }
 
   async stopRecording(): Promise<AudioRecordingResult> {
     if (!this.recording) {
+      logger.error('AUDIO', 'Stop recording requested without active recording');
       throw new Error('No active recording');
     }
 
@@ -148,7 +171,11 @@ class AudioServiceClass {
     try {
       const info = await getInfoAsync(uri);
       fileSize = info.exists ? ((info as any).size ?? 0) : 0;
-    } catch {}
+    } catch (error: any) {
+      logger.warn('AUDIO', 'Failed to read local recording file metadata', {
+        error: error?.message ?? String(error),
+      });
+    }
 
     const duration = durationMillis / 1000;
     this.recording = null;
@@ -156,6 +183,11 @@ class AudioServiceClass {
 
     await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
 
+    logger.info('AUDIO', 'Local recording stopped', {
+      uri,
+      durationSec: duration,
+      fileSize,
+    });
     return { uri, duration, fileSize };
   }
 
@@ -177,6 +209,7 @@ class AudioServiceClass {
     uri: string,
     onPlaybackStatusUpdate?: (position: number, duration: number, isPlaying: boolean) => void
   ): Promise<void> {
+    logger.info('AUDIO', 'Starting playback', { uri });
     await this.stopPlayback();
 
     await Audio.setAudioModeAsync({
@@ -218,6 +251,7 @@ class AudioServiceClass {
       await this.sound.stopAsync();
       await this.sound.unloadAsync();
       this.sound = null;
+      logger.info('AUDIO', 'Playback stopped');
     }
   }
 
@@ -228,12 +262,19 @@ class AudioServiceClass {
   async deleteFile(uri: string): Promise<void> {
     try {
       await deleteAsync(uri, { idempotent: true });
-    } catch {}
+      logger.info('AUDIO', 'Audio file deleted', { uri });
+    } catch (error: any) {
+      logger.warn('AUDIO', 'Failed to delete audio file', {
+        uri,
+        error: error?.message ?? String(error),
+      });
+    }
   }
 
   async copyToDocuments(uri: string, filename: string): Promise<string> {
     const dest = documentDirectory + filename;
     await copyAsync({ from: uri, to: dest });
+    logger.info('AUDIO', 'Audio file copied to documents', { from: uri, to: dest });
     return dest;
   }
 }

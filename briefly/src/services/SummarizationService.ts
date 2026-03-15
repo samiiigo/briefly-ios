@@ -16,6 +16,7 @@ import { Platform, NativeModules } from 'react-native';
 import Constants from 'expo-constants';
 import { TranscriptSegment, KeyInsight } from '../types';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { logger } from '../utils/logger';
 
 const { BrieflyTranscriber } = NativeModules;
 
@@ -75,10 +76,19 @@ async function summarizeOnDevice(
   segments: TranscriptSegment[]
 ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
   const text = segmentsToText(segments);
+  logger.info('SUMMARY', 'On-device summarization requested', {
+    segmentCount: segments.length,
+    chars: text.length,
+    platform: Platform.OS,
+    hasNativeModule: !!BrieflyTranscriber?.summarize,
+  });
 
   if (Platform.OS === 'ios' && BrieflyTranscriber?.summarize) {
     try {
       const result = await BrieflyTranscriber.summarize(text);
+      logger.info('SUMMARY', 'On-device native summarization completed', {
+        keyInsightCount: (result.keyInsights as string[])?.length ?? 0,
+      });
       return {
         summary: result.summary,
         keyInsights: (result.keyInsights as string[]).map((t) => ({
@@ -86,11 +96,15 @@ async function summarizeOnDevice(
           text: t,
         })),
       };
-    } catch {
+    } catch (error: any) {
+      logger.warn('SUMMARY', 'Native on-device summarization failed; using extractive fallback', {
+        error: error?.message ?? String(error),
+      });
       // Fall through to extractive
     }
   }
 
+  logger.info('SUMMARY', 'Using extractive summarization fallback');
   return extractiveSummarize(text);
 }
 
@@ -106,6 +120,10 @@ async function summarizeCloud(
   segments: TranscriptSegment[]
 ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
   const { cloudApiProvider } = useSettingsStore.getState();
+  logger.info('SUMMARY', 'Cloud summarization requested', {
+    provider: cloudApiProvider ?? 'openai(default)',
+    segmentCount: segments.length,
+  });
   if (cloudApiProvider === 'gemini') {
     return summarizeWithGemini(segments);
   }
@@ -131,6 +149,10 @@ async function summarizeWithOpenAI(
   }
 
   const text = segmentsToText(segments);
+  logger.info('SUMMARY', 'OpenAI-compatible summarization request starting', {
+    endpoint: `${cloudApiEndpoint}/chat/completions`,
+    chars: text.length,
+  });
 
   const fetchOptions: RequestInit = {
     method: 'POST',
@@ -153,6 +175,9 @@ async function summarizeWithOpenAI(
   try {
     response = await fetchWithTimeout(`${cloudApiEndpoint}/chat/completions`, fetchOptions);
   } catch (e: any) {
+    logger.error('SUMMARY', 'OpenAI-compatible summarization request failed', {
+      error: e?.message ?? String(e),
+    });
     if (e?.name === 'AbortError' || e?.message === 'timeout') {
       throw new Error(
         'Summarization timed out. The server may be slow or unreachable. Try again or use on-device processing.'
@@ -163,10 +188,17 @@ async function summarizeWithOpenAI(
 
   if (!response!.ok) {
     const err = await response!.text();
+    logger.error('SUMMARY', 'OpenAI-compatible summarization response not OK', {
+      status: response!.status,
+      error: err,
+    });
     throw new Error(`OpenAI summarization failed: ${response!.status} ${err}`);
   }
 
   const data = await response!.json();
+  logger.info('SUMMARY', 'OpenAI-compatible summarization completed', {
+    status: response!.status,
+  });
   return parseJsonSummary(data.choices?.[0]?.message?.content ?? '{}', segmentsToText(segments));
 }
 
@@ -182,6 +214,10 @@ async function summarizeWithOpenRouter(
   }
 
   const text = segmentsToText(segments);
+  logger.info('SUMMARY', 'OpenRouter summarization request starting', {
+    endpoint: `${cloudApiEndpoint}/chat/completions`,
+    chars: text.length,
+  });
 
   const expoConfig: any = Constants.expoConfig ?? {};
   const extra: any = expoConfig.extra ?? {};
@@ -226,6 +262,9 @@ async function summarizeWithOpenRouter(
   try {
     response = await fetchWithTimeout(`${cloudApiEndpoint}/chat/completions`, fetchOptions);
   } catch (e: any) {
+    logger.error('SUMMARY', 'OpenRouter summarization request failed', {
+      error: e?.message ?? String(e),
+    });
     if (e?.name === 'AbortError' || e?.message === 'timeout') {
       throw new Error(
         'Summarization timed out. The server may be slow or unreachable. Try again or use on-device processing.'
@@ -236,10 +275,17 @@ async function summarizeWithOpenRouter(
 
   if (!response!.ok) {
     const err = await response!.text();
+    logger.error('SUMMARY', 'OpenRouter summarization response not OK', {
+      status: response!.status,
+      error: err,
+    });
     throw new Error(`OpenRouter summarization failed: ${response!.status} ${err}`);
   }
 
   const data = await response!.json();
+  logger.info('SUMMARY', 'OpenRouter summarization completed', {
+    status: response!.status,
+  });
   return parseJsonSummary(data.choices?.[0]?.message?.content ?? '{}', text);
 }
 
@@ -255,6 +301,10 @@ async function summarizeWithGemini(
   }
 
   const text = segmentsToText(segments);
+  logger.info('SUMMARY', 'Gemini summarization request starting', {
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent',
+    chars: text.length,
+  });
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent` +
     `?key=${cloudApiKey}`;
@@ -272,6 +322,9 @@ async function summarizeWithGemini(
   try {
     response = await fetchWithTimeout(url, fetchOptions);
   } catch (e: any) {
+    logger.error('SUMMARY', 'Gemini summarization request failed', {
+      error: e?.message ?? String(e),
+    });
     if (e?.name === 'AbortError' || e?.message === 'timeout') {
       throw new Error(
         'Summarization timed out. The server may be slow or unreachable. Try again or use on-device processing.'
@@ -282,10 +335,17 @@ async function summarizeWithGemini(
 
   if (!response!.ok) {
     const err = await response!.text();
+    logger.error('SUMMARY', 'Gemini summarization response not OK', {
+      status: response!.status,
+      error: err,
+    });
     throw new Error(`Gemini summarization failed: ${response!.status} ${err}`);
   }
 
   const data = await response!.json();
+  logger.info('SUMMARY', 'Gemini summarization completed', {
+    status: response!.status,
+  });
   const content: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
   return parseJsonSummary(content, text);
 }
@@ -302,6 +362,10 @@ async function summarizeWithAnthropic(
   }
 
   const text = segmentsToText(segments);
+  logger.info('SUMMARY', 'Anthropic summarization request starting', {
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    chars: text.length,
+  });
 
   const fetchOptions: RequestInit = {
     method: 'POST',
@@ -321,6 +385,9 @@ async function summarizeWithAnthropic(
   try {
     response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', fetchOptions);
   } catch (e: any) {
+    logger.error('SUMMARY', 'Anthropic summarization request failed', {
+      error: e?.message ?? String(e),
+    });
     if (e?.name === 'AbortError' || e?.message === 'timeout') {
       throw new Error(
         'Summarization timed out. The server may be slow or unreachable. Try again or use on-device processing.'
@@ -331,10 +398,17 @@ async function summarizeWithAnthropic(
 
   if (!response!.ok) {
     const err = await response!.text();
+    logger.error('SUMMARY', 'Anthropic summarization response not OK', {
+      status: response!.status,
+      error: err,
+    });
     throw new Error(`Anthropic summarization failed: ${response!.status} ${err}`);
   }
 
   const data = await response!.json();
+  logger.info('SUMMARY', 'Anthropic summarization completed', {
+    status: response!.status,
+  });
   const content: string = data.content?.[0]?.text ?? '{}';
   return parseJsonSummary(content, text);
 }
@@ -351,8 +425,13 @@ function parseJsonSummary(
   try {
     parsed = JSON.parse(cleaned);
   } catch {
+    logger.warn('SUMMARY', 'Model response was not valid JSON; using extractive fallback');
     return extractiveSummarize(fallbackText);
   }
+  logger.info('SUMMARY', 'JSON summary parsed successfully', {
+    hasSummary: typeof parsed.summary === 'string' && parsed.summary.length > 0,
+    keyInsightCount: Array.isArray(parsed.keyInsights) ? parsed.keyInsights.length : 0,
+  });
   return {
     summary: parsed.summary ?? '',
     keyInsights: ((parsed.keyInsights as string[]) ?? []).map((t) => ({
@@ -369,6 +448,10 @@ export const SummarizationService = {
     segments: TranscriptSegment[],
     mode: 'on-device' | 'cloud'
   ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
+    logger.info('SUMMARY', 'Summarization entrypoint invoked', {
+      mode,
+      segmentCount: segments.length,
+    });
     if (mode === 'cloud') {
       return summarizeCloud(segments);
     }
