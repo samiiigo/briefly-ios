@@ -80,7 +80,7 @@ function ctxToString(ctx?: LogContext): string {
 }
 
 function write(level: LogLevel, scope: string, message: string, ctx?: LogContext): void {
-  const line = `[${APP_TAG}][${ts()}][${level}][${scope}] ${message}${ctxToString(ctx)}`;
+  const line = `[${ts()}][${level}][${scope}] ${message}${ctxToString(ctx)}`;
   if (level === 'ERROR') {
     console.error(line);
     return;
