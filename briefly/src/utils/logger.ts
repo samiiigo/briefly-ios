@@ -46,10 +46,10 @@ function sanitizeObject(value: unknown): unknown {
 function sanitizeUrl(rawUrl: string): string {
   try {
     const url = new URL(rawUrl);
-    const sensitiveParams = ['key', 'api_key', 'token', 'access_token', 'apikey'];
-    for (const p of sensitiveParams) {
-      if (url.searchParams.has(p)) {
-        url.searchParams.set(p, '***');
+    const sensitiveParams = new Set(['key', 'api_key', 'token', 'access_token', 'apikey']);
+    for (const [key] of url.searchParams.entries()) {
+      if (sensitiveParams.has(key.toLowerCase())) {
+        url.searchParams.set(key, '***');
       }
     }
     return url.toString();
