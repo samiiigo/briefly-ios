@@ -94,7 +94,7 @@ async function transcribeWithNativeModule(
       logger.error('TRANSCRIPTION', 'Native transcription error', {
         error: event?.message ?? 'unknown error',
       });
-      reject(new Error(event.message));
+      reject(new Error(event?.message ?? 'Unknown transcription error'));
     });
 
     BrieflyTranscriber.transcribeFile(audioUri);
