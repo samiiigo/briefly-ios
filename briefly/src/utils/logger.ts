@@ -3,7 +3,6 @@ type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 type LogContext = Record<string, unknown>;
 
 const APP_TAG = 'BRIEFLY';
-const FETCH_PATCH_FLAG = '__BRIEFLY_FETCH_LOGGER_INSTALLED__';
 
 function ts(): string {
   const now = new Date();
