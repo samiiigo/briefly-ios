@@ -18,6 +18,7 @@ import { RootStackParamList, TranscriptSegment, TranscriptionMode } from '../typ
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { transcriptionModeBadge, transcriptionModeDescription } from '../utils/transcriptionMode';
+import { logger } from '../utils/logger';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Recording'>;
@@ -84,6 +85,10 @@ export function RecordingScreen() {
 
     (async () => {
       try {
+        logger.info('FLOW', 'Recording screen session started', {
+          useLiveTranscription,
+          transcriptionMode,
+        });
         if (useLiveTranscription) {
           // iOS: AVAudioEngine handles recording + real-time transcription together
           await AudioService.startLiveTranscription({
@@ -138,6 +143,9 @@ export function RecordingScreen() {
         setIsStarted(true);
         startTimer();
       } catch (err: any) {
+        logger.error('FLOW', 'Failed to start recording session', {
+          error: err?.message ?? String(err),
+        });
         Alert.alert(
           'Microphone Error',
           err?.message ?? 'Could not start recording. Check microphone permissions.',
@@ -166,6 +174,7 @@ export function RecordingScreen() {
         startTimer();
         setIsPaused(false);
         isPausedRef.current = false;
+        logger.info('FLOW', 'Recording resumed');
       } else {
         if (useLiveTranscription) {
           await AudioService.pauseLiveTranscription();
@@ -175,8 +184,12 @@ export function RecordingScreen() {
         stopTimer();
         setIsPaused(true);
         isPausedRef.current = true;
+        logger.info('FLOW', 'Recording paused');
       }
     } catch (err: any) {
+      logger.error('FLOW', 'Failed to pause/resume recording', {
+        error: err?.message ?? String(err),
+      });
       Alert.alert('Error', err?.message ?? 'Could not pause or resume recording.');
     }
   };
@@ -184,6 +197,7 @@ export function RecordingScreen() {
   // ─── Stop ─────────────────────────────────────────────────────────────────
 
   const handleStop = async () => {
+    logger.info('FLOW', 'Recording stop requested');
     isStopped.current = true;
     stopTimer();
 
@@ -192,6 +206,9 @@ export function RecordingScreen() {
       try {
         result = await AudioService.stopLiveTranscription();
       } catch (err: any) {
+        logger.error('FLOW', 'Failed to stop live transcription recording', {
+          error: err?.message ?? String(err),
+        });
         Alert.alert('Error', err?.message ?? 'Could not stop recording.');
         return;
       }
@@ -217,6 +234,11 @@ export function RecordingScreen() {
       targetFolder: route.params?.targetFolder,
       targetUserFolderId: route.params?.targetUserFolderId,
     });
+    logger.info('FLOW', 'Navigated to save recording screen', {
+      durationSec: result?.duration || elapsed,
+      hasPreTranscript: !!preTranscript,
+      transcriptionMode,
+    });
   };
 
   // ─── Discard ──────────────────────────────────────────────────────────────
@@ -228,6 +250,7 @@ export function RecordingScreen() {
         text: 'Discard',
         style: 'destructive',
         onPress: async () => {
+          logger.warn('FLOW', 'Recording discarded by user');
           isStopped.current = true;
           stopTimer();
           if (useLiveTranscription) {

@@ -16,6 +16,7 @@ import { TranscriptionService } from '../services/TranscriptionService';
 import { SummarizationService } from '../services/SummarizationService';
 import { RootStackParamList } from '../types';
 import { Colors, Spacing, BorderRadius, SliderAnimation } from '../utils/theme';
+import { logger } from '../utils/logger';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Summarizing'>;
@@ -58,6 +59,11 @@ export function SummarizingScreen() {
 
     (async () => {
       try {
+        logger.info('FLOW', 'Summarizing flow started', {
+          recordingId,
+          transcriptionMode,
+          processingMode,
+        });
         setStage('transcribing');
         const lastChunkSegments = await TranscriptionService.transcribe(
           filePath,
@@ -70,6 +76,11 @@ export function SummarizingScreen() {
         const segments = preTranscript && preTranscript.length > 0
           ? [...preTranscript, ...lastChunkSegments]
           : lastChunkSegments;
+
+        logger.info('FLOW', 'Transcription stage complete', {
+          recordingId,
+          segmentCount: segments.length,
+        });
 
         await updateRecording(recordingId, { status: 'summarizing', transcript: segments });
 
@@ -85,6 +96,12 @@ export function SummarizingScreen() {
           segments,
           processingMode
         );
+
+        logger.info('FLOW', 'Summarization stage complete', {
+          recordingId,
+          summaryChars: summary.length,
+          keyInsightCount: keyInsights.length,
+        });
 
         if (isCancelled.current) return;
 
@@ -104,11 +121,16 @@ export function SummarizingScreen() {
         setStage('done');
         setTimeout(() => {
           if (!isCancelled.current) {
+            logger.info('FLOW', 'Navigating to transcript screen', { recordingId });
             navigation.replace('Transcript', { recordingId });
           }
         }, 600);
       } catch (err: any) {
         if (isCancelled.current) return;
+        logger.error('FLOW', 'Summarizing flow failed', {
+          recordingId,
+          error: err?.message ?? String(err),
+        });
         setErrorMessage(err.message ?? 'Unknown error');
         setStage('error');
         await updateRecording(recordingId, {
@@ -130,12 +152,16 @@ export function SummarizingScreen() {
 
   const handleRunLocally = async () => {
     if (!recording) return;
+    logger.info('FLOW', 'Switching processing mode to on-device and restarting flow', {
+      recordingId,
+    });
     await updateRecording(recordingId, { processingMode: 'on-device', status: 'transcribing' });
     navigation.replace('Summarizing', { recordingId });
   };
 
   const handleRetry = async () => {
     if (!recording) return;
+    logger.info('FLOW', 'Retry requested for summarizing flow', { recordingId });
     await updateRecording(recordingId, { status: 'transcribing', errorMessage: undefined });
     hasStarted.current = false;
     isCancelled.current = false;
@@ -146,6 +172,7 @@ export function SummarizingScreen() {
   };
 
   const handleCancel = () => {
+    logger.warn('FLOW', 'Summarizing flow cancelled by user', { recordingId });
     isCancelled.current = true;
     navigation.navigate('Main');
   };
