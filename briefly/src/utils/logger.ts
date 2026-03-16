@@ -163,6 +163,9 @@ export function installRealtimeTerminalLogs(): void {
     return;
   }
 
+  // Mark fetch logging as installed before patching to ensure strict idempotence.
+  (globalThis as any)[FETCH_PATCH_FLAG] = true;
+
   let requestId = 0;
 
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -203,6 +206,5 @@ export function installRealtimeTerminalLogs(): void {
     }
   }) as typeof fetch;
 
-  (globalThis as any)[FETCH_PATCH_FLAG] = true;
   logger.info('SYSTEM', 'Realtime terminal logging enabled');
 }
