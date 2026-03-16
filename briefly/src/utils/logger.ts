@@ -19,8 +19,13 @@ function isSensitiveKey(key: string): boolean {
 
 function maskValue(value: unknown): unknown {
   if (typeof value === 'string') {
-    if (value.length <= 8) return '***';
-    return `${value.slice(0, 4)}...${value.slice(-2)}`;
+    // Fully redact sensitive string values. For Authorization-style headers,
+    // keep only the non-sensitive prefix (e.g., "Bearer") and redact the credential.
+    const bearerPrefix = /^Bearer\s+/i;
+    if (bearerPrefix.test(value)) {
+      return 'Bearer ***';
+    }
+    return '***';
   }
   return '***';
 }
