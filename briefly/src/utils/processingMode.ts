@@ -14,5 +14,5 @@ export function processingModeDescription(mode: ProcessingMode): string {
   if (mode === 'cloud-shared-openrouter') {
     return 'Uses a shared OpenRouter key configured by Briefly for rich cloud summaries with zero data retention.';
   }
-  return 'Uses your configured API key (OpenAI, Gemini, Claude, OpenRouter, etc.) for richer summaries. Zero Data Retention (ZDR) policy applies.';
+  return 'Uses your API key for OpenAI, Google Gemini, or OpenRouter. Zero Data Retention (ZDR) policy applies.';
 }

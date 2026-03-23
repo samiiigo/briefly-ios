@@ -120,6 +120,19 @@ Edit `briefly/app.json` and add to the `expo.extra` section:
 }
 ```
 
+#### Option 3: Native build settings (development builds / CI)
+
+For native builds, you can also inject AssemblyAI at native compile time:
+
+- Android: set `ASSEMBLYAI_API_KEY` as a Gradle property or environment variable.
+- iOS: set `expo.ios.infoPlist.ASSEMBLYAI_API_KEY` in `briefly/app.json` (or inject the value during CI build).
+
+Example (Android):
+
+```bash
+ASSEMBLYAI_API_KEY=your_assemblyai_key ./gradlew assembleDebug
+```
+
 #### Obtaining API keys
 
 - **AssemblyAI**: Get your key at https://www.assemblyai.com/

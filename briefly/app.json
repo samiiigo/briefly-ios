@@ -18,7 +18,8 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Briefly needs microphone access to record audio for transcription.",
         "NSSpeechRecognitionUsageDescription": "Briefly uses on-device speech recognition to transcribe your recordings privately.",
-        "NSMicrophoneUsageDescriptionAlways": "Briefly needs microphone access to record audio."
+        "NSMicrophoneUsageDescriptionAlways": "Briefly needs microphone access to record audio.",
+        "ASSEMBLYAI_API_KEY": ""
       },
       "config": {
         "usesNonExemptEncryption": false
@@ -51,6 +52,7 @@
     },
     "extra": {
       "assemblyAiApiKey": "",
+      "openRouterSharedApiKey": "",
       "eas": {
         "projectId": "briefly-app"
       }

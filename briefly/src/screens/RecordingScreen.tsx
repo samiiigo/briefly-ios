@@ -115,6 +115,9 @@ export function RecordingScreen() {
       ? (canOnDeviceLive ? 'on-device' : 'none')
       : 'none';
   const useLiveTranscription = liveEngine !== 'none';
+  const effectiveTranscriptionMode: TranscriptionMode = useLiveTranscription
+    ? selectedMode
+    : 'post-assemblyai';
 
   // ─── Timer ────────────────────────────────────────────────────────────────
 
@@ -348,11 +351,12 @@ export function RecordingScreen() {
 
     const preTranscript = liveSegments.current.length > 0 ? liveSegments.current : undefined;
 
-    const fallbackToPostRecording = (isAssemblyAiLiveMode && !canCloudLive)
-      || (isLocalMode && !canOnDeviceLive);
-    const effectiveTranscriptionMode: TranscriptionMode = fallbackToPostRecording
-      ? 'post-assemblyai'
-      : selectedMode;
+    if ((isAssemblyAiLiveMode && !canCloudLive) || (isLocalMode && !canOnDeviceLive)) {
+      Alert.alert(
+        'Live transcription unavailable in this build',
+        'This run cannot stream live transcription because the native BrieflyTranscriber module is unavailable. The app will keep your selected mode, but this recording will be transcribed after stop. To enable streaming, run a native dev build (npx expo run:ios or npx expo run:android) and launch with --dev-client.'
+      );
+    }
 
     navigation.replace('SaveRecording', {
       duration: result?.duration || elapsed,

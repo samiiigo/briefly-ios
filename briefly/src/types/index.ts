@@ -1,3 +1,4 @@
+export type CloudProvider = 'openrouter' | 'openai' | 'gemini';
 export type ProcessingMode = 'on-device' | 'cloud' | 'cloud-shared-openrouter' | 'cloud-user-key';
 export type TranscriptionMode = 'live-assemblyai' | 'post-assemblyai' | 'local-on-device';
 /**
