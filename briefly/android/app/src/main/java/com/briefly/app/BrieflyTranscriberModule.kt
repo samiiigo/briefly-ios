@@ -20,7 +20,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import okio.ByteString
+import okio.Buffer
 import org.json.JSONObject
 import java.io.File
 import java.io.RandomAccessFile
@@ -395,7 +395,7 @@ class BrieflyTranscriberModule(
           wavFile?.write(buffer, 0, read)
           bytesWritten += read.toLong()
           if (!onDeviceMode) {
-            webSocket?.send(ByteString.of(buffer, 0, read))
+            webSocket?.send(Buffer().write(buffer, 0, read).readByteString(read.toLong()))
           }
         } catch (error: Exception) {
           emitError("Audio streaming failed: ${error.message}")
