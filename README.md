@@ -80,6 +80,51 @@ cd briefly
 npm install
 ```
 
+### Setting up API keys
+
+Briefly requires two API keys for cloud transcription and AI summarization:
+
+1. **AssemblyAI API Key** – for transcription
+2. **OpenRouter API Key** – for AI summarization
+
+You can set them in one of two ways:
+
+#### Option 1: Environment variables (Recommended)
+
+Create a `.env` file in the `briefly/` directory:
+
+```env
+EXPO_PUBLIC_ASSEMBLYAI_API_KEY=your_assemblyai_key_here
+EXPO_PUBLIC_OPENROUTER_API_KEY=your_openrouter_key_here
+```
+
+Or set them directly in your terminal:
+
+```bash
+export EXPO_PUBLIC_ASSEMBLYAI_API_KEY=your_assemblyai_key
+export EXPO_PUBLIC_OPENROUTER_API_KEY=your_openrouter_key
+```
+
+#### Option 2: Expo config
+
+Edit `briefly/app.json` and add to the `expo.extra` section:
+
+```json
+{
+  "expo": {
+    "extra": {
+      "assemblyAiApiKey": "your_assemblyai_key_here",
+      "openRouterSharedApiKey": "your_openrouter_key_here"
+    }
+  }
+}
+```
+
+#### Obtaining API keys
+
+- **AssemblyAI**: Get your key at https://www.assemblyai.com/
+- **OpenRouter**: Get your key at https://openrouter.ai/
+
 ### Run the app
 
 Start the Expo dev server:
