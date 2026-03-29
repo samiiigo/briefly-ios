@@ -29,6 +29,7 @@ import {
 import { processingModeTitle } from '../utils/processingMode';
 import { folderFlagsFor } from '../utils/recordingFolder';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
+import { logger } from '../utils/logger';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'SaveRecording'>;
@@ -53,6 +54,15 @@ export function SaveRecordingScreen() {
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
+    logger.info('FLOW', 'Save recording requested', {
+      durationSec: duration,
+      fileSize,
+      processingMode,
+      transcriptionMode,
+      targetFolder,
+      hasUserFolder: !!targetUserFolderId,
+      hasPreTranscript: !!preTranscript?.length,
+    });
 
     const id = generateId();
     const baseTitle = title.trim() || generateTitle();
@@ -74,6 +84,10 @@ export function SaveRecordingScreen() {
     };
 
     await addRecording(recording);
+    logger.info('FLOW', 'Recording metadata saved', {
+      recordingId: id,
+      title: safeTitle,
+    });
     navigation.replace('Summarizing', { recordingId: id });
   };
 
@@ -83,7 +97,10 @@ export function SaveRecordingScreen() {
       {
         text: 'Discard',
         style: 'destructive',
-        onPress: () => navigation.navigate('Main'),
+        onPress: () => {
+          logger.warn('FLOW', 'Save recording discarded by user');
+          navigation.navigate('Main');
+        },
       },
     ]);
   };

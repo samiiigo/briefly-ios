@@ -2,6 +2,11 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { TranscriptSegment, TranscriptionMode } from '../types';
 import { AssemblyAIConfig, requireAssemblyAISharedApiKey } from '../config/assemblyAI';
 import { normalizeTranscriptionMode } from '../utils/transcriptionMode';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { resolveTranscriptionRoute } from './transcriptionRouting';
+import { logger } from '../utils/logger';
+
+const { BrieflyTranscriber } = NativeModules;
 
 function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
