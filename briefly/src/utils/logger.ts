@@ -4,6 +4,9 @@ type LogContext = Record<string, unknown>;
 
 const APP_TAG = 'BRIEFLY';
 
+/** Key on `globalThis` for idempotent fetch patching. */
+const FETCH_PATCH_FLAG = '__briefly_fetch_patch_installed__';
+
 function ts(): string {
   const now = new Date();
   const hh = String(now.getHours()).padStart(2, '0');

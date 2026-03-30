@@ -153,6 +153,11 @@ export function TranscriptScreen() {
     navigation.replace('Summarizing', { recordingId: recording.id });
   }, [recording, updateRecording, navigation]);
 
+  const handleStartProcessing = useCallback(async () => {
+    if (!recording) return;
+    navigation.replace('Summarizing', { recordingId: recording.id });
+  }, [recording, navigation]);
+
   const escapeHtml = (text: string) =>
     text
       .replace(/&/g, '&amp;')
@@ -344,6 +349,45 @@ export function TranscriptScreen() {
           </Text>
         </View>
 
+        {/* Needs-processing banner */}
+        {(recording.status === 'saved' || recording.status === 'transcribing' || recording.status === 'summarizing') && (
+          <View style={styles.processingBanner}>
+            <View style={styles.errorBannerTop}>
+              <Ionicons name="sparkles" size={16} color={Colors.primary} />
+              <Text style={styles.processingBannerTitle}>
+                {recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0
+                  ? 'Summarization pending'
+                  : recording.status === 'saved'
+                    ? 'Ready to process'
+                    : 'Processing incomplete'}
+              </Text>
+            </View>
+            <Text style={styles.errorBannerMessage}>
+              {recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0
+                ? 'Transcript is saved. Tap below to generate a summary.'
+                : recording.status === 'saved'
+                  ? 'Audio is saved locally. Tap below to transcribe and summarize.'
+                  : 'A previous run was interrupted. Tap below to resume.'}
+            </Text>
+            <TouchableOpacity style={styles.retryButton} onPress={handleStartProcessing}>
+              <Ionicons
+                name={
+                  recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0
+                    ? 'document-text'
+                    : 'sparkles'
+                }
+                size={15}
+                color={Colors.textPrimary}
+              />
+              <Text style={styles.retryButtonText}>
+                {recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0
+                  ? 'Run Summarization'
+                  : 'Transcribe & Summarize'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Error banner */}
         {recording.status === 'error' && (
           <View style={styles.errorBanner}>
@@ -395,7 +439,9 @@ export function TranscriptScreen() {
             <Text style={styles.noTranscriptText}>
               {recording.status === 'transcribing' || recording.status === 'summarizing'
                 ? 'Processing…'
-                : 'No transcript available.'}
+                : recording.status === 'saved'
+                  ? 'Audio saved. Tap above to start transcription.'
+                  : 'No transcript available.'}
             </Text>
           </View>
         )}
@@ -606,6 +652,22 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   rateText: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
+
+  // Needs-processing
+  processingBanner: {
+    backgroundColor: 'rgba(10, 132, 255, 0.1)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(10, 132, 255, 0.35)',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: 8,
+  },
+  processingBannerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
 
   // Error / retry
   errorBanner: {

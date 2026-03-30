@@ -2,6 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { TranscriptSegment, TranscriptionMode } from '../types';
 import { AssemblyAIConfig, requireAssemblyAISharedApiKey } from '../config/assemblyAI';
 import { normalizeTranscriptionMode } from '../utils/transcriptionMode';
+import { logger } from '../utils/logger';
 
 function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -103,6 +104,7 @@ function buildSentenceSegmentsFromWords(words: AssemblyAIWord[]): TranscriptSegm
 }
 
 async function uploadAudioToAssemblyAI(audioUri: string, apiKey: string): Promise<string> {
+  logger.info('TranscriptionService', 'Uploading audio to AssemblyAI', { audioUri });
   const upload = await FileSystem.uploadAsync(`${API_BASE_URL}/upload`, audioUri, {
     uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
     headers: {
@@ -114,6 +116,9 @@ async function uploadAudioToAssemblyAI(audioUri: string, apiKey: string): Promis
   });
 
   if (upload.status !== 200) {
+    logger.error('TranscriptionService', 'Audio upload failed', {
+      status: upload.status,
+    });
     throw new Error(`AssemblyAI upload failed: ${upload.status} ${upload.body}`);
   }
 
@@ -122,10 +127,12 @@ async function uploadAudioToAssemblyAI(audioUri: string, apiKey: string): Promis
   if (!uploadUrl) {
     throw new Error('AssemblyAI upload did not return upload_url.');
   }
+  logger.info('TranscriptionService', 'Audio uploaded successfully');
   return uploadUrl;
 }
 
 async function createTranscriptJob(uploadUrl: string, apiKey: string): Promise<string> {
+  logger.info('TranscriptionService', 'Creating transcript job');
   const response = await fetch(`${API_BASE_URL}/transcript`, {
     method: 'POST',
     headers: {
@@ -145,6 +152,9 @@ async function createTranscriptJob(uploadUrl: string, apiKey: string): Promise<s
 
   if (!response.ok) {
     const body = await response.text();
+    logger.error('TranscriptionService', 'Transcript job creation failed', {
+      status: response.status,
+    });
     throw new Error(`AssemblyAI transcript create failed: ${response.status} ${body}`);
   }
 
@@ -153,6 +163,7 @@ async function createTranscriptJob(uploadUrl: string, apiKey: string): Promise<s
   if (!transcriptId) {
     throw new Error('AssemblyAI transcript create did not return id.');
   }
+  logger.info('TranscriptionService', 'Transcript job created', { transcriptId });
   return transcriptId;
 }
 
@@ -172,15 +183,21 @@ async function waitForTranscript(
     const payload = await response.json();
     const status = payload?.status as string | undefined;
     if (status === 'completed') {
+      logger.info('TranscriptionService', 'Transcript job completed', { transcriptId });
       return payload;
     }
     if (status === 'error') {
+      logger.error('TranscriptionService', 'Transcript job failed', {
+        transcriptId,
+        error: payload?.error,
+      });
       throw new Error(payload?.error ?? 'AssemblyAI transcript job failed.');
     }
 
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 
+  logger.error('TranscriptionService', 'Transcript job timed out', { transcriptId });
   throw new Error('AssemblyAI transcript job timed out.');
 }
 
@@ -191,8 +208,14 @@ async function transcribeWithAssemblyAI(
   const apiKey = requireAssemblyAISharedApiKey();
   const fileInfo = await FileSystem.getInfoAsync(audioUri);
   if (!fileInfo.exists) {
+    logger.error('TranscriptionService', 'Audio file not found', { audioUri });
     throw new Error('Audio file not found.');
   }
+  const fileSize = fileInfo.exists ? ((fileInfo as any).size ?? 0) : 0;
+  logger.info('TranscriptionService', 'Async transcription started', {
+    audioUri,
+    fileSize,
+  });
 
   const uploadUrl = await uploadAudioToAssemblyAI(audioUri, apiKey);
   const transcriptId = await createTranscriptJob(uploadUrl, apiKey);
@@ -203,12 +226,16 @@ async function transcribeWithAssemblyAI(
     const segments = buildSentenceSegmentsFromWords(words);
     segments.forEach((segment) => onSegment?.(segment));
     if (segments.length > 0) {
+      logger.info('TranscriptionService', 'Transcription result received', {
+        segmentCount: segments.length,
+      });
       return segments;
     }
   }
 
   const fallback = (payload.text ?? '').trim();
   if (!fallback) {
+    logger.error('TranscriptionService', 'Empty transcript returned');
     throw new Error('AssemblyAI returned an empty transcript.');
   }
   const fallbackSegments = splitTextIntoSentenceSegments(fallback).map((text) => ({
@@ -219,6 +246,9 @@ async function transcribeWithAssemblyAI(
     isFinal: true,
   }));
   fallbackSegments.forEach((segment) => onSegment?.(segment));
+  logger.info('TranscriptionService', 'Transcription result received (fallback text)', {
+    segmentCount: fallbackSegments.length,
+  });
   return fallbackSegments;
 }
 
@@ -231,7 +261,13 @@ export const TranscriptionService = {
     mode: TranscriptionMode = 'post-assemblyai'
   ): Promise<TranscriptSegment[]> {
     const normalizedMode = normalizeTranscriptionMode(mode as unknown as string);
+    logger.info('TranscriptionService', 'Transcription submitted', {
+      mode: normalizedMode,
+      audioUri,
+    });
+
     if (normalizedMode === 'local-on-device') {
+      logger.warn('TranscriptionService', 'Local mode cannot be used for async transcription');
       throw new Error(
         'Local (on-device) mode does not upload audio. In this build, local transcripts must be captured live during recording. If no local transcript was captured, retry in Live Local mode with native transcription enabled.'
       );

@@ -9,6 +9,7 @@ import {
   AssemblyAILiveTranscriptionClient,
 } from './AssemblyAILiveTranscription';
 import { AssemblyAIConfig } from '../config/assemblyAI';
+import { logger } from '../utils/logger';
 
 export interface AudioRecordingResult {
   uri: string;
@@ -76,10 +77,12 @@ class AudioServiceClass {
 
   async pauseLiveTranscription(): Promise<void> {
     await this.assemblyAiLiveClient?.pause();
+    logger.info('AudioService', 'Live transcription paused');
   }
 
   async resumeLiveTranscription(): Promise<void> {
     await this.assemblyAiLiveClient?.resume();
+    logger.info('AudioService', 'Live transcription resumed');
   }
 
   async stopLiveTranscription(): Promise<AudioRecordingResult> {
@@ -90,8 +93,17 @@ class AudioServiceClass {
     try {
       const info = await getInfoAsync(result?.uri ?? '');
       fileSize = info.exists ? ((info as any).size ?? 0) : 0;
-    } catch {}
+    } catch (error: any) {
+      logger.warn('AudioService', 'Failed to read live recording file size', {
+        error: error?.message ?? String(error),
+      });
+    }
 
+    logger.info('AudioService', 'Live transcription stopped', {
+      uri: result?.uri ?? '',
+      durationSec: result?.duration ?? 0,
+      fileSize,
+    });
     return { uri: result?.uri ?? '', duration: result?.duration ?? 0, fileSize };
   }
 
@@ -110,14 +122,17 @@ class AudioServiceClass {
       mode: 'on-device',
     });
     this.startTime = Date.now();
+    logger.info('AudioService', 'On-device live transcription started');
   }
 
   async pauseOnDeviceLiveTranscription(): Promise<void> {
     await this.assemblyAiLiveClient?.pause();
+    logger.info('AudioService', 'On-device live transcription paused');
   }
 
   async resumeOnDeviceLiveTranscription(): Promise<void> {
     await this.assemblyAiLiveClient?.resume();
+    logger.info('AudioService', 'On-device live transcription resumed');
   }
 
   async stopOnDeviceLiveTranscription(): Promise<AudioRecordingResult> {
@@ -201,7 +216,11 @@ class AudioServiceClass {
       if (status.isRecording) {
         await this.recording.pauseAsync();
       }
-    } catch {}
+    } catch (error: any) {
+      logger.error('AudioService', 'Failed to flush recording before stop', {
+        error: error?.message ?? String(error),
+      });
+    }
 
     await this.recording.stopAndUnloadAsync();
     const uri = this.recording.getURI()!;

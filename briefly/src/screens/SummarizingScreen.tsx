@@ -67,6 +67,7 @@ export function SummarizingScreen() {
           transcriptionMode,
           processingMode,
         });
+        await updateRecording(recordingId, { status: 'transcribing', errorMessage: undefined });
         setStage('transcribing');
         const hasLiveTranscript = !!(preTranscript && preTranscript.length > 0);
         let segments = preTranscript ?? [];
@@ -196,9 +197,10 @@ export function SummarizingScreen() {
     navigation.replace('Summarizing', { recordingId });
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     logger.warn('FLOW', 'Summarizing flow cancelled by user', { recordingId });
     isCancelled.current = true;
+    await updateRecording(recordingId, { status: 'saved', errorMessage: undefined });
     navigation.navigate('Main');
   };
 

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Recording } from '../types';
 import { StorageService } from '../services/StorageService';
 import { folderFlagsFor } from '../utils/recordingFolder';
+import { logger } from '../utils/logger';
 
 const RECENTLY_DELETED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -53,18 +54,35 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
           `[perf] loadRecordings: ${Date.now() - start}ms (${recordings.length} recordings)`
         );
       }
+      logger.info('useRecordingStore', 'Recordings loaded', {
+        count: recordings.length,
+        elapsedMs: Date.now() - start,
+      });
       set({ recordings, hasLoaded: true, isLoading: false });
-    } catch {
+    } catch (error: any) {
+      logger.error('useRecordingStore', 'Failed to load recordings', {
+        error: error?.message ?? String(error),
+      });
       set({ isLoading: false });
     }
   },
 
   addRecording: async (recording) => {
+    logger.info('useRecordingStore', 'Recording added', {
+      id: recording.id,
+      title: recording.title,
+      durationSec: recording.duration,
+      fileSize: recording.fileSize,
+    });
     await StorageService.saveRecording(recording);
     set((state) => ({ recordings: [recording, ...state.recordings] }));
   },
 
   updateRecording: async (id, updates) => {
+    logger.info('useRecordingStore', 'Recording updated', {
+      id,
+      fields: Object.keys(updates),
+    });
     await StorageService.updateRecording(id, updates);
     set((state) => ({
       recordings: state.recordings.map((r) =>
@@ -74,6 +92,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   },
 
   deleteRecording: async (id) => {
+    logger.info('useRecordingStore', 'Recording soft-deleted', { id });
     const flags = folderFlagsFor('recently-deleted');
     await StorageService.updateRecording(id, flags);
     set((state) => ({
@@ -84,10 +103,12 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   },
 
   restoreRecording: async (id) => {
+    logger.info('useRecordingStore', 'Recording restored', { id });
     await get().updateRecording(id, { deletedAt: undefined });
   },
 
   permanentDelete: async (id) => {
+    logger.info('useRecordingStore', 'Recording permanently deleted', { id });
     await StorageService.deleteRecording(id);
     set((state) => ({
       recordings: state.recordings.filter((r) => r.id !== id),

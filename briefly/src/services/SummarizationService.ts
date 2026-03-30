@@ -18,6 +18,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { OpenRouterConfig, requireOpenRouterSharedApiKey } from '../config/openRouter';
 import { OpenAIConfig } from '../config/openai';
 import { GeminiConfig } from '../config/gemini';
+import { logger } from '../utils/logger';
 
 const { BrieflyTranscriber } = NativeModules;
 
@@ -125,7 +126,7 @@ async function summarizeWithOpenRouter(
 ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
   const text = segmentsToText(segments);
   logger.info('SUMMARY', 'OpenRouter summarization request starting', {
-    endpoint: `${cloudApiEndpoint}/chat/completions`,
+    endpoint: `${OpenRouterConfig.apiBaseUrl}/chat/completions`,
     chars: text.length,
   });
 

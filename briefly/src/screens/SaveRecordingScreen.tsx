@@ -57,7 +57,7 @@ export function SaveRecordingScreen() {
     logger.info('FLOW', 'Save recording requested', {
       durationSec: duration,
       fileSize,
-      processingMode,
+      processingMode: defaultProcessingMode,
       transcriptionMode,
       targetFolder,
       hasUserFolder: !!targetUserFolderId,
@@ -79,7 +79,7 @@ export function SaveRecordingScreen() {
       folder: targetFolder,
       ...folderFlagsFor(targetFolder),
       userFolderId: targetUserFolderId,
-      status: 'transcribing' as const,
+      status: 'saved' as const,
       transcript: preTranscript, // pre-built from live/local chunks captured during recording
     };
 

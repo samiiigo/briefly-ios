@@ -25,6 +25,7 @@ import {
   transcriptionModeDescription,
 } from '../utils/transcriptionMode';
 import type { AssemblyAIConnectionState } from '../services/AssemblyAILiveTranscription';
+import { logger } from '../utils/logger';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Recording'>;
@@ -338,11 +339,18 @@ export function RecordingScreen() {
     } else {
       try {
         result = await AudioService.stopRecording();
-      } catch {
+      } catch (err: any) {
+        logger.warn('RecordingScreen', 'Stop recording failed, retrying', {
+          error: err?.message ?? String(err),
+        });
         await new Promise((r) => setTimeout(r, 300));
         try {
           result = await AudioService.stopRecording();
-        } catch {}
+        } catch (retryErr: any) {
+          logger.error('RecordingScreen', 'Stop recording retry failed', {
+            error: retryErr?.message ?? String(retryErr),
+          });
+        }
       }
     }
 
