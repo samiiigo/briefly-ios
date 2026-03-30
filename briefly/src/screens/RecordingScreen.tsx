@@ -6,7 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -17,14 +19,54 @@ import { Colors, Spacing, BorderRadius } from '../utils/theme';
 import { RootStackParamList, TranscriptSegment, TranscriptionMode } from '../types';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { transcriptionModeBadge, transcriptionModeDescription } from '../utils/transcriptionMode';
-import { logger } from '../utils/logger';
+import {
+  normalizeTranscriptionMode,
+  transcriptionModeBadge,
+  transcriptionModeDescription,
+} from '../utils/transcriptionMode';
+import type { AssemblyAIConnectionState } from '../services/AssemblyAILiveTranscription';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Recording'>;
 
 function generateSegmentId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+const SENTENCE_BOUNDARY_REGEX = /[^.!?]+[.!?]+["')\]]*(?=\s|$)/g;
+
+function appendChunk(base: string, chunk: string): string {
+  const left = base.trim();
+  const right = chunk.trim();
+  if (!left) return right;
+  if (!right) return left;
+  return `${left} ${right}`;
+}
+
+function splitCompleteSentences(text: string): { sentences: string[]; remainder: string } {
+  const source = text.trim();
+  if (!source) {
+    return { sentences: [], remainder: '' };
+  }
+
+  const sentences: string[] = [];
+  let lastBoundary = 0;
+  SENTENCE_BOUNDARY_REGEX.lastIndex = 0;
+
+  let match = SENTENCE_BOUNDARY_REGEX.exec(source);
+  while (match) {
+    const sentence = match[0].trim();
+    if (sentence) {
+      sentences.push(sentence);
+    }
+    lastBoundary = match.index + match[0].length;
+    match = SENTENCE_BOUNDARY_REGEX.exec(source);
+  }
+
+  return {
+    sentences,
+    remainder: source.slice(lastBoundary).trim(),
+  };
 }
 
 export function RecordingScreen() {
@@ -38,12 +80,15 @@ export function RecordingScreen() {
   const [isPaused, setIsPaused] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>(
-    route.params?.transcriptionModeOverride ?? defaultTranscriptionMode
+    normalizeTranscriptionMode(route.params?.transcriptionModeOverride ?? defaultTranscriptionMode)
   );
+  const [streamingState, setStreamingState] = useState<AssemblyAIConnectionState>('idle');
 
   // Live transcript display state
   const [finalText, setFinalText] = useState('');
   const [partialText, setPartialText] = useState('');
+
+  const livePreviewScrollRef = useRef<ScrollView | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -51,10 +96,28 @@ export function RecordingScreen() {
   const liveSegments = useRef<TranscriptSegment[]>([]);
   // Accumulated final text (so each onFinal delta can be computed)
   const prevFinalText = useRef('');
+  const finalSentenceBufferRef = useRef('');
   const isStopped = useRef(false);
   const isPausedRef = useRef(false);
 
-  const useLiveTranscription = AudioService.supportsLiveTranscription;
+  // Buffered partial text to coalesce rapid onPartial events into ~80ms batches
+  const pendingPartialRef = useRef('');
+  const partialFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const canCloudLive = AudioService.supportsLiveTranscription;
+  const canOnDeviceLive = AudioService.supportsOnDeviceLiveTranscription;
+  const selectedMode = normalizeTranscriptionMode(transcriptionMode);
+  const isAssemblyAiLiveMode = selectedMode === 'live-assemblyai';
+  const isLocalMode = selectedMode === 'local-on-device';
+  const liveEngine: 'cloud' | 'on-device' | 'none' = isAssemblyAiLiveMode
+    ? (canCloudLive ? 'cloud' : 'none')
+    : isLocalMode
+      ? (canOnDeviceLive ? 'on-device' : 'none')
+      : 'none';
+  const useLiveTranscription = liveEngine !== 'none';
+  const effectiveTranscriptionMode: TranscriptionMode = useLiveTranscription
+    ? selectedMode
+    : 'post-assemblyai';
 
   // ─── Timer ────────────────────────────────────────────────────────────────
 
@@ -82,6 +145,7 @@ export function RecordingScreen() {
     setPartialText('');
     liveSegments.current = [];
     prevFinalText.current = '';
+    finalSentenceBufferRef.current = '';
 
     (async () => {
       try {
@@ -90,19 +154,27 @@ export function RecordingScreen() {
           transcriptionMode,
         });
         if (useLiveTranscription) {
-          // iOS: AVAudioEngine handles recording + real-time transcription together
-          await AudioService.startLiveTranscription({
-            onPartial: (text) => {
-              setPartialText(text);
-              setLiveTranscript(
-                prevFinalText.current
-                  ? prevFinalText.current + ' ' + text
-                  : text
-              );
+          const callbacks = {
+            onPartial: (text: string) => {
+              pendingPartialRef.current = text;
+              if (!partialFlushTimerRef.current) {
+                partialFlushTimerRef.current = setTimeout(() => {
+                  partialFlushTimerRef.current = null;
+                  if (isStopped.current) return;
+                  const buffered = pendingPartialRef.current;
+                  setPartialText(buffered);
+                  const accFinal = liveSegments.current.map((s) => s.text).join(' ');
+                  setLiveTranscript(accFinal ? `${accFinal} ${buffered}` : buffered);
+                }, 80);
+              }
             },
-            onFinal: (text) => {
-              // SFSpeechRecognizer returns the full text for the current task segment.
-              // Compute the delta vs. the last known final to get just the new words.
+            onFinal: (text: string) => {
+              if (partialFlushTimerRef.current) {
+                clearTimeout(partialFlushTimerRef.current);
+                partialFlushTimerRef.current = null;
+              }
+              pendingPartialRef.current = '';
+
               const prev = prevFinalText.current;
               const newWords = prev
                 ? text.startsWith(prev)
@@ -111,30 +183,63 @@ export function RecordingScreen() {
                 : text;
 
               if (newWords) {
-                const seg: TranscriptSegment = {
-                  id: generateSegmentId(),
-                  text: newWords,
-                  startTime: liveSegments.current.length > 0
+                const merged = appendChunk(finalSentenceBufferRef.current, newWords);
+                const { sentences, remainder } = splitCompleteSentences(merged);
+
+                if (sentences.length > 0) {
+                  const endTime = elapsedRef.current;
+                  let cursorStart = liveSegments.current.length > 0
                     ? liveSegments.current[liveSegments.current.length - 1].endTime
-                    : 0,
-                  endTime: 0, // updated below
-                  isFinal: true,
-                };
-                // Approximate endTime from elapsed timer (use ref to avoid stale closure)
-                seg.endTime = elapsedRef.current;
-                liveSegments.current = [...liveSegments.current, seg];
+                    : 0;
+                  liveSegments.current = [
+                    ...liveSegments.current,
+                    ...sentences.map((sentence) => {
+                      const segment: TranscriptSegment = {
+                        id: generateSegmentId(),
+                        text: sentence,
+                        startTime: cursorStart,
+                        endTime,
+                        isFinal: true,
+                      };
+                      cursorStart = endTime;
+                      return segment;
+                    }),
+                  ];
+                }
+
+                finalSentenceBufferRef.current = remainder;
               }
 
-              // After each final, SFSpeechRecognizer starts fresh for the next segment,
-              // so reset prevFinalText to '' for the new task window.
-              prevFinalText.current = '';
+              prevFinalText.current = text;
 
               const accumulated = liveSegments.current.map((s) => s.text).join(' ');
               setFinalText(accumulated);
-              setPartialText('');
-              setLiveTranscript(accumulated);
+              setPartialText(finalSentenceBufferRef.current);
+              setLiveTranscript(
+                finalSentenceBufferRef.current
+                  ? appendChunk(accumulated, finalSentenceBufferRef.current)
+                  : accumulated
+              );
             },
-          });
+            onConnectionState: (state: AssemblyAIConnectionState) => {
+              setStreamingState(state);
+            },
+            onError: (message: string) => {
+              setStreamingState('reconnecting');
+              if (liveSegments.current.length === 0) {
+                setLiveTranscript('Reconnecting live transcription...');
+              }
+              console.warn('[Transcription] live transcription error:', message);
+            },
+          };
+
+          if (liveEngine === 'cloud') {
+            // Native module handles recording + AssemblyAI real-time transcription together.
+            await AudioService.startLiveTranscription(callbacks);
+          } else {
+            // Native module handles recording + on-device real-time transcription.
+            await AudioService.startOnDeviceLiveTranscription(callbacks);
+          }
         } else {
           // No native module: record audio only, transcription happens after stop
           await AudioService.startRecording();
@@ -156,6 +261,10 @@ export function RecordingScreen() {
 
     return () => {
       stopTimer();
+      if (partialFlushTimerRef.current) {
+        clearTimeout(partialFlushTimerRef.current);
+        partialFlushTimerRef.current = null;
+      }
     };
     // Intentional: this flow runs exactly once when entering Recording screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -167,7 +276,11 @@ export function RecordingScreen() {
     try {
       if (isPaused) {
         if (useLiveTranscription) {
-          await AudioService.resumeLiveTranscription();
+          if (liveEngine === 'cloud') {
+            await AudioService.resumeLiveTranscription();
+          } else {
+            await AudioService.resumeOnDeviceLiveTranscription();
+          }
         } else {
           await AudioService.resumeRecording();
         }
@@ -177,7 +290,11 @@ export function RecordingScreen() {
         logger.info('FLOW', 'Recording resumed');
       } else {
         if (useLiveTranscription) {
-          await AudioService.pauseLiveTranscription();
+          if (liveEngine === 'cloud') {
+            await AudioService.pauseLiveTranscription();
+          } else {
+            await AudioService.pauseOnDeviceLiveTranscription();
+          }
         } else {
           await AudioService.pauseRecording();
         }
@@ -200,11 +317,17 @@ export function RecordingScreen() {
     logger.info('FLOW', 'Recording stop requested');
     isStopped.current = true;
     stopTimer();
+    if (partialFlushTimerRef.current) {
+      clearTimeout(partialFlushTimerRef.current);
+      partialFlushTimerRef.current = null;
+    }
 
     let result;
     if (useLiveTranscription) {
       try {
-        result = await AudioService.stopLiveTranscription();
+        result = liveEngine === 'cloud'
+          ? await AudioService.stopLiveTranscription()
+          : await AudioService.stopOnDeviceLiveTranscription();
       } catch (err: any) {
         logger.error('FLOW', 'Failed to stop live transcription recording', {
           error: err?.message ?? String(err),
@@ -223,14 +346,40 @@ export function RecordingScreen() {
       }
     }
 
+    const trimmedPartial = (pendingPartialRef.current || partialText).trim();
+    const trailingText = appendChunk(finalSentenceBufferRef.current, trimmedPartial);
+    if (trailingText) {
+      liveSegments.current = [
+        ...liveSegments.current,
+        {
+          id: generateSegmentId(),
+          text: trailingText,
+          startTime: liveSegments.current.length > 0
+            ? liveSegments.current[liveSegments.current.length - 1].endTime
+            : 0,
+          endTime: elapsedRef.current,
+          isFinal: true,
+        },
+      ];
+      setPartialText('');
+      finalSentenceBufferRef.current = '';
+    }
+
     const preTranscript = liveSegments.current.length > 0 ? liveSegments.current : undefined;
+
+    if ((isAssemblyAiLiveMode && !canCloudLive) || (isLocalMode && !canOnDeviceLive)) {
+      Alert.alert(
+        'Live transcription unavailable in this build',
+        'This run cannot stream live transcription because the native BrieflyTranscriber module is unavailable. The app will keep your selected mode, but this recording will be transcribed after stop. To enable streaming, run a native dev build (npx expo run:ios or npx expo run:android) and launch with --dev-client.'
+      );
+    }
 
     navigation.replace('SaveRecording', {
       duration: result?.duration || elapsed,
       filePath: result?.uri ?? '',
       fileSize: result?.fileSize ?? 0,
       preTranscript,
-      transcriptionMode,
+      transcriptionMode: effectiveTranscriptionMode,
       targetFolder: route.params?.targetFolder,
       targetUserFolderId: route.params?.targetUserFolderId,
     });
@@ -253,8 +402,16 @@ export function RecordingScreen() {
           logger.warn('FLOW', 'Recording discarded by user');
           isStopped.current = true;
           stopTimer();
+          if (partialFlushTimerRef.current) {
+            clearTimeout(partialFlushTimerRef.current);
+            partialFlushTimerRef.current = null;
+          }
           if (useLiveTranscription) {
-            await AudioService.stopLiveTranscription().catch(() => {});
+            if (liveEngine === 'cloud') {
+              await AudioService.stopLiveTranscription().catch(() => {});
+            } else {
+              await AudioService.stopOnDeviceLiveTranscription().catch(() => {});
+            }
           } else {
             await AudioService.stopRecording().catch(() => {});
           }
@@ -271,21 +428,37 @@ export function RecordingScreen() {
   const minutes = Math.floor((elapsed % 3600) / 60);
   const seconds = elapsed % 60;
 
-  const showLiveText = finalText || partialText;
+  const hasAnyText = finalText.length > 0 || partialText.length > 0;
+
+  const liveUnavailableMessage = (() => {
+    const modeLabel = isAssemblyAiLiveMode ? 'Live (AssemblyAI)' : 'Local (on-device)';
+    const capabilityLabel = isAssemblyAiLiveMode
+      ? 'AssemblyAI live streaming with BrieflyTranscriber'
+      : 'native on-device speech recognition with BrieflyTranscriber';
+    const fallbackLine = 'This recording will fall back to post-recording AssemblyAI transcription after you stop.';
+    if (Constants.appOwnership === 'expo') {
+      return `${modeLabel} requires ${capabilityLabel}. This run is in Expo Go, which does not include the native transcription module. Next steps: run npx expo run:ios or npx expo run:android and retry. ${fallbackLine}`;
+    }
+    return `${modeLabel} requires ${capabilityLabel} on ${Platform.OS}. This build is missing that capability. Next steps: enable the native transcription module and rebuild the app. ${fallbackLine}`;
+  })();
 
   const livePreviewPlaceholder = useLiveTranscription
-    ? 'Listening… speak naturally and your words will appear here instantly.'
-    : transcriptionMode === 'cloud'
-      ? 'Transcription will run in the cloud after you stop recording.'
-      : 'Transcription will run on-device after you stop recording.';
+    ? isAssemblyAiLiveMode
+      ? 'Listening with AssemblyAI... your words will appear live.'
+      : 'Listening on-device... your words will appear live.'
+    : isAssemblyAiLiveMode || isLocalMode
+      ? liveUnavailableMessage
+      : 'Transcription will be generated after you stop recording.';
+  const showLivePreview = selectedMode !== 'post-assemblyai';
 
   const handleChooseTranscriptionMode = () => {
     Alert.alert(
       'Transcription for this recording',
-      transcriptionModeDescription(transcriptionMode),
+      transcriptionModeDescription(selectedMode),
       [
-        { text: 'On-device', onPress: () => setTranscriptionMode('on-device') },
-        { text: 'Cloud', onPress: () => setTranscriptionMode('cloud') },
+        { text: 'Live (AssemblyAI)', onPress: () => setTranscriptionMode('live-assemblyai') },
+        { text: 'Post-recording (AssemblyAI)', onPress: () => setTranscriptionMode('post-assemblyai') },
+        { text: 'Local (on-device)', onPress: () => setTranscriptionMode('local-on-device') },
         { text: 'Cancel', style: 'cancel' },
       ]
     );
@@ -339,29 +512,48 @@ export function RecordingScreen() {
         <WaveformVisualizer isActive={isStarted && !isPaused} barCount={24} />
       </View>
 
-      {/* Live Preview */}
-      <View style={styles.livePreviewContainer}>
-        <View style={styles.livePreviewHeader}>
-          <Ionicons name="document-text" size={14} color={Colors.primary} />
-          <Text style={styles.livePreviewLabel}>Live Preview</Text>
-          <View style={styles.onDevicePill}>
-            <Text style={styles.onDevicePillText}>{transcriptionModeBadge(transcriptionMode)}</Text>
+      {showLivePreview && (
+        <View style={styles.livePreviewContainer}>
+          <View style={styles.livePreviewHeader}>
+            <Ionicons name="document-text" size={14} color={Colors.primary} />
+            <Text style={styles.livePreviewLabel}>Live Preview</Text>
+            {useLiveTranscription && (
+              <Text style={styles.streamingStatusText}>
+                {streamingState === 'reconnecting'
+                  ? 'Reconnecting...'
+                  : streamingState === 'open'
+                    ? 'Live'
+                    : streamingState === 'connecting'
+                      ? 'Connecting...'
+                      : ''}
+              </Text>
+            )}
+            <View style={styles.onDevicePill}>
+              <Text style={styles.onDevicePillText}>{transcriptionModeBadge(selectedMode)}</Text>
+            </View>
           </View>
+          <ScrollView
+            ref={livePreviewScrollRef}
+            style={styles.livePreviewScroll}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => {
+              livePreviewScrollRef.current?.scrollToEnd({ animated: true });
+            }}
+          >
+            {hasAnyText ? (
+              <Text style={styles.liveTranscriptText}>
+                {finalText}
+                {finalText && partialText ? ' ' : ''}
+                {partialText ? (
+                  <Text style={styles.partialText}>{partialText}</Text>
+                ) : null}
+              </Text>
+            ) : (
+              <Text style={styles.liveTranscriptPlaceholder}>{livePreviewPlaceholder}</Text>
+            )}
+          </ScrollView>
         </View>
-        <ScrollView style={styles.livePreviewScroll} showsVerticalScrollIndicator={false}>
-          {showLiveText ? (
-            <Text style={styles.liveTranscriptText}>
-              {finalText}
-              {finalText && partialText ? ' ' : ''}
-              {partialText ? (
-                <Text style={styles.partialText}>{partialText}</Text>
-              ) : null}
-            </Text>
-          ) : (
-            <Text style={styles.liveTranscriptPlaceholder}>{livePreviewPlaceholder}</Text>
-          )}
-        </ScrollView>
-      </View>
+      )}
 
       {/* Controls */}
       <View style={styles.controls}>
@@ -501,6 +693,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.primary,
     flex: 1,
+  },
+  streamingStatusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.orange,
+    marginRight: 6,
   },
   onDevicePill: {
     backgroundColor: 'rgba(52,199,89,0.15)',

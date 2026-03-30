@@ -1,23 +1,37 @@
 import { TranscriptionMode } from '../types';
 
-export function transcriptionModeTitle(mode: TranscriptionMode): string {
-  if (mode === 'on-device') return 'On-device';
-  if (mode === 'cloud') return 'Cloud';
-  return 'On-device'; // fallback for legacy data
+export function normalizeTranscriptionMode(mode: string | undefined | null): TranscriptionMode {
+  if (mode === 'live-assemblyai' || mode === 'post-assemblyai' || mode === 'local-on-device') {
+    return mode;
+  }
+  // Legacy values from older builds.
+  if (mode === 'on-device') return 'live-assemblyai';
+  if (mode === 'cloud') return 'post-assemblyai';
+  if (mode === 'on-device-first') return 'local-on-device';
+  return 'live-assemblyai';
 }
 
-export function transcriptionModeDescription(mode: TranscriptionMode): string {
-  if (mode === 'on-device') {
-    return 'Best privacy and low latency. Uses local processing and keeps audio on-device.';
-  }
-  if (mode === 'cloud') {
-    return 'Potentially better accuracy and language coverage. Requires internet and sends audio to your AI provider.';
-  }
-  return 'Best privacy and low latency. Uses local processing and keeps audio on-device.'; // fallback for legacy data
+export function transcriptionModeTitle(mode: TranscriptionMode | string): string {
+  const normalized = normalizeTranscriptionMode(mode);
+  if (normalized === 'live-assemblyai') return 'Live (AssemblyAI)';
+  if (normalized === 'post-assemblyai') return 'Post-recording (AssemblyAI)';
+  return 'Local (on-device)';
 }
 
-export function transcriptionModeBadge(mode: TranscriptionMode): string {
-  if (mode === 'on-device') return 'ON-DEVICE';
-  if (mode === 'cloud') return 'CLOUD';
-  return 'ON-DEVICE'; // fallback for legacy data
+export function transcriptionModeDescription(mode: TranscriptionMode | string): string {
+  const normalized = normalizeTranscriptionMode(mode);
+  if (normalized === 'live-assemblyai') {
+    return 'Streams microphone audio to AssemblyAI for real-time transcript updates while recording.';
+  }
+  if (normalized === 'post-assemblyai') {
+    return 'Records first, then transcribes with AssemblyAI after you stop recording.';
+  }
+  return 'Uses native on-device speech recognition so audio stays on your device.';
+}
+
+export function transcriptionModeBadge(mode: TranscriptionMode | string): string {
+  const normalized = normalizeTranscriptionMode(mode);
+  if (normalized === 'live-assemblyai') return 'LIVE';
+  if (normalized === 'post-assemblyai') return 'POST';
+  return 'LOCAL';
 }

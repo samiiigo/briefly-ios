@@ -5,8 +5,14 @@
 
 @interface RCT_EXTERN_MODULE(BrieflyTranscriber, RCTEventEmitter)
 
-// Live transcription (records + transcribes simultaneously, on-device)
-RCT_EXTERN_METHOD(startLiveTranscription:(RCTPromiseResolveBlock)resolve
+// Live transcription (records + transcribes simultaneously via AssemblyAI)
+RCT_EXTERN_METHOD(startLiveTranscription:(NSDictionary *)options
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+// On-device live transcription using Speech framework (fully on-device STT)
+RCT_EXTERN_METHOD(startOnDeviceLiveTranscription:(NSDictionary *)options
+                  resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(pauseLiveTranscription:(RCTPromiseResolveBlock)resolve
@@ -18,7 +24,16 @@ RCT_EXTERN_METHOD(resumeLiveTranscription:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(stopLiveTranscription:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
-// Post-recording file transcription
+RCT_EXTERN_METHOD(pauseOnDeviceLiveTranscription:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(resumeOnDeviceLiveTranscription:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(stopOnDeviceLiveTranscription:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+// Post-recording file transcription entrypoint (disabled in favor of AssemblyAI)
 RCT_EXTERN_METHOD(transcribeFile:(NSString *)filePath)
 
 // On-device summarization

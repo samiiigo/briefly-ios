@@ -8,15 +8,16 @@
  *
  * On-Device (Android/fallback): Simple extractive summarization in JS.
  *
- * Cloud: Sends transcript text to OpenAI chat completions (or compatible
- *        endpoint) with zero-data-retention posture.
+ * Cloud: Sends transcript text to multiple LLM providers (OpenRouter, OpenAI, Gemini).
  */
 
 import { Platform, NativeModules } from 'react-native';
 import Constants from 'expo-constants';
-import { TranscriptSegment, KeyInsight } from '../types';
+import { TranscriptSegment, KeyInsight, ProcessingMode } from '../types';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { logger } from '../utils/logger';
+import { OpenRouterConfig, requireOpenRouterSharedApiKey } from '../config/openRouter';
+import { OpenAIConfig } from '../config/openai';
+import { GeminiConfig } from '../config/gemini';
 
 const { BrieflyTranscriber } = NativeModules;
 
@@ -116,103 +117,12 @@ const SYSTEM_PROMPT = `You are a concise meeting/lecture summarizer. Given a tra
 
 Respond ONLY with valid JSON. No markdown fences, no extra explanation.`;
 
-async function summarizeCloud(
-  segments: TranscriptSegment[]
-): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
-  const { cloudApiProvider } = useSettingsStore.getState();
-  logger.info('SUMMARY', 'Cloud summarization requested', {
-    provider: cloudApiProvider ?? 'openai(default)',
-    segmentCount: segments.length,
-  });
-  if (cloudApiProvider === 'gemini') {
-    return summarizeWithGemini(segments);
-  }
-  if (cloudApiProvider === 'anthropic') {
-    return summarizeWithAnthropic(segments);
-  }
-  if (cloudApiProvider === 'openrouter') {
-    return summarizeWithOpenRouter(segments);
-  }
-  // openai and github both use the OpenAI-compatible chat completions endpoint
-  return summarizeWithOpenAI(segments);
-}
-
-// ─── OpenAI ───────────────────────────────────────────────────────────────────
-
-async function summarizeWithOpenAI(
-  segments: TranscriptSegment[]
-): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
-  const { cloudApiKey, cloudApiEndpoint } = useSettingsStore.getState();
-
-  if (!cloudApiKey) {
-    throw new Error('Cloud API key is not configured. Go to Settings to add your API key.');
-  }
-
-  const text = segmentsToText(segments);
-  logger.info('SUMMARY', 'OpenAI-compatible summarization request starting', {
-    endpoint: `${cloudApiEndpoint}/chat/completions`,
-    chars: text.length,
-  });
-
-  const fetchOptions: RequestInit = {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${cloudApiKey}`,
-      'OpenAI-No-Training': '1',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Transcript:\n${text}` },
-      ],
-      temperature: 0.3,
-      max_tokens: 800,
-    }),
-  };
-  let response: Response;
-  try {
-    response = await fetchWithTimeout(`${cloudApiEndpoint}/chat/completions`, fetchOptions);
-  } catch (e: any) {
-    logger.error('SUMMARY', 'OpenAI-compatible summarization request failed', {
-      error: e?.message ?? String(e),
-    });
-    if (e?.name === 'AbortError' || e?.message === 'timeout') {
-      throw new Error(
-        'Summarization timed out. The server may be slow or unreachable. Try again or use on-device processing.'
-      );
-    }
-    throw e;
-  }
-
-  if (!response!.ok) {
-    const err = await response!.text();
-    logger.error('SUMMARY', 'OpenAI-compatible summarization response not OK', {
-      status: response!.status,
-      error: err,
-    });
-    throw new Error(`OpenAI summarization failed: ${response!.status} ${err}`);
-  }
-
-  const data = await response!.json();
-  logger.info('SUMMARY', 'OpenAI-compatible summarization completed', {
-    status: response!.status,
-  });
-  return parseJsonSummary(data.choices?.[0]?.message?.content ?? '{}', segmentsToText(segments));
-}
-
 // ─── OpenRouter ────────────────────────────────────────────────────────────────
 
 async function summarizeWithOpenRouter(
-  segments: TranscriptSegment[]
+  segments: TranscriptSegment[],
+  apiKey: string
 ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
-  const { cloudApiKey, cloudApiEndpoint } = useSettingsStore.getState();
-
-  if (!cloudApiKey) {
-    throw new Error('Cloud API key is not configured. Go to Settings to add your API key.');
-  }
-
   const text = segmentsToText(segments);
   logger.info('SUMMARY', 'OpenRouter summarization request starting', {
     endpoint: `${cloudApiEndpoint}/chat/completions`,
@@ -224,11 +134,11 @@ async function summarizeWithOpenRouter(
   const model: string =
     extra.openRouterModelId ??
     extra.OPENROUTER_MODEL_ID ??
-    'openai/gpt-4.1-mini';
+    OpenRouterConfig.model;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${cloudApiKey}`,
+    Authorization: `Bearer ${apiKey}`,
   };
 
   const referer: string | undefined =
@@ -260,7 +170,7 @@ async function summarizeWithOpenRouter(
   };
   let response: Response;
   try {
-    response = await fetchWithTimeout(`${cloudApiEndpoint}/chat/completions`, fetchOptions);
+    response = await fetchWithTimeout(`${OpenRouterConfig.apiBaseUrl}/chat/completions`, fetchOptions);
   } catch (e: any) {
     logger.error('SUMMARY', 'OpenRouter summarization request failed', {
       error: e?.message ?? String(e),
@@ -289,38 +199,60 @@ async function summarizeWithOpenRouter(
   return parseJsonSummary(data.choices?.[0]?.message?.content ?? '{}', text);
 }
 
-// ─── Gemini ───────────────────────────────────────────────────────────────────
-
-async function summarizeWithGemini(
+async function summarizeWithSharedOpenRouter(
   segments: TranscriptSegment[]
 ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
-  const { cloudApiKey } = useSettingsStore.getState();
+  return summarizeWithOpenRouter(segments, requireOpenRouterSharedApiKey());
+}
 
-  if (!cloudApiKey) {
-    throw new Error('Gemini API key is not configured. Go to Settings to add your API key.');
+async function summarizeWithUserOpenRouter(
+  segments: TranscriptSegment[]
+): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
+  const { openrouterApiKey } = useSettingsStore.getState();
+  const apiKey = openrouterApiKey.trim();
+  if (!apiKey) {
+    throw new Error('OpenRouter API key is not configured. Go to Settings to add your API key.');
   }
+  return summarizeWithOpenRouter(segments, apiKey);
+}
 
+// ─── OpenAI ────────────────────────────────────────────────────────────────────
+
+async function summarizeWithOpenAI(
+  segments: TranscriptSegment[],
+  apiKey: string
+): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
   const text = segmentsToText(segments);
-  logger.info('SUMMARY', 'Gemini summarization request starting', {
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent',
-    chars: text.length,
-  });
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent` +
-    `?key=${cloudApiKey}`;
+
+  const expoConfig: any = Constants.expoConfig ?? {};
+  const extra: any = expoConfig.extra ?? {};
+  const model: string =
+    extra.openaiModelId ??
+    extra.OPENAI_MODEL_ID ??
+    OpenAIConfig.model;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`,
+  };
 
   const fetchOptions: RequestInit = {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [{ role: 'user', parts: [{ text: `Transcript:\n${text}` }] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 800 },
+      model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `Transcript:\n${text}` },
+      ],
+      temperature: 0.3,
+      max_tokens: 800,
     }),
   };
+
   let response: Response;
   try {
-    response = await fetchWithTimeout(url, fetchOptions);
+    response = await fetchWithTimeout(`${OpenAIConfig.apiBaseUrl}/chat/completions`, fetchOptions);
   } catch (e: any) {
     logger.error('SUMMARY', 'Gemini summarization request failed', {
       error: e?.message ?? String(e),
@@ -335,55 +267,65 @@ async function summarizeWithGemini(
 
   if (!response!.ok) {
     const err = await response!.text();
-    logger.error('SUMMARY', 'Gemini summarization response not OK', {
-      status: response!.status,
-      error: err,
-    });
-    throw new Error(`Gemini summarization failed: ${response!.status} ${err}`);
+    throw new Error(`OpenAI summarization failed: ${response!.status} ${err}`);
   }
 
   const data = await response!.json();
-  logger.info('SUMMARY', 'Gemini summarization completed', {
-    status: response!.status,
-  });
-  const content: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
-  return parseJsonSummary(content, text);
+  return parseJsonSummary(data.choices?.[0]?.message?.content ?? '{}', text);
 }
 
-// ─── Anthropic Claude ─────────────────────────────────────────────────────────
-
-async function summarizeWithAnthropic(
+async function summarizeWithUserOpenAI(
   segments: TranscriptSegment[]
 ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
-  const { cloudApiKey } = useSettingsStore.getState();
-
-  if (!cloudApiKey) {
-    throw new Error('Anthropic API key is not configured. Go to Settings to add your API key.');
+  const { openaiApiKey } = useSettingsStore.getState();
+  const apiKey = openaiApiKey.trim();
+  if (!apiKey) {
+    throw new Error('OpenAI API key is not configured. Go to Settings to add your API key.');
   }
+  return summarizeWithOpenAI(segments, apiKey);
+}
 
+// ─── Gemini ────────────────────────────────────────────────────────────────────
+
+async function summarizeWithGemini(
+  segments: TranscriptSegment[],
+  apiKey: string
+): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
   const text = segmentsToText(segments);
   logger.info('SUMMARY', 'Anthropic summarization request starting', {
     endpoint: 'https://api.anthropic.com/v1/messages',
     chars: text.length,
   });
 
+  const expoConfig: any = Constants.expoConfig ?? {};
+  const extra: any = expoConfig.extra ?? {};
+  const model: string =
+    extra.geminiModelId ??
+    extra.GEMINI_MODEL_ID ??
+    GeminiConfig.model;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`,
+  };
+
   const fetchOptions: RequestInit = {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': cloudApiKey,
-      'anthropic-version': '2023-06-01',
-    },
+    headers,
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `Transcript:\n${text}` },
+      ],
+      temperature: 0.3,
       max_tokens: 800,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: `Transcript:\n${text}` }],
     }),
   };
+
   let response: Response;
   try {
-    response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', fetchOptions);
+    response = await fetchWithTimeout(`${GeminiConfig.apiBaseUrl}chat/completions`, fetchOptions);
   } catch (e: any) {
     logger.error('SUMMARY', 'Anthropic summarization request failed', {
       error: e?.message ?? String(e),
@@ -398,19 +340,39 @@ async function summarizeWithAnthropic(
 
   if (!response!.ok) {
     const err = await response!.text();
-    logger.error('SUMMARY', 'Anthropic summarization response not OK', {
-      status: response!.status,
-      error: err,
-    });
-    throw new Error(`Anthropic summarization failed: ${response!.status} ${err}`);
+    throw new Error(`Gemini summarization failed: ${response!.status} ${err}`);
   }
 
   const data = await response!.json();
-  logger.info('SUMMARY', 'Anthropic summarization completed', {
-    status: response!.status,
-  });
-  const content: string = data.content?.[0]?.text ?? '{}';
-  return parseJsonSummary(content, text);
+  return parseJsonSummary(data.choices?.[0]?.message?.content ?? '{}', text);
+}
+
+async function summarizeWithUserGemini(
+  segments: TranscriptSegment[]
+): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
+  const { geminiApiKey } = useSettingsStore.getState();
+  const apiKey = geminiApiKey.trim();
+  if (!apiKey) {
+    throw new Error('Gemini API key is not configured. Go to Settings to add your API key.');
+  }
+  return summarizeWithGemini(segments, apiKey);
+}
+
+// ─── Router: dispatch by provider ─────────────────────────────────────────────
+
+async function summarizeWithUserKey(
+  segments: TranscriptSegment[]
+): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
+  const { cloudProvider } = useSettingsStore.getState();
+  
+  if (cloudProvider === 'openai') {
+    return summarizeWithUserOpenAI(segments);
+  } else if (cloudProvider === 'gemini') {
+    return summarizeWithUserGemini(segments);
+  } else {
+    // Default to OpenRouter
+    return summarizeWithUserOpenRouter(segments);
+  }
 }
 
 // ─── Shared JSON parser ───────────────────────────────────────────────────────
@@ -446,14 +408,16 @@ function parseJsonSummary(
 export const SummarizationService = {
   async summarize(
     segments: TranscriptSegment[],
-    mode: 'on-device' | 'cloud'
+    mode: ProcessingMode
   ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
-    logger.info('SUMMARY', 'Summarization entrypoint invoked', {
-      mode,
-      segmentCount: segments.length,
-    });
-    if (mode === 'cloud') {
-      return summarizeCloud(segments);
+    if (mode === 'on-device') {
+      return summarizeOnDevice(segments);
+    }
+    if (mode === 'cloud-shared-openrouter') {
+      return summarizeWithSharedOpenRouter(segments);
+    }
+    if (mode === 'cloud-user-key' || mode === 'cloud') {
+      return summarizeWithUserKey(segments);
     }
     return summarizeOnDevice(segments);
   },

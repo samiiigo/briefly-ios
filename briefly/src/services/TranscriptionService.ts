@@ -1,320 +1,225 @@
-/**
- * TranscriptionService
- *
- * Primary path: on-device using BrieflyTranscriber native Swift module
- * (AVAudioEngine + SFSpeechRecognizer). Requires a development build.
- *
- * Expo Go fallback: when the native module is not available, automatically
- * routes to cloud transcription if an API key is configured in Settings.
- * This fallback only applies to Expo Go — a real build always uses on-device.
- */
-
-import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { TranscriptSegment, TranscriptionMode } from '../types';
-import { useSettingsStore } from '../store/useSettingsStore';
-import { resolveTranscriptionRoute } from './transcriptionRouting';
-import { logger } from '../utils/logger';
-
-const { BrieflyTranscriber } = NativeModules;
+import { AssemblyAIConfig, requireAssemblyAISharedApiKey } from '../config/assemblyAI';
+import { normalizeTranscriptionMode } from '../utils/transcriptionMode';
 
 function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-// ─── On-Device ────────────────────────────────────────────────────────────────
+const API_BASE_URL = 'https://api.assemblyai.com/v2';
+const POLL_INTERVAL_MS = 1500;
+const MAX_POLL_ATTEMPTS = 180;
 
-async function transcribeOnDevice(
-  audioUri: string,
-  onSegment?: (segment: TranscriptSegment) => void
-): Promise<TranscriptSegment[]> {
-  logger.info('TRANSCRIPTION', 'On-device transcription requested', {
-    platform: Platform.OS,
-    hasNativeModule: !!BrieflyTranscriber,
-    audioUri,
-  });
-  if (Platform.OS === 'ios' && BrieflyTranscriber) {
-    return transcribeWithNativeModule(audioUri, onSegment);
+const SENTENCE_BOUNDARY_REGEX = /[^.!?]+[.!?]+["')\]]*(?=\s|$)/g;
+
+type AssemblyAIWord = { text: string; start?: number; end?: number };
+
+function splitCompleteSentences(text: string): { sentences: string[]; remainder: string } {
+  const source = text.trim();
+  if (!source) {
+    return { sentences: [], remainder: '' };
   }
 
-  throw new Error(
-    'On-device transcription requires a development build with native modules.'
-  );
+  const sentences: string[] = [];
+  let lastBoundary = 0;
+  SENTENCE_BOUNDARY_REGEX.lastIndex = 0;
+
+  let match = SENTENCE_BOUNDARY_REGEX.exec(source);
+  while (match) {
+    const sentence = match[0].trim();
+    if (sentence) {
+      sentences.push(sentence);
+    }
+    lastBoundary = match.index + match[0].length;
+    match = SENTENCE_BOUNDARY_REGEX.exec(source);
+  }
+
+  return {
+    sentences,
+    remainder: source.slice(lastBoundary).trim(),
+  };
 }
 
-async function transcribeWithNativeModule(
-  audioUri: string,
-  onSegment?: (segment: TranscriptSegment) => void
-): Promise<TranscriptSegment[]> {
-  return new Promise((resolve, reject) => {
-    logger.info('TRANSCRIPTION', 'Native transcription started', { audioUri });
-    const emitter = new NativeEventEmitter(BrieflyTranscriber);
-    const segments: TranscriptSegment[] = [];
-
-    let segmentSub: ReturnType<typeof emitter.addListener>;
-    let doneSub: ReturnType<typeof emitter.addListener>;
-    let errSub: ReturnType<typeof emitter.addListener>;
-
-    const cleanup = () => {
-      segmentSub?.remove();
-      doneSub?.remove();
-      errSub?.remove();
-    };
-
-    segmentSub = emitter.addListener('onTranscriptSegment', (event: any) => {
-      const seg: TranscriptSegment = {
-        id: generateId(),
-        speaker: event.speaker,
-        speakerInitial: event.speaker ? event.speaker[0].toUpperCase() : undefined,
-        text: event.text,
-        startTime: event.startTime,
-        endTime: event.endTime,
-        isFinal: event.isFinal,
-      };
-      if (event.isFinal) {
-        segments.push(seg);
-        logger.debug('TRANSCRIPTION', 'Native final segment captured', {
-          segmentCount: segments.length,
-          chars: seg.text.length,
-        });
-        onSegment?.(seg);
-      }
-    });
-
-    doneSub = emitter.addListener('onTranscriptionComplete', () => {
-      cleanup();
-      logger.info('TRANSCRIPTION', 'Native transcription complete', {
-        segmentCount: segments.length,
-      });
-      resolve(segments);
-    });
-
-    errSub = emitter.addListener('onTranscriptionError', (event: any) => {
-      cleanup();
-      logger.error('TRANSCRIPTION', 'Native transcription error', {
-        error: event?.message ?? 'unknown error',
-      });
-      reject(new Error(event?.message ?? 'Unknown transcription error'));
-    });
-
-    BrieflyTranscriber.transcribeFile(audioUri);
-  });
+function splitTextIntoSentenceSegments(text: string): string[] {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return [];
+  }
+  const { sentences, remainder } = splitCompleteSentences(normalized);
+  return remainder ? [...sentences, remainder] : sentences;
 }
 
-// ─── Cloud: route by provider (Expo Go fallback only) ─────────────────────────
+function buildSentenceSegmentsFromWords(words: AssemblyAIWord[]): TranscriptSegment[] {
+  const segments: TranscriptSegment[] = [];
 
-async function transcribeCloud(
-  audioUri: string,
-  onSegment?: (segment: TranscriptSegment) => void
-): Promise<TranscriptSegment[]> {
-  const { cloudApiProvider } = useSettingsStore.getState();
-  logger.info('TRANSCRIPTION', 'Cloud transcription requested', {
-    provider: cloudApiProvider ?? 'openai(default)',
-    audioUri,
-  });
-  if (cloudApiProvider === 'gemini') {
-    return transcribeWithGemini(audioUri, onSegment);
-  }
-  if (
-    cloudApiProvider === 'anthropic' ||
-    cloudApiProvider === 'github' ||
-    cloudApiProvider === 'openrouter'
-  ) {
-    throw new Error(
-      `${
-        cloudApiProvider === 'anthropic'
-          ? 'Anthropic Claude'
-          : cloudApiProvider === 'github'
-          ? 'GitHub Models'
-          : 'OpenRouter'
-      } does not support audio transcription.\n\n` +
-      'Use a development build for on-device transcription, or switch to an OpenAI or Gemini key.'
-    );
-  }
-  return transcribeWithOpenAI(audioUri, onSegment);
-}
+  let buffer = '';
+  let sentenceStart = 0;
+  let sentenceEnd = 0;
+  let hasTime = false;
 
-// ─── OpenAI Whisper ───────────────────────────────────────────────────────────
-
-async function transcribeWithOpenAI(
-  audioUri: string,
-  onSegment?: (segment: TranscriptSegment) => void
-): Promise<TranscriptSegment[]> {
-  const { cloudApiKey, cloudApiEndpoint } = useSettingsStore.getState();
-
-  if (!cloudApiKey) {
-    throw new Error('Cloud API key is not configured. Go to Settings to add your API key.');
-  }
-
-  const fileInfo = await FileSystem.getInfoAsync(audioUri);
-  if (!fileInfo.exists) {
-    logger.error('TRANSCRIPTION', 'OpenAI transcription failed: audio file missing', { audioUri });
-    throw new Error('Audio file not found');
-  }
-
-  logger.info('TRANSCRIPTION', 'OpenAI transcription upload starting', {
-    endpoint: `${cloudApiEndpoint}/audio/transcriptions`,
-  });
-
-  const formData = new FormData();
-  formData.append('file', {
-    uri: audioUri,
-    name: 'recording.m4a',
-    type: 'audio/m4a',
-  } as any);
-  formData.append('model', 'whisper-1');
-  formData.append('response_format', 'verbose_json');
-  formData.append('timestamp_granularities[]', 'segment');
-
-  const response = await fetch(`${cloudApiEndpoint}/audio/transcriptions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${cloudApiKey}`,
-      'OpenAI-No-Training': '1',
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    logger.error('TRANSCRIPTION', 'OpenAI transcription request failed', {
-      status: response.status,
-      error: err,
-    });
-    throw new Error(`OpenAI transcription failed: ${response.status} ${err}`);
-  }
-
-  const data = await response.json();
-
-  const segments: TranscriptSegment[] = (data.segments ?? []).map((s: any) => {
-    const seg: TranscriptSegment = {
+  const flush = () => {
+    const text = buffer.trim();
+    if (!text) {
+      return;
+    }
+    segments.push({
       id: generateId(),
-      text: s.text.trim(),
-      startTime: s.start,
-      endTime: s.end,
+      text,
+      startTime: sentenceStart,
+      endTime: sentenceEnd,
       isFinal: true,
-    };
-    onSegment?.(seg);
-    return seg;
+    });
+    buffer = '';
+    sentenceStart = sentenceEnd;
+    hasTime = false;
+  };
+
+  words.forEach((word) => {
+    const text = (word.text ?? '').trim();
+    if (!text) {
+      return;
+    }
+
+    const start = typeof word.start === 'number' ? word.start / 1000 : undefined;
+    const end = typeof word.end === 'number' ? word.end / 1000 : undefined;
+    if (!hasTime && typeof start === 'number') {
+      sentenceStart = start;
+      hasTime = true;
+    }
+    if (typeof end === 'number') {
+      sentenceEnd = end;
+    }
+
+    buffer = buffer ? `${buffer} ${text}` : text;
+
+    if (/[.!?]["')\]]*$/.test(text)) {
+      flush();
+    }
   });
 
-  logger.info('TRANSCRIPTION', 'OpenAI transcription completed', {
-    segmentCount: segments.length,
-    hasPlainTextFallback: !!data.text,
-  });
-
-  if (segments.length === 0 && data.text) {
-    const seg: TranscriptSegment = {
-      id: generateId(),
-      text: data.text.trim(),
-      startTime: 0,
-      endTime: 0,
-      isFinal: true,
-    };
-    onSegment?.(seg);
-    return [seg];
-  }
-
+  flush();
   return segments;
 }
 
-// ─── Google Gemini ────────────────────────────────────────────────────────────
+async function uploadAudioToAssemblyAI(audioUri: string, apiKey: string): Promise<string> {
+  const upload = await FileSystem.uploadAsync(`${API_BASE_URL}/upload`, audioUri, {
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers: {
+      Authorization: apiKey,
+      'Content-Type': 'application/octet-stream',
+    },
+    sessionType: FileSystem.FileSystemSessionType.BACKGROUND,
+    httpMethod: 'POST',
+  });
 
-function audioMimeType(uri: string): string {
-  const ext = uri.split('.').pop()?.toLowerCase() ?? '';
-  const map: Record<string, string> = {
-    wav: 'audio/wav',
-    mp3: 'audio/mpeg',
-    caf: 'audio/x-caf',
-    ogg: 'audio/ogg',
-    flac: 'audio/flac',
-  };
-  return map[ext] ?? 'audio/mp4'; // m4a / mp4
+  if (upload.status !== 200) {
+    throw new Error(`AssemblyAI upload failed: ${upload.status} ${upload.body}`);
+  }
+
+  const payload = JSON.parse(upload.body);
+  const uploadUrl = payload?.upload_url as string | undefined;
+  if (!uploadUrl) {
+    throw new Error('AssemblyAI upload did not return upload_url.');
+  }
+  return uploadUrl;
 }
 
-async function transcribeWithGemini(
-  audioUri: string,
-  onSegment?: (segment: TranscriptSegment) => void
-): Promise<TranscriptSegment[]> {
-  const { cloudApiKey } = useSettingsStore.getState();
-
-  if (!cloudApiKey) {
-    throw new Error('Gemini API key is not configured. Go to Settings to add your API key.');
-  }
-
-  const fileInfo = await FileSystem.getInfoAsync(audioUri);
-  if (!fileInfo.exists) {
-    logger.error('TRANSCRIPTION', 'Gemini transcription failed: audio file missing', { audioUri });
-    throw new Error('Audio file not found');
-  }
-
-  const base64Audio = await FileSystem.readAsStringAsync(audioUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent` +
-    `?key=${cloudApiKey}`;
-
-  logger.info('TRANSCRIPTION', 'Gemini transcription request starting', {
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent',
-    mimeType: audioMimeType(audioUri),
-  });
-
-  const response = await fetch(url, {
+async function createTranscriptJob(uploadUrl: string, apiKey: string): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/transcript`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: apiKey,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            {
-              inline_data: {
-                mime_type: audioMimeType(audioUri),
-                data: base64Audio,
-              },
-            },
-            {
-              text:
-                'Transcribe this audio recording accurately. ' +
-                'Return only the spoken words exactly as said, ' +
-                'with natural punctuation. No labels, no commentary.',
-            },
-          ],
-        },
-      ],
+      audio_url: uploadUrl,
+      punctuate: true,
+      format_text: true,
+      language_detection: true,
+      // AssemblyAI deprecated `speech_model` on the async endpoint.
+      // Use `speech_models` (array) instead and restrict to async-safe models.
+      speech_models: [AssemblyAIConfig.asyncModel],
     }),
   });
 
   if (!response.ok) {
-    const err = await response.text();
-    logger.error('TRANSCRIPTION', 'Gemini transcription request failed', {
-      status: response.status,
-      error: err,
+    const body = await response.text();
+    throw new Error(`AssemblyAI transcript create failed: ${response.status} ${body}`);
+  }
+
+  const payload = await response.json();
+  const transcriptId = payload?.id as string | undefined;
+  if (!transcriptId) {
+    throw new Error('AssemblyAI transcript create did not return id.');
+  }
+  return transcriptId;
+}
+
+async function waitForTranscript(
+  transcriptId: string,
+  apiKey: string
+): Promise<{ words?: { text: string; start?: number; end?: number }[]; text?: string }> {
+  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
+    const response = await fetch(`${API_BASE_URL}/transcript/${transcriptId}`, {
+      headers: { Authorization: apiKey },
     });
-    throw new Error(`Gemini transcription failed: ${response.status} ${err}`);
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`AssemblyAI transcript poll failed: ${response.status} ${body}`);
+    }
+
+    const payload = await response.json();
+    const status = payload?.status as string | undefined;
+    if (status === 'completed') {
+      return payload;
+    }
+    if (status === 'error') {
+      throw new Error(payload?.error ?? 'AssemblyAI transcript job failed.');
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 
-  const data = await response.json();
-  const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  throw new Error('AssemblyAI transcript job timed out.');
+}
 
-  if (!text.trim()) {
-    logger.error('TRANSCRIPTION', 'Gemini returned empty transcription');
-    throw new Error('Gemini returned an empty transcription. Check your API key and audio file.');
+async function transcribeWithAssemblyAI(
+  audioUri: string,
+  onSegment?: (segment: TranscriptSegment) => void
+): Promise<TranscriptSegment[]> {
+  const apiKey = requireAssemblyAISharedApiKey();
+  const fileInfo = await FileSystem.getInfoAsync(audioUri);
+  if (!fileInfo.exists) {
+    throw new Error('Audio file not found.');
   }
 
-  const seg: TranscriptSegment = {
+  const uploadUrl = await uploadAudioToAssemblyAI(audioUri, apiKey);
+  const transcriptId = await createTranscriptJob(uploadUrl, apiKey);
+  const payload = await waitForTranscript(transcriptId, apiKey);
+
+  const words = payload.words ?? [];
+  if (words.length > 0) {
+    const segments = buildSentenceSegmentsFromWords(words);
+    segments.forEach((segment) => onSegment?.(segment));
+    if (segments.length > 0) {
+      return segments;
+    }
+  }
+
+  const fallback = (payload.text ?? '').trim();
+  if (!fallback) {
+    throw new Error('AssemblyAI returned an empty transcript.');
+  }
+  const fallbackSegments = splitTextIntoSentenceSegments(fallback).map((text) => ({
     id: generateId(),
-    text: text.trim(),
+    text,
     startTime: 0,
     endTime: 0,
     isFinal: true,
-  };
-  onSegment?.(seg);
-  logger.info('TRANSCRIPTION', 'Gemini transcription completed', {
-    chars: seg.text.length,
-  });
-  return [seg];
+  }));
+  fallbackSegments.forEach((segment) => onSegment?.(segment));
+  return fallbackSegments;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -323,34 +228,15 @@ export const TranscriptionService = {
   async transcribe(
     audioUri: string,
     onSegment?: (segment: TranscriptSegment) => void,
-    mode: TranscriptionMode = 'on-device'
+    mode: TranscriptionMode = 'post-assemblyai'
   ): Promise<TranscriptSegment[]> {
-    const route = resolveTranscriptionRoute(mode);
-    logger.info('TRANSCRIPTION', 'Route resolved', { mode, route });
-    if (route === 'cloud') {
-      return transcribeCloud(audioUri, onSegment);
+    const normalizedMode = normalizeTranscriptionMode(mode as unknown as string);
+    if (normalizedMode === 'local-on-device') {
+      throw new Error(
+        'Local (on-device) mode does not upload audio. In this build, local transcripts must be captured live during recording. If no local transcript was captured, retry in Live Local mode with native transcription enabled.'
+      );
     }
 
-    if (route === 'on-device') {
-      return transcribeOnDevice(audioUri, onSegment);
-    }
-
-    try {
-      logger.info('TRANSCRIPTION', 'Attempting on-device first (auto mode)');
-      return await transcribeOnDevice(audioUri, onSegment);
-    } catch (onDeviceError: any) {
-      logger.warn('TRANSCRIPTION', 'On-device failed; evaluating cloud fallback', {
-        error: onDeviceError?.message ?? String(onDeviceError),
-      });
-      const { cloudApiKey } = useSettingsStore.getState();
-      if (!cloudApiKey) {
-        throw new Error(
-          `${onDeviceError?.message ?? 'On-device transcription failed.'}\n\n` +
-          'Cloud fallback is configured for this recording, but no cloud API key is set in Settings.'
-        );
-      }
-      logger.info('TRANSCRIPTION', 'Cloud fallback selected');
-      return transcribeCloud(audioUri, onSegment);
-    }
+    return transcribeWithAssemblyAI(audioUri, onSegment);
   },
 };

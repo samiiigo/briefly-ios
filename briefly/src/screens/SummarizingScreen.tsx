@@ -8,13 +8,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp, CommonActions } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { TranscriptionService } from '../services/TranscriptionService';
 import { SummarizationService } from '../services/SummarizationService';
 import { RootStackParamList } from '../types';
+import { transcriptionModeTitle } from '../utils/transcriptionMode';
 import { Colors, Spacing, BorderRadius, SliderAnimation } from '../utils/theme';
 import { logger } from '../utils/logger';
 
@@ -35,6 +36,7 @@ export function SummarizingScreen() {
   const [stage, setStage] = useState<Stage>('transcribing');
   const [progress] = useState(new Animated.Value(0));
   const [errorMessage, setErrorMessage] = useState('');
+  const [retrySummaryOnly, setRetrySummaryOnly] = useState(false);
   const isCancelled = useRef(false);
   const hasStarted = useRef(false);
 
@@ -49,6 +51,7 @@ export function SummarizingScreen() {
     const processingMode = rec.processingMode;
     const filePath = rec.filePath;
     const preTranscript = rec.transcript;
+    setRetrySummaryOnly(!!(preTranscript && preTranscript.length > 0));
 
     Animated.timing(progress, {
       toValue: 0.4,
@@ -65,17 +68,25 @@ export function SummarizingScreen() {
           processingMode,
         });
         setStage('transcribing');
-        const lastChunkSegments = await TranscriptionService.transcribe(
-          filePath,
-          undefined,
-          transcriptionMode
-        );
+        const hasLiveTranscript = !!(preTranscript && preTranscript.length > 0);
+        let segments = preTranscript ?? [];
 
-        if (isCancelled.current) return;
-
-        const segments = preTranscript && preTranscript.length > 0
-          ? [...preTranscript, ...lastChunkSegments]
-          : lastChunkSegments;
+        if (!hasLiveTranscript) {
+          const lastChunkSegments = await TranscriptionService.transcribe(
+            filePath,
+            undefined,
+            transcriptionMode
+          );
+          if (isCancelled.current) return;
+          segments = lastChunkSegments;
+        } else {
+          Animated.timing(progress, {
+            toValue: 0.55,
+            duration: 500,
+            easing: SliderAnimation.easing,
+            useNativeDriver: false,
+          }).start();
+        }
 
         logger.info('FLOW', 'Transcription stage complete', {
           recordingId,
@@ -133,6 +144,9 @@ export function SummarizingScreen() {
         });
         setErrorMessage(err.message ?? 'Unknown error');
         setStage('error');
+        const latest = getRecordingById(recordingId);
+        const hasTranscript = !!(latest?.transcript && latest.transcript.length > 0);
+        setRetrySummaryOnly(hasTranscript);
         await updateRecording(recordingId, {
           status: 'error',
           errorMessage: err.message,
@@ -161,8 +175,19 @@ export function SummarizingScreen() {
 
   const handleRetry = async () => {
     if (!recording) return;
-    logger.info('FLOW', 'Retry requested for summarizing flow', { recordingId });
-    await updateRecording(recordingId, { status: 'transcribing', errorMessage: undefined });
+    if (retrySummaryOnly || (recording.transcript?.length ?? 0) > 0) {
+      await updateRecording(recordingId, {
+        status: 'summarizing',
+        errorMessage: undefined,
+        summary: undefined,
+        keyInsights: undefined,
+      });
+    } else {
+      await updateRecording(recordingId, {
+        status: 'transcribing',
+        errorMessage: undefined,
+      });
+    }
     hasStarted.current = false;
     isCancelled.current = false;
     setStage('transcribing');
@@ -232,11 +257,9 @@ export function SummarizingScreen() {
           <View style={styles.modeBadge}>
             <Ionicons name="lock-closed" size={12} color={Colors.green} />
             <Text style={styles.modeBadgeText}>
-              {(recording.transcriptionMode ?? defaultTranscriptionMode) === 'cloud'
-                ? 'TRANSCRIPTION: CLOUD'
-                : (recording.transcriptionMode ?? defaultTranscriptionMode) === 'on-device'
-                  ? 'TRANSCRIPTION: ON-DEVICE'
-                  : 'TRANSCRIPTION: ON-DEVICE FIRST'}
+              {`TRANSCRIPTION: ${transcriptionModeTitle(
+                recording.transcriptionMode ?? defaultTranscriptionMode
+              ).toUpperCase()}`}
             </Text>
           </View>
         )}
@@ -246,27 +269,12 @@ export function SummarizingScreen() {
         {stage === 'error' && (
           <TouchableOpacity style={styles.primaryButton} onPress={handleRetry}>
             <Ionicons name="refresh" size={18} color="#fff" />
-            <Text style={styles.primaryButtonText}>Retry</Text>
+            <Text style={styles.primaryButtonText}>
+              {retrySummaryOnly || (recording?.transcript?.length ?? 0) > 0 ? 'Retry Summary' : 'Retry'}
+            </Text>
           </TouchableOpacity>
         )}
-        {stage === 'error' && errorMessage.toLowerCase().includes('api key') && (
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => {
-              isCancelled.current = true;
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'Main', params: { screen: 'Settings' } }],
-                })
-              );
-            }}
-          >
-            <Ionicons name="key-outline" size={18} color={Colors.textPrimary} />
-            <Text style={styles.secondaryButtonText}>Add API Key in Settings</Text>
-          </TouchableOpacity>
-        )}
-        {recording?.processingMode === 'cloud' && stage !== 'error' && (
+        {recording?.processingMode !== 'on-device' && stage !== 'error' && (
           <TouchableOpacity style={styles.secondaryButton} onPress={handleRunLocally}>
             <Ionicons name="hardware-chip-outline" size={18} color={Colors.textPrimary} />
             <Text style={styles.secondaryButtonText}>Run Locally Instead</Text>

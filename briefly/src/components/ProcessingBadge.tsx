@@ -15,7 +15,7 @@ interface Props {
 }
 
 export function ProcessingBadge({ mode, size = 'md', showLabel = true }: Props) {
-  const isCloud = mode === 'cloud';
+  const isCloud = mode !== 'on-device';
   const isSmall = size === 'sm';
 
   return (

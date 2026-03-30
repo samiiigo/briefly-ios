@@ -11,7 +11,7 @@ function mkRecording(overrides: Partial<Recording> = {}): Recording {
     duration: 10,
     filePath: '/tmp/test.m4a',
     fileSize: 123,
-    processingMode: 'cloud',
+    processingMode: 'cloud-user-key',
     status: 'ready',
     ...overrides,
   };

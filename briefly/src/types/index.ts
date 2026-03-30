@@ -1,5 +1,6 @@
-export type ProcessingMode = 'on-device' | 'cloud';
-export type TranscriptionMode = 'on-device' | 'cloud';
+export type CloudProvider = 'openrouter' | 'openai' | 'gemini';
+export type ProcessingMode = 'on-device' | 'cloud' | 'cloud-shared-openrouter' | 'cloud-user-key';
+export type TranscriptionMode = 'live-assemblyai' | 'post-assemblyai' | 'local-on-device';
 /**
  * System-managed storage buckets for recordings.
  *

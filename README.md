@@ -80,6 +80,64 @@ cd briefly
 npm install
 ```
 
+### Setting up API keys
+
+Briefly requires two API keys for cloud transcription and AI summarization:
+
+1. **AssemblyAI API Key** – for transcription
+2. **OpenRouter API Key** – for AI summarization
+
+You can set them in one of two ways:
+
+#### Option 1: Environment variables (Recommended)
+
+Create a `.env` file in the `briefly/` directory:
+
+```env
+EXPO_PUBLIC_ASSEMBLYAI_API_KEY=your_assemblyai_key_here
+EXPO_PUBLIC_OPENROUTER_API_KEY=your_openrouter_key_here
+```
+
+Or set them directly in your terminal:
+
+```bash
+export EXPO_PUBLIC_ASSEMBLYAI_API_KEY=your_assemblyai_key
+export EXPO_PUBLIC_OPENROUTER_API_KEY=your_openrouter_key
+```
+
+#### Option 2: Expo config
+
+Edit `briefly/app.json` and add to the `expo.extra` section:
+
+```json
+{
+  "expo": {
+    "extra": {
+      "assemblyAiApiKey": "your_assemblyai_key_here",
+      "openRouterSharedApiKey": "your_openrouter_key_here"
+    }
+  }
+}
+```
+
+#### Option 3: Native build settings (development builds / CI)
+
+For native builds, you can also inject AssemblyAI at native compile time:
+
+- Android: set `ASSEMBLYAI_API_KEY` as a Gradle property or environment variable.
+- iOS: set `expo.ios.infoPlist.ASSEMBLYAI_API_KEY` in `briefly/app.json` (or inject the value during CI build).
+
+Example (Android):
+
+```bash
+ASSEMBLYAI_API_KEY=your_assemblyai_key ./gradlew assembleDebug
+```
+
+#### Obtaining API keys
+
+- **AssemblyAI**: Get your key at https://www.assemblyai.com/
+- **OpenRouter**: Get your key at https://openrouter.ai/
+
 ### Run the app
 
 Start the Expo dev server:

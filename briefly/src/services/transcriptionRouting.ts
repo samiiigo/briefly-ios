@@ -1,10 +1,8 @@
 import { TranscriptionMode } from '../types';
+import { normalizeTranscriptionMode } from '../utils/transcriptionMode';
 
-export type TranscriptionRoute = 'on-device' | 'cloud';
+export type TranscriptionRoute = 'live-assemblyai' | 'post-assemblyai' | 'local-on-device';
 
 export function resolveTranscriptionRoute(mode: TranscriptionMode): TranscriptionRoute {
-  if (mode === 'cloud') return 'cloud';
-  // Legacy 'on-device-first' from stored recordings maps to on-device
-  if ((mode as string) === 'on-device-first') return 'on-device';
-  return 'on-device';
+  return normalizeTranscriptionMode(mode);
 }

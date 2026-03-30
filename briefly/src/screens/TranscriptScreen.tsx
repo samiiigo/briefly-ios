@@ -132,13 +132,24 @@ export function TranscriptScreen() {
 
   const handleRetry = useCallback(async () => {
     if (!recording) return;
-    await updateRecording(recording.id, {
-      status: 'transcribing',
-      errorMessage: undefined,
-      transcript: undefined,
-      summary: undefined,
-      keyInsights: undefined,
-    });
+    const hasTranscript = (recording.transcript?.length ?? 0) > 0;
+    await updateRecording(
+      recording.id,
+      hasTranscript
+        ? {
+            status: 'summarizing',
+            errorMessage: undefined,
+            summary: undefined,
+            keyInsights: undefined,
+          }
+        : {
+            status: 'transcribing',
+            errorMessage: undefined,
+            transcript: undefined,
+            summary: undefined,
+            keyInsights: undefined,
+          }
+    );
     navigation.replace('Summarizing', { recordingId: recording.id });
   }, [recording, updateRecording, navigation]);
 
@@ -347,7 +358,11 @@ export function TranscriptScreen() {
             )}
             <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
               <Ionicons name="refresh" size={15} color={Colors.textPrimary} />
-              <Text style={styles.retryButtonText}>Retry Transcription & Summary</Text>
+              <Text style={styles.retryButtonText}>
+                {(recording.transcript?.length ?? 0) > 0
+                  ? 'Retry Summary Processing'
+                  : 'Retry Transcription & Summary'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}

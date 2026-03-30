@@ -12,8 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { RootStackParamList, ProcessingMode } from '../types';
-import { detectProvider, providerLabel } from '../utils';
+import { RootStackParamList, ProcessingMode, CloudProvider } from '../types';
 import {
   processingModeDescription,
   processingModeTitle,
@@ -22,19 +21,103 @@ import { Colors, Spacing } from '../utils/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const PROCESSING_MODES: ProcessingMode[] = ['on-device', 'cloud'];
+const PROCESSING_MODES: ProcessingMode[] = [
+  'cloud-shared-openrouter',
+  'cloud-user-key',
+  'on-device',
+];
+
+function getProviderTitle(provider: CloudProvider): string {
+  if (provider === 'openrouter') return 'OpenRouter';
+  if (provider === 'openai') return 'OpenAI';
+  if (provider === 'gemini') return 'Google Gemini';
+  return provider;
+}
+
+function getApiKeyPlaceholder(provider: CloudProvider): string {
+  if (provider === 'openrouter') return 'sk-or-...';
+  if (provider === 'openai') return 'sk-proj-...';
+  if (provider === 'gemini') return 'AIza...';
+  return 'Paste your API key';
+}
+
+function isValidApiKeyFormat(key: string, provider: CloudProvider): boolean {
+  const trimmed = key.trim();
+  if (provider === 'openrouter') return trimmed.startsWith('sk-or-');
+  if (provider === 'openai') return trimmed.startsWith('sk-') || trimmed.startsWith('sk-proj-');
+  if (provider === 'gemini') return trimmed.startsWith('AIza') || trimmed.length > 20;
+  return trimmed.length > 10;
+}
+
+function detectCloudProviderFromKey(key: string): CloudProvider | null {
+  const trimmed = key.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('sk-or-')) return 'openrouter';
+  if (trimmed.startsWith('sk-') || trimmed.startsWith('sk-proj-')) return 'openai';
+  if (trimmed.startsWith('AIza') || trimmed.startsWith('AI')) return 'gemini';
+  return null;
+}
 
 export function ProcessingModePickerScreen() {
   const navigation = useNavigation<Nav>();
   const {
     defaultProcessingMode,
     setDefaultProcessingMode,
-    cloudApiKey,
-    setCloudApiKey,
+    cloudProvider,
+    setCloudProvider,
+    openrouterApiKey,
+    setOpenrouterApiKey,
+    openaiApiKey,
+    setOpenaiApiKey,
+    geminiApiKey,
+    setGeminiApiKey,
   } = useSettingsStore();
-  const [apiKeyInput, setApiKeyInput] = useState(cloudApiKey);
-  const isCloud = defaultProcessingMode === 'cloud';
-  const detectedProvider = detectProvider(apiKeyInput);
+
+  const isCloudUserKey =
+    defaultProcessingMode === 'cloud-user-key' || defaultProcessingMode === 'cloud';
+
+  const getProviderApiKey = (provider: CloudProvider): string => {
+    if (provider === 'openrouter') return openrouterApiKey;
+    if (provider === 'openai') return openaiApiKey;
+    if (provider === 'gemini') return geminiApiKey;
+    return '';
+  };
+
+  // Get the current API key based on selected provider
+  const getCurrentApiKey = (): string => getProviderApiKey(cloudProvider);
+
+  const setCurrentApiKey = (value: string) => {
+    if (cloudProvider === 'openrouter') {
+      setOpenrouterApiKey(value);
+    } else if (cloudProvider === 'openai') {
+      setOpenaiApiKey(value);
+    } else if (cloudProvider === 'gemini') {
+      setGeminiApiKey(value);
+    }
+  };
+
+  const [apiKeyInput, setApiKeyInput] = useState(getCurrentApiKey());
+  const isValidFormat = isValidApiKeyFormat(apiKeyInput, cloudProvider);
+
+  const saveApiKeyForProvider = (provider: CloudProvider, value: string) => {
+    if (provider === 'openrouter') {
+      setOpenrouterApiKey(value);
+    } else if (provider === 'openai') {
+      setOpenaiApiKey(value);
+    } else if (provider === 'gemini') {
+      setGeminiApiKey(value);
+    }
+  };
+
+  const handleApiKeyChange = (value: string) => {
+    setApiKeyInput(value);
+    const detected = detectCloudProviderFromKey(value);
+    const providerToSave = detected ?? cloudProvider;
+    if (detected && detected !== cloudProvider) {
+      setCloudProvider(detected);
+    }
+    saveApiKeyForProvider(providerToSave, value);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -83,14 +166,15 @@ export function ProcessingModePickerScreen() {
           })}
         </View>
 
-        {/* API Key — shown when Cloud AI is selected */}
-        {isCloud && (
+        {/* API key input — shown for Cloud (use your own key) */}
+        {isCloudUserKey && (
           <React.Fragment>
+            {/* API Key Input */}
             <Text style={styles.sectionLabel}>API KEY</Text>
             <Text style={styles.sectionDescription}>
-              Paste any supported key — OpenAI, Google Gemini, Anthropic Claude,
-              OpenRouter, or a GitHub PAT. The provider is detected automatically.
-              Stored locally on your device and never shared.
+              Paste one key and Briefly will auto-detect the provider type
+              (for example: sk-or-..., sk-proj-..., or AIza...). The key is
+              stored locally on your device.
             </Text>
             <View style={styles.card}>
               <View style={styles.apiKeyRow}>
@@ -104,9 +188,9 @@ export function ProcessingModePickerScreen() {
                 <TextInput
                   style={styles.apiKeyInput}
                   value={apiKeyInput}
-                  onChangeText={setApiKeyInput}
-                  onBlur={() => setCloudApiKey(apiKeyInput)}
-                  placeholder="sk-… · AIza… · sk-ant-… · sk-or-… · github_pat_…"
+                  onChangeText={handleApiKeyChange}
+                  onBlur={() => setCurrentApiKey(apiKeyInput)}
+                  placeholder={getApiKeyPlaceholder(cloudProvider)}
                   placeholderTextColor="rgba(255,255,255,0.25)"
                   secureTextEntry
                   autoCapitalize="none"
@@ -116,7 +200,7 @@ export function ProcessingModePickerScreen() {
                   <TouchableOpacity
                     onPress={() => {
                       setApiKeyInput('');
-                      setCloudApiKey('');
+                      setCurrentApiKey('');
                     }}
                   >
                     <Ionicons
@@ -127,7 +211,7 @@ export function ProcessingModePickerScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-              {detectedProvider && (
+              {apiKeyInput.trim().length > 0 && isValidFormat && (
                 <View style={styles.detectedRow}>
                   <Ionicons
                     name="checkmark-circle"
@@ -135,11 +219,11 @@ export function ProcessingModePickerScreen() {
                     color={Colors.primary}
                   />
                   <Text style={styles.detectedText}>
-                    {providerLabel(detectedProvider)} detected
+                    Detected: {getProviderTitle(cloudProvider)}
                   </Text>
                 </View>
               )}
-              {apiKeyInput.trim().length > 0 && !detectedProvider && (
+              {apiKeyInput.trim().length > 0 && !isValidFormat && (
                 <View style={styles.detectedRow}>
                   <Ionicons
                     name="help-circle"
@@ -149,7 +233,7 @@ export function ProcessingModePickerScreen() {
                   <Text
                     style={[styles.detectedText, { color: Colors.orange }]}
                   >
-                    Provider not recognised
+                    Key format not recognized yet. Expected patterns include sk-or-..., sk-proj-..., or AIza...
                   </Text>
                 </View>
               )}
