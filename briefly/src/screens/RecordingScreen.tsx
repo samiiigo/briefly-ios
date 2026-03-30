@@ -149,6 +149,10 @@ export function RecordingScreen() {
 
     (async () => {
       try {
+        logger.info('FLOW', 'Recording screen session started', {
+          useLiveTranscription,
+          transcriptionMode,
+        });
         if (useLiveTranscription) {
           const callbacks = {
             onPartial: (text: string) => {
@@ -244,6 +248,9 @@ export function RecordingScreen() {
         setIsStarted(true);
         startTimer();
       } catch (err: any) {
+        logger.error('FLOW', 'Failed to start recording session', {
+          error: err?.message ?? String(err),
+        });
         Alert.alert(
           'Microphone Error',
           err?.message ?? 'Could not start recording. Check microphone permissions.',
@@ -280,6 +287,7 @@ export function RecordingScreen() {
         startTimer();
         setIsPaused(false);
         isPausedRef.current = false;
+        logger.info('FLOW', 'Recording resumed');
       } else {
         if (useLiveTranscription) {
           if (liveEngine === 'cloud') {
@@ -293,8 +301,12 @@ export function RecordingScreen() {
         stopTimer();
         setIsPaused(true);
         isPausedRef.current = true;
+        logger.info('FLOW', 'Recording paused');
       }
     } catch (err: any) {
+      logger.error('FLOW', 'Failed to pause/resume recording', {
+        error: err?.message ?? String(err),
+      });
       Alert.alert('Error', err?.message ?? 'Could not pause or resume recording.');
     }
   };
@@ -302,6 +314,7 @@ export function RecordingScreen() {
   // ─── Stop ─────────────────────────────────────────────────────────────────
 
   const handleStop = async () => {
+    logger.info('FLOW', 'Recording stop requested');
     isStopped.current = true;
     stopTimer();
     if (partialFlushTimerRef.current) {
@@ -316,6 +329,9 @@ export function RecordingScreen() {
           ? await AudioService.stopLiveTranscription()
           : await AudioService.stopOnDeviceLiveTranscription();
       } catch (err: any) {
+        logger.error('FLOW', 'Failed to stop live transcription recording', {
+          error: err?.message ?? String(err),
+        });
         Alert.alert('Error', err?.message ?? 'Could not stop recording.');
         return;
       }
@@ -367,6 +383,11 @@ export function RecordingScreen() {
       targetFolder: route.params?.targetFolder,
       targetUserFolderId: route.params?.targetUserFolderId,
     });
+    logger.info('FLOW', 'Navigated to save recording screen', {
+      durationSec: result?.duration || elapsed,
+      hasPreTranscript: !!preTranscript,
+      transcriptionMode,
+    });
   };
 
   // ─── Discard ──────────────────────────────────────────────────────────────
@@ -378,6 +399,7 @@ export function RecordingScreen() {
         text: 'Discard',
         style: 'destructive',
         onPress: async () => {
+          logger.warn('FLOW', 'Recording discarded by user');
           isStopped.current = true;
           stopTimer();
           if (partialFlushTimerRef.current) {
