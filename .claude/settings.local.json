@@ -8,7 +8,11 @@
       "Bash(where node:*)",
       "Bash(where npm:*)",
       "Bash(where npx:*)",
-      "Bash(grep -n \"interface UserFolderStore\" /d/repo/briefly-ios/briefly/src/store/*.ts)"
+      "Bash(grep -n \"interface UserFolderStore\" /d/repo/briefly-ios/briefly/src/store/*.ts)",
+      "Bash(npx expo:*)",
+      "Bash(export PATH=\"/c/Users/samyo/AppData/Roaming/npm:$PATH:/c/Program Files/nodejs:/c/Users/samyo/AppData/Local/Programs/nodejs\")",
+      "Bash(npx --version)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")"
     ]
   }
 }

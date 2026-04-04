@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RecordingService, LiveTranscriptionService } from '../services/audio';
 import { WaveformVisualizer } from '../components/WaveformVisualizer';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
-import { RootStackParamList, TranscriptionMode } from '../types';
+import { RootStackParamList, TranscriptionMode, TranscriptSegment } from '../types';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useTimer } from '../hooks/useTimer';
@@ -26,11 +26,16 @@ import {
   transcriptionModeBadge,
   transcriptionModeDescription,
 } from '../utils/transcriptionMode';
+import { appendChunk, splitCompleteSentences } from '../utils/sentenceSplitter';
 import type { AssemblyAIConnectionState } from '../services/audio/AssemblyAILiveTranscription';
 import { logger } from '../utils/logger';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Recording'>;
+
+function generateSegmentId() {
+  return `seg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
 
 export function RecordingScreen() {
   const navigation = useNavigation<Nav>();
@@ -62,6 +67,11 @@ export function RecordingScreen() {
   const finalSentenceBufferRef = useRef('');
   const isStopped = useRef(false);
   const isPausedRef = useRef(false);
+  // Captures the recording mode at start time so stop/pause/discard always
+  // call the same service that was used to start, even if the user changes
+  // the transcription mode mid-recording via the menu.
+  const startedWithLiveRef = useRef(false);
+  const effectiveModeAtStartRef = useRef<TranscriptionMode>('post-assemblyai');
 
   // Buffered partial text to coalesce rapid onPartial events into ~80ms batches
   const pendingPartialRef = useRef('');
@@ -112,9 +122,13 @@ export function RecordingScreen() {
 
     (async () => {
       try {
+        startedWithLiveRef.current = useLiveTranscription;
+        effectiveModeAtStartRef.current = effectiveTranscriptionMode;
         logger.info('FLOW', 'Recording screen session started', {
           useLiveTranscription,
+          liveEngine,
           transcriptionMode,
+          effectiveTranscriptionMode,
         });
         if (useLiveTranscription) {
           const callbacks = {
@@ -233,7 +247,7 @@ export function RecordingScreen() {
   const handlePause = async () => {
     try {
       if (isPaused) {
-        if (useLiveTranscription) {
+        if (startedWithLiveRef.current) {
           await LiveTranscriptionService.resume();
         } else {
           await RecordingService.resume();
@@ -243,7 +257,7 @@ export function RecordingScreen() {
         isPausedRef.current = false;
         logger.info('FLOW', 'Recording resumed');
       } else {
-        if (useLiveTranscription) {
+        if (startedWithLiveRef.current) {
           await LiveTranscriptionService.pause();
         } else {
           await RecordingService.pause();
@@ -264,8 +278,12 @@ export function RecordingScreen() {
   // ─── Stop ─────────────────────────────────────────────────────────────────
 
   const handleStop = async () => {
-    logger.info('FLOW', 'Recording stop requested');
+    if (isStopped.current) return;
     isStopped.current = true;
+    logger.info('FLOW', 'Recording stop requested', {
+      startedWithLive: startedWithLiveRef.current,
+      currentUseLiveTranscription: useLiveTranscription,
+    });
     stopTimer();
     if (partialFlushTimerRef.current) {
       clearTimeout(partialFlushTimerRef.current);
@@ -273,10 +291,14 @@ export function RecordingScreen() {
     }
 
     let result;
-    if (useLiveTranscription) {
+    if (startedWithLiveRef.current) {
       try {
         result = await LiveTranscriptionService.stop();
       } catch (err: any) {
+        isStopped.current = false;
+        if (!isPausedRef.current) {
+          startTimer();
+        }
         logger.error('FLOW', 'Failed to stop live transcription recording', {
           error: err?.message ?? String(err),
         });
@@ -294,9 +316,15 @@ export function RecordingScreen() {
         try {
           result = await RecordingService.stop();
         } catch (retryErr: any) {
+          isStopped.current = false;
+          if (!isPausedRef.current) {
+            startTimer();
+          }
           logger.error('RecordingScreen', 'Stop recording retry failed', {
             error: retryErr?.message ?? String(retryErr),
           });
+          Alert.alert('Error', retryErr?.message ?? 'Could not stop recording.');
+          return;
         }
       }
     }
@@ -334,14 +362,15 @@ export function RecordingScreen() {
       filePath: result?.uri ?? '',
       fileSize: result?.fileSize ?? 0,
       preTranscript,
-      transcriptionMode: effectiveTranscriptionMode,
+      transcriptionMode: effectiveModeAtStartRef.current,
       targetFolder: route.params?.targetFolder,
       targetUserFolderId: route.params?.targetUserFolderId,
+      autoProcessOnOpen: false,
     });
     logger.info('FLOW', 'Navigated to save recording screen', {
       durationSec: result?.duration || elapsed,
       hasPreTranscript: !!preTranscript,
-      transcriptionMode,
+      transcriptionMode: effectiveModeAtStartRef.current,
     });
   };
 
@@ -361,7 +390,7 @@ export function RecordingScreen() {
             clearTimeout(partialFlushTimerRef.current);
             partialFlushTimerRef.current = null;
           }
-          if (useLiveTranscription) {
+          if (startedWithLiveRef.current) {
             await LiveTranscriptionService.stop().catch(() => {});
           } else {
             await RecordingService.stop().catch(() => {});

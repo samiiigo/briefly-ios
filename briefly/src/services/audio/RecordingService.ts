@@ -23,6 +23,17 @@ class RecordingServiceClass {
   }
 
   async start(): Promise<void> {
+    // Clean up any leftover recording (e.g. React Strict Mode double-mount)
+    if (this.recording) {
+      logger.warn('AUDIO', 'Cleaning up previous recording before starting new one');
+      try {
+        await this.recording.stopAndUnloadAsync();
+      } catch {
+        // Ignore — the old recording may already be in an unloaded state
+      }
+      this.recording = null;
+    }
+
     logger.info('AUDIO', 'Starting local recording');
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: true,
@@ -61,8 +72,8 @@ class RecordingServiceClass {
 
   async stop(): Promise<AudioRecordingResult> {
     if (!this.recording) {
-      logger.error('AUDIO', 'Stop recording requested without active recording');
-      throw new Error('No active recording');
+      logger.warn('AUDIO', 'Stop called without active recording, returning empty result');
+      return { uri: '', duration: 0, fileSize: 0 };
     }
 
     let durationMillis = 0;
