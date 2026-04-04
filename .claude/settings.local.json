@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /d/repo/briefly-ios/briefly/src/**/*.ts /d/repo/briefly-ios/briefly/src/**/*.tsx)",
+      "Bash(xargs wc:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(where node:*)",
+      "Bash(where npm:*)",
+      "Bash(where npx:*)",
+      "Bash(grep -n \"interface UserFolderStore\" /d/repo/briefly-ios/briefly/src/store/*.ts)"
+    ]
+  }
+}

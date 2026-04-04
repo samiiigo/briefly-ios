@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Recording } from '../types';
-import { StorageService } from '../services/StorageService';
+import { RecordingStorageService } from '../services/storage';
 import { folderFlagsFor } from '../utils/recordingFolder';
 import { logger } from '../utils/logger';
 
@@ -42,11 +42,11 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
     set({ isLoading: true });
     const start = Date.now();
     try {
-      let recordings = await StorageService.loadRecordings();
+      let recordings = await RecordingStorageService.loadAll();
       const cutoff = Date.now() - RECENTLY_DELETED_RETENTION_MS;
       const kept = recordings.filter((r) => !r.deletedAt || r.deletedAt > cutoff);
       if (kept.length < recordings.length) {
-        await StorageService.saveAllRecordings(kept);
+        await RecordingStorageService.saveAll(kept);
         recordings = kept;
       }
       if (__DEV__) {
@@ -74,7 +74,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       durationSec: recording.duration,
       fileSize: recording.fileSize,
     });
-    await StorageService.saveRecording(recording);
+    await RecordingStorageService.save(recording);
     set((state) => ({ recordings: [recording, ...state.recordings] }));
   },
 
@@ -83,7 +83,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       id,
       fields: Object.keys(updates),
     });
-    await StorageService.updateRecording(id, updates);
+    await RecordingStorageService.update(id, updates);
     set((state) => ({
       recordings: state.recordings.map((r) =>
         r.id === id ? { ...r, ...updates } : r
@@ -94,7 +94,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   deleteRecording: async (id) => {
     logger.info('useRecordingStore', 'Recording soft-deleted', { id });
     const flags = folderFlagsFor('recently-deleted');
-    await StorageService.updateRecording(id, flags);
+    await RecordingStorageService.update(id, flags);
     set((state) => ({
       recordings: state.recordings.map((r) =>
         r.id === id ? { ...r, ...flags } : r
@@ -109,7 +109,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
 
   permanentDelete: async (id) => {
     logger.info('useRecordingStore', 'Recording permanently deleted', { id });
-    await StorageService.deleteRecording(id);
+    await RecordingStorageService.remove(id);
     set((state) => ({
       recordings: state.recordings.filter((r) => r.id !== id),
     }));

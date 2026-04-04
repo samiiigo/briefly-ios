@@ -1,12 +1,18 @@
+/**
+ * RecordingStorageService (SRP)
+ *
+ * Single responsibility: persist and retrieve Recording entities.
+ * Separated from folder persistence so each has one reason to change.
+ */
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Recording, UserFolder } from '../types';
-import { logger } from '../utils/logger';
+import { Recording } from '../../types';
+import { logger } from '../../utils/logger';
 
 const RECORDINGS_KEY = '@briefly/recordings';
-const USER_FOLDERS_KEY = '@briefly/user_folders';
 
-export const StorageService = {
-  async loadRecordings(): Promise<Recording[]> {
+export const RecordingStorageService = {
+  async loadAll(): Promise<Recording[]> {
     try {
       const json = await AsyncStorage.getItem(RECORDINGS_KEY);
       if (!json) return [];
@@ -23,8 +29,8 @@ export const StorageService = {
     }
   },
 
-  async saveRecording(recording: Recording): Promise<void> {
-    const existing = await this.loadRecordings();
+  async save(recording: Recording): Promise<void> {
+    const existing = await this.loadAll();
     const updated = [recording, ...existing.filter((r) => r.id !== recording.id)];
     await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(updated));
     logger.info('StorageService', 'Recording saved', {
@@ -33,46 +39,22 @@ export const StorageService = {
     });
   },
 
-  async updateRecording(id: string, updates: Partial<Recording>): Promise<void> {
-    const existing = await this.loadRecordings();
+  async update(id: string, updates: Partial<Recording>): Promise<void> {
+    const existing = await this.loadAll();
     const updated = existing.map((r) => (r.id === id ? { ...r, ...updates } : r));
     await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(updated));
     logger.info('StorageService', 'Recording updated', { id, fields: Object.keys(updates) });
   },
 
-  async deleteRecording(id: string): Promise<void> {
-    const existing = await this.loadRecordings();
+  async remove(id: string): Promise<void> {
+    const existing = await this.loadAll();
     const updated = existing.filter((r) => r.id !== id);
     await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(updated));
     logger.info('StorageService', 'Recording deleted from storage', { id });
   },
 
-  async saveAllRecordings(recordings: Recording[]): Promise<void> {
+  async saveAll(recordings: Recording[]): Promise<void> {
     await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(recordings));
     logger.info('StorageService', 'All recordings saved', { count: recordings.length });
-  },
-
-  async loadUserFolders(): Promise<UserFolder[]> {
-    try {
-      const json = await AsyncStorage.getItem(USER_FOLDERS_KEY);
-      if (!json) return [];
-      return JSON.parse(json);
-    } catch {
-      return [];
-    }
-  },
-
-  async saveUserFolder(folder: UserFolder): Promise<void> {
-    const existing = await this.loadUserFolders();
-    const updated = existing.some((f) => f.id === folder.id)
-      ? existing.map((f) => (f.id === folder.id ? folder : f))
-      : [...existing, folder];
-    await AsyncStorage.setItem(USER_FOLDERS_KEY, JSON.stringify(updated));
-  },
-
-  async deleteUserFolder(id: string): Promise<void> {
-    const existing = await this.loadUserFolders();
-    const updated = existing.filter((f) => f.id !== id);
-    await AsyncStorage.setItem(USER_FOLDERS_KEY, JSON.stringify(updated));
   },
 };

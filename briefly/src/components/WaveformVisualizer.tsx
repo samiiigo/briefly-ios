@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
-import { AudioService } from '../services/AudioService';
+import { RecordingService } from '../services/audio';
 import { Colors } from '../utils/theme';
 
 const POLL_MS = 80;
@@ -36,7 +36,7 @@ export function WaveformVisualizer({ isActive, barCount = 20 }: Props) {
     const poll = async () => {
       if (cancelled) return;
 
-      const level = await AudioService.getMetering();
+      const level = await RecordingService.getMetering();
       if (cancelled) return;
 
       // When metering returns 0 (unsupported platform or near-silence),

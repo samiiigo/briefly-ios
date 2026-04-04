@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AudioService } from '../services/AudioService';
+import { RecordingService } from '../services/audio';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useUserFolderStore } from '../store/useUserFolderStore';
 import { RecordingCard } from '../components/RecordingCard';
@@ -128,7 +128,7 @@ export function LibraryScreen() {
   }, [folders, countForBuiltIn, countForUserFolder]);
 
   const handleStartRecording = useCallback(async () => {
-    const granted = await AudioService.requestPermissions();
+    const granted = await RecordingService.requestPermissions();
     if (!granted) return;
     navigation.navigate('Recording', { targetFolder: 'unlisted' });
   }, [navigation]);

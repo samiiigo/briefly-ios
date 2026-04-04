@@ -13,62 +13,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AudioService } from '../services/AudioService';
+import { RecordingService, LiveTranscriptionService } from '../services/audio';
 import { WaveformVisualizer } from '../components/WaveformVisualizer';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
-import { RootStackParamList, TranscriptSegment, TranscriptionMode } from '../types';
+import { RootStackParamList, TranscriptionMode } from '../types';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useTimer } from '../hooks/useTimer';
+import { useLiveTranscript } from '../hooks/useLiveTranscript';
 import {
   normalizeTranscriptionMode,
   transcriptionModeBadge,
   transcriptionModeDescription,
 } from '../utils/transcriptionMode';
-import type { AssemblyAIConnectionState } from '../services/AssemblyAILiveTranscription';
+import type { AssemblyAIConnectionState } from '../services/audio/AssemblyAILiveTranscription';
 import { logger } from '../utils/logger';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Recording'>;
-
-function generateSegmentId() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-const SENTENCE_BOUNDARY_REGEX = /[^.!?]+[.!?]+["')\]]*(?=\s|$)/g;
-
-function appendChunk(base: string, chunk: string): string {
-  const left = base.trim();
-  const right = chunk.trim();
-  if (!left) return right;
-  if (!right) return left;
-  return `${left} ${right}`;
-}
-
-function splitCompleteSentences(text: string): { sentences: string[]; remainder: string } {
-  const source = text.trim();
-  if (!source) {
-    return { sentences: [], remainder: '' };
-  }
-
-  const sentences: string[] = [];
-  let lastBoundary = 0;
-  SENTENCE_BOUNDARY_REGEX.lastIndex = 0;
-
-  let match = SENTENCE_BOUNDARY_REGEX.exec(source);
-  while (match) {
-    const sentence = match[0].trim();
-    if (sentence) {
-      sentences.push(sentence);
-    }
-    lastBoundary = match.index + match[0].length;
-    match = SENTENCE_BOUNDARY_REGEX.exec(source);
-  }
-
-  return {
-    sentences,
-    remainder: source.slice(lastBoundary).trim(),
-  };
-}
 
 export function RecordingScreen() {
   const navigation = useNavigation<Nav>();
@@ -105,8 +67,8 @@ export function RecordingScreen() {
   const pendingPartialRef = useRef('');
   const partialFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const canCloudLive = AudioService.supportsLiveTranscription;
-  const canOnDeviceLive = AudioService.supportsOnDeviceLiveTranscription;
+  const canCloudLive = LiveTranscriptionService.isSupported;
+  const canOnDeviceLive = LiveTranscriptionService.isOnDeviceSupported;
   const selectedMode = normalizeTranscriptionMode(transcriptionMode);
   const isAssemblyAiLiveMode = selectedMode === 'live-assemblyai';
   const isLocalMode = selectedMode === 'local-on-device';
@@ -234,16 +196,11 @@ export function RecordingScreen() {
             },
           };
 
-          if (liveEngine === 'cloud') {
-            // Native module handles recording + AssemblyAI real-time transcription together.
-            await AudioService.startLiveTranscription(callbacks);
-          } else {
-            // Native module handles recording + on-device real-time transcription.
-            await AudioService.startOnDeviceLiveTranscription(callbacks);
-          }
+          // Unified: LiveTranscriptionService handles both modes via the mode parameter (OCP + LSP).
+          await LiveTranscriptionService.start(liveEngine as 'cloud' | 'on-device', callbacks);
         } else {
           // No native module: record audio only, transcription happens after stop
-          await AudioService.startRecording();
+          await RecordingService.start();
         }
 
         setIsStarted(true);
@@ -277,13 +234,9 @@ export function RecordingScreen() {
     try {
       if (isPaused) {
         if (useLiveTranscription) {
-          if (liveEngine === 'cloud') {
-            await AudioService.resumeLiveTranscription();
-          } else {
-            await AudioService.resumeOnDeviceLiveTranscription();
-          }
+          await LiveTranscriptionService.resume();
         } else {
-          await AudioService.resumeRecording();
+          await RecordingService.resume();
         }
         startTimer();
         setIsPaused(false);
@@ -291,13 +244,9 @@ export function RecordingScreen() {
         logger.info('FLOW', 'Recording resumed');
       } else {
         if (useLiveTranscription) {
-          if (liveEngine === 'cloud') {
-            await AudioService.pauseLiveTranscription();
-          } else {
-            await AudioService.pauseOnDeviceLiveTranscription();
-          }
+          await LiveTranscriptionService.pause();
         } else {
-          await AudioService.pauseRecording();
+          await RecordingService.pause();
         }
         stopTimer();
         setIsPaused(true);
@@ -326,9 +275,7 @@ export function RecordingScreen() {
     let result;
     if (useLiveTranscription) {
       try {
-        result = liveEngine === 'cloud'
-          ? await AudioService.stopLiveTranscription()
-          : await AudioService.stopOnDeviceLiveTranscription();
+        result = await LiveTranscriptionService.stop();
       } catch (err: any) {
         logger.error('FLOW', 'Failed to stop live transcription recording', {
           error: err?.message ?? String(err),
@@ -338,14 +285,14 @@ export function RecordingScreen() {
       }
     } else {
       try {
-        result = await AudioService.stopRecording();
+        result = await RecordingService.stop();
       } catch (err: any) {
         logger.warn('RecordingScreen', 'Stop recording failed, retrying', {
           error: err?.message ?? String(err),
         });
         await new Promise((r) => setTimeout(r, 300));
         try {
-          result = await AudioService.stopRecording();
+          result = await RecordingService.stop();
         } catch (retryErr: any) {
           logger.error('RecordingScreen', 'Stop recording retry failed', {
             error: retryErr?.message ?? String(retryErr),
@@ -415,13 +362,9 @@ export function RecordingScreen() {
             partialFlushTimerRef.current = null;
           }
           if (useLiveTranscription) {
-            if (liveEngine === 'cloud') {
-              await AudioService.stopLiveTranscription().catch(() => {});
-            } else {
-              await AudioService.stopOnDeviceLiveTranscription().catch(() => {});
-            }
+            await LiveTranscriptionService.stop().catch(() => {});
           } else {
-            await AudioService.stopRecording().catch(() => {});
+            await RecordingService.stop().catch(() => {});
           }
           setLiveTranscript('');
           navigation.navigate('Main');

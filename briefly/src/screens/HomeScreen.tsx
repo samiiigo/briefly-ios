@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecordingStore } from '../store/useRecordingStore';
-import { AudioService } from '../services/AudioService';
+import { RecordingService } from '../services/audio';
 import { RecordingCard } from '../components/RecordingCard';
 import { RecordingSwipeableRow } from '../components/RecordingSwipeableRow';
 import { RecordButton } from '../components/RecordButton';
@@ -54,7 +54,7 @@ export function HomeScreen() {
   }, [loadRecordings]);
 
   const handleStartRecording = useCallback(async () => {
-    const granted = await AudioService.requestPermissions();
+    const granted = await RecordingService.requestPermissions();
     if (!granted) return;
     navigation.navigate('Recording', { targetFolder: 'unlisted' });
   }, [navigation]);
