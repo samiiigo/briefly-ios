@@ -66,7 +66,7 @@ export function WaveformVisualizer({ isActive, barCount = 20, getMetering }: Pro
     return () => {
       cancelled = true;
     };
-  }, [animations, isActive]);
+  }, [animations, isActive, getMetering]);
 
   return (
     <View style={styles.container}>

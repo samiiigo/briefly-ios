@@ -1,50 +1,80 @@
 import { create } from 'zustand';
 import { UserFolder } from '../types';
 import { FolderStorageService } from '../services/storage';
+import type { FolderRepository } from '../services/storage';
 import { generateId } from '../utils';
+
+export interface UserFolderStore {
+  folders: UserFolder[];
+  hasLoaded: boolean;
+  loadFolders: () => Promise<void>;
+  addFolder: (name: string) => Promise<UserFolder>;
+  renameFolder: (id: string, name: string) => Promise<void>;
+  deleteFolder: (id: string) => Promise<void>;
+}
+
+function normalizeFolderName(name: string): string {
+  return name.trim();
+}
+
+function hasDuplicateFolderName(folders: UserFolder[], name: string, excludeId?: string): boolean {
+  const normalized = name.toLowerCase();
+  return folders.some((folder) => {
+    if (excludeId && folder.id === excludeId) {
+      return false;
+    }
+    return folder.name.toLowerCase() === normalized;
+  });
+}
+
+let folderRepository: FolderRepository = FolderStorageService;
+
+export function configureFolderRepository(repository: FolderRepository): void {
+  folderRepository = repository;
+}
+
+export function resetFolderRepository(): void {
+  folderRepository = FolderStorageService;
+}
 
 export const useUserFolderStore = create<UserFolderStore>((set, get) => ({
   folders: [],
   hasLoaded: false,
 
   loadFolders: async () => {
-    const folders = await FolderStorageService.loadAll();
+    const folders = await folderRepository.loadAll();
     set({ folders, hasLoaded: true });
   },
 
-  addFolder: async (name) => {
-    const trimmed = name.trim();
+  addFolder: async (name: string) => {
+    const trimmed = normalizeFolderName(name);
     if (!trimmed) throw new Error('Folder name cannot be empty');
     const existing = get().folders;
-    const duplicate = existing.some(
-      (f) => f.name.toLowerCase() === trimmed.toLowerCase()
-    );
+    const duplicate = hasDuplicateFolderName(existing, trimmed);
     if (duplicate) throw new Error('A folder with this name already exists');
     const folder: UserFolder = { id: `uf_${generateId()}`, name: trimmed };
-    await FolderStorageService.save(folder);
-    set((s) => ({ folders: [...s.folders, folder] }));
+    await folderRepository.save(folder);
+    set((state) => ({ folders: [...state.folders, folder] }));
     return folder;
   },
 
-  renameFolder: async (id, name) => {
-    const trimmed = name.trim();
+  renameFolder: async (id: string, name: string) => {
+    const trimmed = normalizeFolderName(name);
     if (!trimmed) throw new Error('Folder name cannot be empty');
     const existing = get().folders;
-    const duplicate = existing.some(
-      (f) => f.id !== id && f.name.toLowerCase() === trimmed.toLowerCase()
-    );
+    const duplicate = hasDuplicateFolderName(existing, trimmed, id);
     if (duplicate) throw new Error('A folder with this name already exists');
-    const folder = existing.find((f) => f.id === id);
+    const folder = existing.find((folderItem) => folderItem.id === id);
     if (!folder) throw new Error('Folder not found');
     const updated = { ...folder, name: trimmed };
-    await FolderStorageService.save(updated);
-    set((s) => ({
-      folders: s.folders.map((f) => (f.id === id ? updated : f)),
+    await folderRepository.save(updated);
+    set((state) => ({
+      folders: state.folders.map((folderItem) => (folderItem.id === id ? updated : folderItem)),
     }));
   },
 
-  deleteFolder: async (id) => {
-    await FolderStorageService.remove(id);
-    set((s) => ({ folders: s.folders.filter((f) => f.id !== id) }));
+  deleteFolder: async (id: string) => {
+    await folderRepository.remove(id);
+    set((state) => ({ folders: state.folders.filter((folderItem) => folderItem.id !== id) }));
   },
 }));

@@ -6,10 +6,11 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserFolder } from '../../types';
+import { FolderRepository } from './contracts';
 
 const USER_FOLDERS_KEY = '@briefly/user_folders';
 
-export const FolderStorageService = {
+export const FolderStorageService: FolderRepository = {
   async loadAll(): Promise<UserFolder[]> {
     try {
       const json = await AsyncStorage.getItem(USER_FOLDERS_KEY);

@@ -22,9 +22,8 @@ import { RecordingCard } from '../components/RecordingCard';
 import { RecordingSwipeableRow } from '../components/RecordingSwipeableRow';
 import { RecordButton } from '../components/RecordButton';
 import { SearchIconButton } from '../components/SearchIconButton';
-import { Colors, Spacing } from '../utils/theme';
+import { Spacing } from '../utils/theme';
 import { RootStackParamList } from '../types';
-import { resolveRecordingFolder } from '../utils/recordingFolder';
 import { countByLibraryTab, filterByLibraryTab, LibraryTabId } from '../utils/libraryFilters';
 import { groupRecordingsByTime } from '../utils';
 
@@ -59,6 +58,17 @@ interface FolderTile {
   icon: string;
   color: string;
   count: number;
+}
+
+function folderCardVariantStyle(styleKey?: string) {
+  switch (styleKey) {
+    case 'folderPersonal':
+      return styles.folderPersonal;
+    case 'folderRecentlyDeleted':
+      return styles.folderRecentlyDeleted;
+    default:
+      return styles.folderUser;
+  }
 }
 
 export function LibraryScreen() {
@@ -148,7 +158,9 @@ export function LibraryScreen() {
         (name) => {
           const trimmed = name?.trim();
           if (!trimmed) return;
-          addFolder(trimmed).catch((err) => Alert.alert('Error', err.message || 'Could not create folder'));
+          addFolder(trimmed).catch((err: unknown) =>
+            Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
+          );
         },
         'plain-text',
         ''
@@ -167,7 +179,9 @@ export function LibraryScreen() {
         setAddFolderModalVisible(false);
         setNewFolderName('');
       })
-      .catch((err) => Alert.alert('Error', err.message || 'Could not create folder'));
+      .catch((err: unknown) =>
+        Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
+      );
   }, [addFolder, newFolderName]);
 
   const { visibleFolders, showAddFolderTile, hasMoreFolders } = useMemo(() => {
@@ -184,10 +198,11 @@ export function LibraryScreen() {
     };
   }, [folderTiles]);
 
-  const recentSections = useMemo(
-    () => groupRecordingsByTime(filtered),
-    [filtered, now]
-  );
+  const recentSections = useMemo(() => {
+    // Touch now to refresh relative date group labels once per minute.
+    void now;
+    return groupRecordingsByTime(filtered);
+  }, [filtered, now]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -239,7 +254,7 @@ export function LibraryScreen() {
               <View
                 style={[
                   styles.folderCardInner,
-                  f.folderType === 'built-in' && f.styleKey ? styles[f.styleKey] : styles.folderUser,
+                  f.folderType === 'built-in' ? folderCardVariantStyle(f.styleKey) : styles.folderUser,
                 ]}
               >
                 <View style={styles.folderIconRow}>

@@ -8,8 +8,9 @@
 
 import { Audio } from 'expo-av';
 import { logger } from '../../utils/logger';
+import { PlaybackControls } from './contracts';
 
-class PlaybackServiceClass {
+class PlaybackServiceClass implements PlaybackControls {
   private sound: Audio.Sound | null = null;
 
   async play(

@@ -10,8 +10,8 @@ import { RecordingCard } from '../components/RecordingCard';
 import { RecordingSwipeableRow } from '../components/RecordingSwipeableRow';
 import { RecordButton } from '../components/RecordButton';
 import { RootStackParamList } from '../types';
-import { resolveRecordingFolder } from '../utils/recordingFolder';
 import { groupRecordingsByTime } from '../utils';
+import { resolveRecordingFolder } from '../utils/recordingFolder';
 import { Colors, Spacing } from '../utils/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -36,20 +36,17 @@ export function FolderRecordingsScreen() {
   const isRecentlyDeleted = folderId === 'recently-deleted';
   const filtered = useMemo(() => {
     if (folderType === 'built-in') {
-      if (folderId === 'archived') {
-        return recordings.filter((r) => r.deletedAt == null && r.isArchived);
-      }
-      if (folderId === 'recently-deleted') {
-        return recordings.filter((r) => r.deletedAt != null);
-      }
+      return recordings.filter(
+        (recording) => resolveRecordingFolder(recording) === folderId
+      );
     }
-    return recordings.filter((r) => r.userFolderId === folderId);
+    return recordings.filter((recording) => recording.userFolderId === folderId);
   }, [recordings, folderId, folderType]);
 
-  const sections = useMemo(
-    () => groupRecordingsByTime(filtered),
-    [filtered, now]
-  );
+  const sections = useMemo(() => {
+    void now;
+    return groupRecordingsByTime(filtered);
+  }, [filtered, now]);
 
   const handleRecordIntoFolder = useCallback(async () => {
     if (isRecentlyDeleted) return;

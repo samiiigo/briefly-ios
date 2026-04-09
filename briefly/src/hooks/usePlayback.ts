@@ -8,15 +8,21 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Animated } from 'react-native';
 import { PlaybackService } from '../services/audio';
+import type { PlaybackControls } from '../services/audio';
 import { TranscriptSegment } from '../types';
 import { SliderAnimation } from '../utils/theme';
 
 interface UsePlaybackOptions {
   filePath: string;
   transcript?: TranscriptSegment[];
+  playbackService?: PlaybackControls;
 }
 
-export function usePlayback({ filePath, transcript }: UsePlaybackOptions) {
+export function usePlayback({
+  filePath,
+  transcript,
+  playbackService = PlaybackService,
+}: UsePlaybackOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackPos, setPlaybackPos] = useState(0);
   const [playbackDur, setPlaybackDur] = useState(0);
@@ -39,16 +45,16 @@ export function usePlayback({ filePath, transcript }: UsePlaybackOptions) {
     const rates = [1.0, 1.5, 2.0];
     const next = rates[(rates.indexOf(playbackRate) + 1) % rates.length];
     setPlaybackRate(next);
-    await PlaybackService.setSpeed(next);
-  }, [playbackRate]);
+    await playbackService.setSpeed(next);
+  }, [playbackRate, playbackService]);
 
   const togglePlayPause = useCallback(async () => {
     if (isPlaying) {
-      await PlaybackService.pause();
+      await playbackService.pause();
       setIsPlaying(false);
     } else {
       if (playbackPos === 0 || playbackPos >= playbackDur - 0.5) {
-        await PlaybackService.play(filePath, (pos, dur, playing) => {
+        await playbackService.play(filePath, (pos, dur, playing) => {
           setPlaybackPos(pos);
           setPlaybackDur(dur);
           setIsPlaying(playing);
@@ -58,20 +64,20 @@ export function usePlayback({ filePath, transcript }: UsePlaybackOptions) {
           }
         });
       } else {
-        await PlaybackService.resume();
+        await playbackService.resume();
       }
       setIsPlaying(true);
     }
-  }, [isPlaying, playbackPos, playbackDur, filePath, transcript]);
+  }, [isPlaying, playbackPos, playbackDur, filePath, transcript, playbackService]);
 
   const seek = useCallback(
     async (direction: 'back' | 'forward') => {
       const delta = direction === 'back' ? -15 : 15;
       const newPos = Math.max(0, Math.min(playbackDur, playbackPos + delta));
-      await PlaybackService.seekTo(newPos);
+      await playbackService.seekTo(newPos);
       setPlaybackPos(newPos);
     },
-    [playbackPos, playbackDur]
+    [playbackPos, playbackDur, playbackService]
   );
 
   const seekToRatio = useCallback(
@@ -79,10 +85,10 @@ export function usePlayback({ filePath, transcript }: UsePlaybackOptions) {
       if (!playbackDur) return;
       const clamped = Math.max(0, Math.min(1, ratio));
       const newPos = clamped * playbackDur;
-      await PlaybackService.seekTo(newPos);
+      await playbackService.seekTo(newPos);
       setPlaybackPos(newPos);
     },
-    [playbackDur]
+    [playbackDur, playbackService]
   );
 
   return {

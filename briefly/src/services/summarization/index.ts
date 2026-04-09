@@ -9,7 +9,11 @@
  */
 
 import { TranscriptSegment, KeyInsight, ProcessingMode } from '../../types';
-import { createSummarizationProvider } from './SummarizationProviderFactory';
+import {
+  createSummarizationProvider,
+  configureSummarizationProviderFactory,
+  resetSummarizationProviderFactory,
+} from './SummarizationProviderFactory';
 import { logger } from '../../utils/logger';
 
 // Re-export for external consumers
@@ -24,4 +28,10 @@ export const SummarizationService = {
     const provider = createSummarizationProvider(mode);
     return provider.summarize(segments);
   },
+};
+
+export {
+  createSummarizationProvider,
+  configureSummarizationProviderFactory,
+  resetSummarizationProviderFactory,
 };

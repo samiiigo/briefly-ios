@@ -66,10 +66,10 @@ export function HomeScreen() {
     [recordings]
   );
 
-  const sections = useMemo(
-    () => groupRecordingsByTime(visibleRecordings),
-    [visibleRecordings, now]
-  );
+  const sections = useMemo(() => {
+    void now;
+    return groupRecordingsByTime(visibleRecordings);
+  }, [visibleRecordings, now]);
 
 
   if (visibleRecordings.length === 0) {

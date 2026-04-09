@@ -13,5 +13,6 @@ export { RecordingService } from './RecordingService';
 export { LiveTranscriptionService } from './LiveTranscriptionService';
 export { AudioFileService } from './AudioFileService';
 export type { AudioRecordingResult } from './types';
+export type { PlaybackControls, MeteringSource } from './contracts';
 export type { LiveTranscriptionCallbacks } from './LiveTranscriptionService';
 export type { AssemblyAIConnectionState } from './AssemblyAILiveTranscription';

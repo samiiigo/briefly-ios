@@ -8,7 +8,12 @@
 import { Platform, NativeModules } from 'react-native';
 import { TranscriptSegment } from '../../types';
 import { SummarizationProvider, SummarizationResult } from './SummarizationProvider';
-import { segmentsToText, generateId, extractiveSummarize } from './summarizationUtils';
+import {
+  segmentsToText,
+  generateId,
+  extractiveSummarize,
+  normalizeSummarizationResult,
+} from './summarizationUtils';
 import { logger } from '../../utils/logger';
 
 const { BrieflyTranscriber } = NativeModules;
@@ -31,13 +36,16 @@ export class OnDeviceProvider implements SummarizationProvider {
         logger.info('SUMMARY', 'On-device native summarization completed', {
           keyInsightCount: (result.keyInsights as string[])?.length ?? 0,
         });
-        return {
-          summary: result.summary,
-          keyInsights: (result.keyInsights as string[]).map((t) => ({
-            id: generateId(),
-            text: t,
-          })),
-        };
+        return normalizeSummarizationResult(
+          {
+            summary: result.summary,
+            keyInsights: (result.keyInsights as string[]).map((t) => ({
+              id: generateId(),
+              text: t,
+            })),
+          },
+          text
+        );
       } catch (error: any) {
         logger.warn('SUMMARY', 'Native on-device summarization failed; using extractive fallback', {
           error: error?.message ?? String(error),

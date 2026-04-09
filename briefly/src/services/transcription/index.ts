@@ -16,16 +16,73 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { TranscriptSegment, TranscriptionMode } from '../../types';
 import { requireAssemblyAISharedApiKey } from '../../config/assemblyAI';
 import { normalizeTranscriptionMode } from '../../utils/transcriptionMode';
-import { uploadAudio, createTranscriptJob, pollForCompletion } from './AssemblyAIClient';
+import {
+  uploadAudio,
+  createTranscriptJob,
+  pollForCompletion,
+  AssemblyAITranscriptPayload,
+} from './AssemblyAIClient';
 import { buildSentenceSegments, buildFallbackSegments } from './segmentBuilder';
 import { logger } from '../../utils/logger';
+
+interface AsyncTranscriptionClient {
+  uploadAudio(audioUri: string, apiKey: string): Promise<string>;
+  createTranscriptJob(uploadUrl: string, apiKey: string): Promise<string>;
+  pollForCompletion(transcriptId: string, apiKey: string): Promise<AssemblyAITranscriptPayload>;
+}
+
+interface SegmentBuilder {
+  buildFromWords(words: { text: string; start?: number; end?: number }[]): TranscriptSegment[];
+  buildFromText(text: string): TranscriptSegment[];
+}
+
+interface TranscriptionDependencies {
+  getApiKey(): string;
+  getFileInfo(audioUri: string): Promise<{ exists: boolean; size?: number }>;
+  client: AsyncTranscriptionClient;
+  segmentBuilder: SegmentBuilder;
+}
+
+function createDefaultDependencies(): TranscriptionDependencies {
+  return {
+    getApiKey: requireAssemblyAISharedApiKey,
+    getFileInfo: async (audioUri) => {
+      const info = await FileSystem.getInfoAsync(audioUri);
+      return { exists: info.exists, size: (info as any).size };
+    },
+    client: {
+      uploadAudio,
+      createTranscriptJob,
+      pollForCompletion,
+    },
+    segmentBuilder: {
+      buildFromWords: buildSentenceSegments,
+      buildFromText: buildFallbackSegments,
+    },
+  };
+}
+
+let dependencies: TranscriptionDependencies = createDefaultDependencies();
+
+export function configureTranscriptionDependencies(next: Partial<TranscriptionDependencies>): void {
+  dependencies = {
+    ...dependencies,
+    ...next,
+    client: { ...dependencies.client, ...(next.client ?? {}) },
+    segmentBuilder: { ...dependencies.segmentBuilder, ...(next.segmentBuilder ?? {}) },
+  };
+}
+
+export function resetTranscriptionDependencies(): void {
+  dependencies = createDefaultDependencies();
+}
 
 async function transcribeWithAssemblyAI(
   audioUri: string,
   onSegment?: (segment: TranscriptSegment) => void
 ): Promise<TranscriptSegment[]> {
-  const apiKey = requireAssemblyAISharedApiKey();
-  const fileInfo = await FileSystem.getInfoAsync(audioUri);
+  const apiKey = dependencies.getApiKey();
+  const fileInfo = await dependencies.getFileInfo(audioUri);
   if (!fileInfo.exists) {
     logger.error('TranscriptionService', 'Audio file not found', { audioUri });
     throw new Error('Audio file not found.');
@@ -33,13 +90,13 @@ async function transcribeWithAssemblyAI(
   const fileSize = fileInfo.exists ? ((fileInfo as any).size ?? 0) : 0;
   logger.info('TranscriptionService', 'Async transcription started', { audioUri, fileSize });
 
-  const uploadUrl = await uploadAudio(audioUri, apiKey);
-  const transcriptId = await createTranscriptJob(uploadUrl, apiKey);
-  const payload = await pollForCompletion(transcriptId, apiKey);
+  const uploadUrl = await dependencies.client.uploadAudio(audioUri, apiKey);
+  const transcriptId = await dependencies.client.createTranscriptJob(uploadUrl, apiKey);
+  const payload = await dependencies.client.pollForCompletion(transcriptId, apiKey);
 
   const words = payload.words ?? [];
   if (words.length > 0) {
-    const segments = buildSentenceSegments(words);
+    const segments = dependencies.segmentBuilder.buildFromWords(words);
     segments.forEach((segment) => onSegment?.(segment));
     if (segments.length > 0) {
       logger.info('TranscriptionService', 'Transcription result received', {
@@ -54,7 +111,7 @@ async function transcribeWithAssemblyAI(
     logger.error('TranscriptionService', 'Empty transcript returned');
     throw new Error('AssemblyAI returned an empty transcript.');
   }
-  const fallbackSegments = buildFallbackSegments(fallback);
+  const fallbackSegments = dependencies.segmentBuilder.buildFromText(fallback);
   fallbackSegments.forEach((segment) => onSegment?.(segment));
   logger.info('TranscriptionService', 'Transcription result received (fallback text)', {
     segmentCount: fallbackSegments.length,
@@ -84,3 +141,5 @@ export const TranscriptionService = {
     return transcribeWithAssemblyAI(audioUri, onSegment);
   },
 };
+
+export type { TranscriptionDependencies };

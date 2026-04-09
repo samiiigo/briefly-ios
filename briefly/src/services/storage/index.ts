@@ -6,3 +6,4 @@
 
 export { RecordingStorageService } from './RecordingStorageService';
 export { FolderStorageService } from './FolderStorageService';
+export type { RecordingRepository, FolderRepository } from './contracts';

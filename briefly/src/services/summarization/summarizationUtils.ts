@@ -8,6 +8,7 @@
 
 import { TranscriptSegment, KeyInsight } from '../../types';
 import { logger } from '../../utils/logger';
+import { SummarizationResult } from './SummarizationProvider';
 
 /** Timeout for cloud summarization API calls (ms). */
 export const SUMMARIZATION_TIMEOUT_MS = 30_000;
@@ -72,13 +73,41 @@ export function parseJsonSummary(
     hasSummary: typeof parsed.summary === 'string' && parsed.summary.length > 0,
     keyInsightCount: Array.isArray(parsed.keyInsights) ? parsed.keyInsights.length : 0,
   });
-  return {
-    summary: parsed.summary ?? '',
-    keyInsights: ((parsed.keyInsights as string[]) ?? []).map((t) => ({
-      id: generateId(),
-      text: t,
-    })),
-  };
+  return normalizeSummarizationResult(
+    {
+      summary: parsed.summary ?? '',
+      keyInsights: ((parsed.keyInsights as string[]) ?? []).map((t) => ({
+        id: generateId(),
+        text: t,
+      })),
+    },
+    fallbackText
+  );
+}
+
+/**
+ * Normalizes provider results to keep a stable substitution contract (LSP).
+ * Every provider must return a non-empty summary and normalized insights.
+ */
+export function normalizeSummarizationResult(
+  result: Partial<SummarizationResult>,
+  fallbackText: string
+): SummarizationResult {
+  const normalizedSummary = (result.summary ?? '').trim();
+  const normalizedInsights = (result.keyInsights ?? [])
+    .map((insight) => insight?.text?.trim() ?? '')
+    .filter((text) => text.length > 0)
+    .map((text) => ({ id: generateId(), text }));
+
+  if (normalizedSummary.length > 0) {
+    return {
+      summary: normalizedSummary,
+      keyInsights: normalizedInsights,
+    };
+  }
+
+  logger.warn('SUMMARY', 'Provider returned empty summary; using extractive fallback');
+  return extractiveSummarize(fallbackText);
 }
 
 /**

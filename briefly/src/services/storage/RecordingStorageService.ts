@@ -8,10 +8,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Recording } from '../../types';
 import { logger } from '../../utils/logger';
+import { RecordingRepository } from './contracts';
 
 const RECORDINGS_KEY = '@briefly/recordings';
 
-export const RecordingStorageService = {
+export const RecordingStorageService: RecordingRepository = {
   async loadAll(): Promise<Recording[]> {
     try {
       const json = await AsyncStorage.getItem(RECORDINGS_KEY);

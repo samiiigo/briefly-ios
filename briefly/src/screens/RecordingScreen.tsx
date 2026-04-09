@@ -19,8 +19,6 @@ import { Colors, Spacing, BorderRadius } from '../utils/theme';
 import { RootStackParamList, TranscriptionMode, TranscriptSegment } from '../types';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { useTimer } from '../hooks/useTimer';
-import { useLiveTranscript } from '../hooks/useLiveTranscript';
 import {
   normalizeTranscriptionMode,
   transcriptionModeBadge,

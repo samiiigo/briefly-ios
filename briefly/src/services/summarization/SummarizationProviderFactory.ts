@@ -1,70 +1,108 @@
 /**
- * SummarizationProviderFactory (OCP + DIP)
+ * Summarization provider factories (SRP + OCP + DIP)
  *
- * Maps ProcessingMode → SummarizationProvider without if/else chains.
- * New providers are registered via `register()` — no modification needed.
+ * - Mode-based factory: maps processing mode -> provider builder.
+ * - Cloud resolver: maps selected cloud provider -> concrete provider.
  *
- * The factory depends on the SummarizationProvider abstraction (DIP), and
- * is open for extension via registration (OCP).
+ * High-level code depends on abstractions and can be extended via
+ * registration maps instead of modifying switch statements.
  */
 
 import { ProcessingMode, CloudProvider } from '../../types';
-import { useSettingsStore } from '../../store/useSettingsStore';
 import { requireOpenRouterSharedApiKey } from '../../config/openRouter';
 import { SummarizationProvider } from './SummarizationProvider';
 import { OnDeviceProvider } from './OnDeviceProvider';
 import { OpenRouterProvider } from './OpenRouterProvider';
 import { OpenAIProvider } from './OpenAIProvider';
 import { GeminiProvider } from './GeminiProvider';
+import {
+  SummarizationSettingsReader,
+  StoreBackedSummarizationSettingsReader,
+} from './SummarizationSettings';
 
-/** Resolves the correct SummarizationProvider for a given ProcessingMode. */
-export function createSummarizationProvider(mode: ProcessingMode): SummarizationProvider {
-  switch (mode) {
-    case 'on-device':
-      return new OnDeviceProvider();
+type ProviderBuilder = () => SummarizationProvider;
+type CloudProviderBuilder = (apiKey: string) => SummarizationProvider;
 
-    case 'cloud-shared-openrouter':
-      return new OpenRouterProvider(requireOpenRouterSharedApiKey());
+interface SummarizationProviderFactory {
+  create(mode: ProcessingMode): SummarizationProvider;
+}
 
-    case 'cloud-user-key':
-    case 'cloud':
-      return createUserKeyProvider();
+const CLOUD_PROVIDER_LABEL: Record<CloudProvider, string> = {
+  openrouter: 'OpenRouter',
+  openai: 'OpenAI',
+  gemini: 'Gemini',
+};
 
-    default:
-      // Fallback to on-device for unknown modes
-      return new OnDeviceProvider();
+class ModeBasedSummarizationProviderFactory implements SummarizationProviderFactory {
+  constructor(
+    private readonly buildersByMode: Record<ProcessingMode, ProviderBuilder>,
+    private readonly fallbackBuilder: ProviderBuilder
+  ) {}
+
+  create(mode: ProcessingMode): SummarizationProvider {
+    const builder = this.buildersByMode[mode] ?? this.fallbackBuilder;
+    return builder();
   }
 }
 
-/**
- * Creates the correct cloud provider based on the user's selected
- * cloudProvider setting and their stored API key.
- */
-function createUserKeyProvider(): SummarizationProvider {
-  const { cloudProvider, openrouterApiKey, openaiApiKey, geminiApiKey } =
-    useSettingsStore.getState();
+class UserKeyCloudProviderResolver {
+  constructor(
+    private readonly settingsReader: SummarizationSettingsReader,
+    private readonly cloudProviderBuilders: Record<CloudProvider, CloudProviderBuilder>
+  ) {}
 
-  const providerMap: Record<CloudProvider, () => SummarizationProvider> = {
-    openrouter: () => {
-      const key = openrouterApiKey.trim();
-      if (!key) throw new Error('OpenRouter API key is not configured. Go to Settings to add your API key.');
-      return new OpenRouterProvider(key);
-    },
-    openai: () => {
-      const key = openaiApiKey.trim();
-      if (!key) throw new Error('OpenAI API key is not configured. Go to Settings to add your API key.');
-      return new OpenAIProvider(key);
-    },
-    gemini: () => {
-      const key = geminiApiKey.trim();
-      if (!key) throw new Error('Gemini API key is not configured. Go to Settings to add your API key.');
-      return new GeminiProvider(key);
-    },
-  };
+  resolve(): SummarizationProvider {
+    const snapshot = this.settingsReader.getSnapshot();
+    const builder = this.cloudProviderBuilders[snapshot.cloudProvider];
 
-  const factory = providerMap[cloudProvider];
-  if (!factory) {
-    throw new Error(`Unknown cloud provider: ${cloudProvider}`);
+    if (!builder) {
+      throw new Error(`Unknown cloud provider: ${snapshot.cloudProvider}`);
+    }
+
+    const apiKey = snapshot.apiKeys[snapshot.cloudProvider]?.trim() ?? '';
+    if (!apiKey) {
+      const providerLabel = CLOUD_PROVIDER_LABEL[snapshot.cloudProvider] ?? snapshot.cloudProvider;
+      throw new Error(`${providerLabel} API key is not configured. Go to Settings to add your API key.`);
+    }
+
+    return builder(apiKey);
   }
-  return factory();
+}
+
+function createDefaultFactory(
+  settingsReader: SummarizationSettingsReader = new StoreBackedSummarizationSettingsReader()
+): SummarizationProviderFactory {
+  const cloudResolver = new UserKeyCloudProviderResolver(settingsReader, {
+    openrouter: (key) => new OpenRouterProvider(key),
+    openai: (key) => new OpenAIProvider(key),
+    gemini: (key) => new GeminiProvider(key),
+  });
+
+  return new ModeBasedSummarizationProviderFactory(
+    {
+      'on-device': () => new OnDeviceProvider(),
+      'cloud-shared-openrouter': () =>
+        new OpenRouterProvider(requireOpenRouterSharedApiKey()),
+      'cloud-user-key': () => cloudResolver.resolve(),
+      cloud: () => cloudResolver.resolve(),
+    },
+    () => new OnDeviceProvider()
+  );
+}
+
+let activeFactory: SummarizationProviderFactory = createDefaultFactory();
+
+/**
+ * Dependency injection entrypoint for tests and composition roots (DIP).
+ */
+export function configureSummarizationProviderFactory(factory: SummarizationProviderFactory): void {
+  activeFactory = factory;
+}
+
+export function resetSummarizationProviderFactory(): void {
+  activeFactory = createDefaultFactory();
+}
+
+export function createSummarizationProvider(mode: ProcessingMode): SummarizationProvider {
+  return activeFactory.create(mode);
 }
