@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
-import { AssemblyAIConfig, getAssemblyAISharedApiKey } from '../config/assemblyAI';
+import { AssemblyAIConfig, getAssemblyAISharedApiKey } from '../../config/assemblyAI';
 
 const { BrieflyTranscriber } = NativeModules;
 

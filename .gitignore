@@ -31,6 +31,10 @@ playground.xcworkspace
 
 .build/
 
+# Local-only tooling / IDE cache (machine-specific; do not commit)
+.claude/settings.local.json
+.idea/caches/
+
 # CocoaPods
 #
 # We recommend against adding the Pods directory to your .gitignore. However

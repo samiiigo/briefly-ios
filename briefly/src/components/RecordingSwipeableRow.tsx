@@ -40,7 +40,7 @@ export function RecordingSwipeableRow({
   onRestore,
   isRecentlyDeleted = false,
 }: RecordingSwipeableRowProps) {
-  const swipeableRef = useRef<Swipeable>(null);
+  const swipeableRef = useRef<React.ElementRef<typeof Swipeable> | null>(null);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
   const { folders, loadFolders } = useUserFolderStore();
 
@@ -71,19 +71,24 @@ export function RecordingSwipeableRow({
     [recording.id, updateRecording]
   );
 
-  const moveDestinations = useCallback((): MoveDestination[] => {
+  const moveDestinations = useCallback((folderList = folders): MoveDestination[] => {
     const builtIn: MoveDestination[] = [
       { type: 'built-in', id: 'unlisted' },
       { type: 'built-in', id: 'archived' },
     ];
-    const user = folders.map((f) => ({ type: 'user' as const, id: f.id, name: f.name }));
+    const user = folderList.map((folder) => ({
+      type: 'user' as const,
+      id: folder.id,
+      name: folder.name,
+    }));
     return [...builtIn, ...user];
   }, [folders]);
 
-  const showMoveSheet = useCallback(() => {
-    loadFolders();
-    const dests = moveDestinations();
-    const names = ['Favorites', 'Unlisted', 'Archived', ...folders.map((f) => f.name)];
+  const showMoveSheet = useCallback(async () => {
+    await loadFolders();
+    const latestFolders = useUserFolderStore.getState().folders;
+    const dests = moveDestinations(latestFolders);
+    const names = ['Unlisted', 'Archived', ...latestFolders.map((folder) => folder.name)];
     if (Platform.OS === 'ios' && names.length <= 10) {
       ActionSheetIOS.showActionSheetWithOptions(
         {
@@ -99,14 +104,17 @@ export function RecordingSwipeableRow({
     } else {
       setMoveModalVisible(true);
     }
-  }, [moveDestinations, folders, handleMoveTo]);
+  }, [loadFolders, moveDestinations, handleMoveTo]);
 
   const [moveModalVisible, setMoveModalVisible] = React.useState(false);
   const destsForModal = moveDestinations();
   const moveModalOptions = [
     { label: 'Unlisted', dest: destsForModal.find((d) => d.type === 'built-in' && d.id === 'unlisted')! },
     { label: 'Archived', dest: destsForModal.find((d) => d.type === 'built-in' && d.id === 'archived')! },
-    ...folders.map((f) => ({ label: f.name, dest: { type: 'user' as const, id: f.id, name: f.name } as MoveDestination })),
+    ...folders.map((folder) => ({
+      label: folder.name,
+      dest: { type: 'user' as const, id: folder.id, name: folder.name } as MoveDestination,
+    })),
   ].filter((o) => o.dest);
 
   const handleDelete = useCallback(() => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -50,8 +50,10 @@ export function SaveRecordingScreen() {
     normalizeTranscriptionMode(route.params.transcriptionMode ?? defaultTranscriptionMode)
   );
   const [saving, setSaving] = useState(false);
+  const autoSaveTriggeredRef = useRef(false);
+  const autoProcessOnOpen = route.params.autoProcessOnOpen ?? false;
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (saving) return;
     setSaving(true);
     logger.info('FLOW', 'Save recording requested', {
@@ -89,7 +91,28 @@ export function SaveRecordingScreen() {
       title: safeTitle,
     });
     navigation.replace('Summarizing', { recordingId: id });
-  };
+  }, [
+    saving,
+    duration,
+    fileSize,
+    defaultProcessingMode,
+    transcriptionMode,
+    targetFolder,
+    targetUserFolderId,
+    preTranscript,
+    title,
+    existingTitles,
+    filePath,
+    addRecording,
+    navigation,
+  ]);
+
+  useEffect(() => {
+    if (!autoProcessOnOpen || autoSaveTriggeredRef.current) return;
+    autoSaveTriggeredRef.current = true;
+    logger.info('FLOW', 'Auto-processing recording on SaveRecording open');
+    void handleSave();
+  }, [autoProcessOnOpen, handleSave]);
 
   const handleDiscard = () => {
     Alert.alert('Discard Recording', 'This recording will be permanently deleted.', [

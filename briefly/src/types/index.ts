@@ -78,6 +78,7 @@ export type RootStackParamList = {
     transcriptionMode?: TranscriptionMode;
     targetFolder?: RecordingFolder;
     targetUserFolderId?: string;
+    autoProcessOnOpen?: boolean;
   };
   Summarizing: { recordingId: string };
   Transcript: { recordingId: string };

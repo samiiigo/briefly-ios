@@ -28,6 +28,7 @@ const BUILT_IN_FOLDERS = [
   { id: 'archived', name: 'Archived', icon: 'archive' as const, color: '#BF5AF2' },
   { id: 'recently-deleted', name: 'Recently Deleted', icon: 'trash' as const, color: 'rgba(255,255,255,0.6)' },
 ] as const;
+type BuiltInFolderId = (typeof BUILT_IN_FOLDERS)[number]['id'];
 
 export function FolderListScreen() {
   const navigation = useNavigation<Nav>();
@@ -48,7 +49,9 @@ export function FolderListScreen() {
         (name) => {
           const trimmed = name?.trim();
           if (!trimmed) return;
-          addFolder(trimmed).catch((err) => Alert.alert('Error', err.message));
+          addFolder(trimmed).catch((err: unknown) =>
+            Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
+          );
         },
         'plain-text',
         ''
@@ -67,21 +70,23 @@ export function FolderListScreen() {
         setAddModalVisible(false);
         setNewFolderName('');
       })
-      .catch((err) => Alert.alert('Error', err.message));
+      .catch((err: unknown) =>
+        Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
+      );
   }, [addFolder, newFolderName]);
 
-  const countForBuiltIn = (id: string) => {
+  const countForBuiltIn = (id: BuiltInFolderId) => {
     if (id === 'archived') {
-      return recordings.filter((r) => r.deletedAt == null && r.isArchived).length;
+      return recordings.filter((recording) => resolveRecordingFolder(recording) === 'archived').length;
     }
     if (id === 'recently-deleted') {
-      return recordings.filter((r) => r.deletedAt != null).length;
+      return recordings.filter((recording) => resolveRecordingFolder(recording) === 'recently-deleted').length;
     }
     return 0;
   };
 
   const countForUserFolder = (id: string) =>
-    recordings.filter((r) => r.userFolderId === id).length;
+    recordings.filter((recording) => recording.userFolderId === id).length;
 
   const openFolder = (folderId: string, folderName: string, folderType: 'built-in' | 'user') => {
     navigation.navigate('FolderRecordings', { folderId, folderName, folderType });
@@ -121,18 +126,18 @@ export function FolderListScreen() {
         {folders.length > 0 && (
           <>
             <Text style={[styles.sectionLabel, { marginTop: Spacing.xl }]}>USER FOLDERS</Text>
-            {folders.map((f) => (
+            {folders.map((folder) => (
               <TouchableOpacity
-                key={f.id}
+                key={folder.id}
                 style={styles.folderRow}
-                onPress={() => openFolder(f.id, f.name, 'user')}
+                onPress={() => openFolder(folder.id, folder.name, 'user')}
               >
                 <View style={[styles.folderIconWrap, styles.folderIconUser]}>
                   <Ionicons name="folder" size={22} color="rgba(255,255,255,0.7)" />
                 </View>
                 <View style={styles.folderInfo}>
-                  <Text style={styles.folderName}>{f.name}</Text>
-                  <Text style={styles.folderCount}>{countForUserFolder(f.id)} recordings</Text>
+                  <Text style={styles.folderName}>{folder.name}</Text>
+                  <Text style={styles.folderCount}>{countForUserFolder(folder.id)} recordings</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
               </TouchableOpacity>

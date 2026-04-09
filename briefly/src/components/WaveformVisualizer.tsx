@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
-import { AudioService } from '../services/AudioService';
+import { RecordingService } from '../services/audio';
 import { Colors } from '../utils/theme';
 
 const POLL_MS = 80;
@@ -9,9 +9,11 @@ const MIN_SCALE = 0.05;
 interface Props {
   isActive: boolean;
   barCount?: number;
+  /** Optional custom metering function. Falls back to RecordingService.getMetering(). */
+  getMetering?: () => Promise<number>;
 }
 
-export function WaveformVisualizer({ isActive, barCount = 20 }: Props) {
+export function WaveformVisualizer({ isActive, barCount = 20, getMetering }: Props) {
   const animations = useRef<Animated.Value[]>(
     Array.from({ length: barCount }, () => new Animated.Value(MIN_SCALE))
   ).current;
@@ -36,7 +38,7 @@ export function WaveformVisualizer({ isActive, barCount = 20 }: Props) {
     const poll = async () => {
       if (cancelled) return;
 
-      const level = await AudioService.getMetering();
+      const level = getMetering ? await getMetering() : await RecordingService.getMetering();
       if (cancelled) return;
 
       // When metering returns 0 (unsupported platform or near-silence),
@@ -64,7 +66,7 @@ export function WaveformVisualizer({ isActive, barCount = 20 }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [animations, isActive]);
+  }, [animations, isActive, getMetering]);
 
   return (
     <View style={styles.container}>

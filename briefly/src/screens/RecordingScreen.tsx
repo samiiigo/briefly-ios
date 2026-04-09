@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AudioService } from '../services/AudioService';
+import { RecordingService, LiveTranscriptionService } from '../services/audio';
 import { WaveformVisualizer } from '../components/WaveformVisualizer';
 import { Colors, Spacing, BorderRadius } from '../utils/theme';
-import { RootStackParamList, TranscriptSegment, TranscriptionMode } from '../types';
+import { RootStackParamList, TranscriptionMode } from '../types';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import {
@@ -24,51 +24,13 @@ import {
   transcriptionModeBadge,
   transcriptionModeDescription,
 } from '../utils/transcriptionMode';
-import type { AssemblyAIConnectionState } from '../services/AssemblyAILiveTranscription';
+import type { AssemblyAIConnectionState } from '../services/audio/AssemblyAILiveTranscription';
 import { logger } from '../utils/logger';
+import { useTimer } from '../hooks/useTimer';
+import { useLiveTranscript } from '../hooks/useLiveTranscript';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Recording'>;
-
-function generateSegmentId() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-const SENTENCE_BOUNDARY_REGEX = /[^.!?]+[.!?]+["')\]]*(?=\s|$)/g;
-
-function appendChunk(base: string, chunk: string): string {
-  const left = base.trim();
-  const right = chunk.trim();
-  if (!left) return right;
-  if (!right) return left;
-  return `${left} ${right}`;
-}
-
-function splitCompleteSentences(text: string): { sentences: string[]; remainder: string } {
-  const source = text.trim();
-  if (!source) {
-    return { sentences: [], remainder: '' };
-  }
-
-  const sentences: string[] = [];
-  let lastBoundary = 0;
-  SENTENCE_BOUNDARY_REGEX.lastIndex = 0;
-
-  let match = SENTENCE_BOUNDARY_REGEX.exec(source);
-  while (match) {
-    const sentence = match[0].trim();
-    if (sentence) {
-      sentences.push(sentence);
-    }
-    lastBoundary = match.index + match[0].length;
-    match = SENTENCE_BOUNDARY_REGEX.exec(source);
-  }
-
-  return {
-    sentences,
-    remainder: source.slice(lastBoundary).trim(),
-  };
-}
 
 export function RecordingScreen() {
   const navigation = useNavigation<Nav>();
@@ -76,8 +38,11 @@ export function RecordingScreen() {
   const { setLiveTranscript } = useRecordingStore();
   const { defaultTranscriptionMode } = useSettingsStore();
 
-  const [elapsed, setElapsed] = useState(0);
-  const elapsedRef = useRef(0);
+  const { elapsed, elapsedRef, start: startTimer, stop: stopTimer } = useTimer();
+  const live = useLiveTranscript(setLiveTranscript, elapsedRef);
+  const { finalText, partialText, liveSegments, isStopped, onPartial, onFinal, flush, reset, cleanup } =
+    live;
+
   const [isPaused, setIsPaused] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
   const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>(
@@ -85,28 +50,17 @@ export function RecordingScreen() {
   );
   const [streamingState, setStreamingState] = useState<AssemblyAIConnectionState>('idle');
 
-  // Live transcript display state
-  const [finalText, setFinalText] = useState('');
-  const [partialText, setPartialText] = useState('');
-
   const livePreviewScrollRef = useRef<ScrollView | null>(null);
 
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // For building preTranscript passed to SaveRecording
-  const liveSegments = useRef<TranscriptSegment[]>([]);
-  // Accumulated final text (so each onFinal delta can be computed)
-  const prevFinalText = useRef('');
-  const finalSentenceBufferRef = useRef('');
-  const isStopped = useRef(false);
   const isPausedRef = useRef(false);
+  // Captures the recording mode at start time so stop/pause/discard always
+  // call the same service that was used to start, even if the user changes
+  // the transcription mode mid-recording via the menu.
+  const startedWithLiveRef = useRef(false);
+  const effectiveModeAtStartRef = useRef<TranscriptionMode>('post-assemblyai');
 
-  // Buffered partial text to coalesce rapid onPartial events into ~80ms batches
-  const pendingPartialRef = useRef('');
-  const partialFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const canCloudLive = AudioService.supportsLiveTranscription;
-  const canOnDeviceLive = AudioService.supportsOnDeviceLiveTranscription;
+  const canCloudLive = LiveTranscriptionService.isSupported;
+  const canOnDeviceLive = LiveTranscriptionService.isOnDeviceSupported;
   const selectedMode = normalizeTranscriptionMode(transcriptionMode);
   const isAssemblyAiLiveMode = selectedMode === 'live-assemblyai';
   const isLocalMode = selectedMode === 'local-on-device';
@@ -120,108 +74,26 @@ export function RecordingScreen() {
     ? selectedMode
     : 'post-assemblyai';
 
-  // ─── Timer ────────────────────────────────────────────────────────────────
-
-  const startTimer = useCallback(() => {
-    timerRef.current = setInterval(() => {
-      setElapsed((e) => {
-        elapsedRef.current = e + 1;
-        return e + 1;
-      });
-    }, 1000);
-  }, []);
-
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
-
   // ─── Mount: start recording ───────────────────────────────────────────────
 
   useEffect(() => {
+    reset();
     setLiveTranscript('');
-    setFinalText('');
-    setPartialText('');
-    liveSegments.current = [];
-    prevFinalText.current = '';
-    finalSentenceBufferRef.current = '';
 
     (async () => {
       try {
+        startedWithLiveRef.current = useLiveTranscription;
+        effectiveModeAtStartRef.current = effectiveTranscriptionMode;
         logger.info('FLOW', 'Recording screen session started', {
           useLiveTranscription,
+          liveEngine,
           transcriptionMode,
+          effectiveTranscriptionMode,
         });
         if (useLiveTranscription) {
           const callbacks = {
-            onPartial: (text: string) => {
-              pendingPartialRef.current = text;
-              if (!partialFlushTimerRef.current) {
-                partialFlushTimerRef.current = setTimeout(() => {
-                  partialFlushTimerRef.current = null;
-                  if (isStopped.current) return;
-                  const buffered = pendingPartialRef.current;
-                  setPartialText(buffered);
-                  const accFinal = liveSegments.current.map((s) => s.text).join(' ');
-                  setLiveTranscript(accFinal ? `${accFinal} ${buffered}` : buffered);
-                }, 80);
-              }
-            },
-            onFinal: (text: string) => {
-              if (partialFlushTimerRef.current) {
-                clearTimeout(partialFlushTimerRef.current);
-                partialFlushTimerRef.current = null;
-              }
-              pendingPartialRef.current = '';
-
-              const prev = prevFinalText.current;
-              const newWords = prev
-                ? text.startsWith(prev)
-                  ? text.slice(prev.length).trim()
-                  : text
-                : text;
-
-              if (newWords) {
-                const merged = appendChunk(finalSentenceBufferRef.current, newWords);
-                const { sentences, remainder } = splitCompleteSentences(merged);
-
-                if (sentences.length > 0) {
-                  const endTime = elapsedRef.current;
-                  let cursorStart = liveSegments.current.length > 0
-                    ? liveSegments.current[liveSegments.current.length - 1].endTime
-                    : 0;
-                  liveSegments.current = [
-                    ...liveSegments.current,
-                    ...sentences.map((sentence) => {
-                      const segment: TranscriptSegment = {
-                        id: generateSegmentId(),
-                        text: sentence,
-                        startTime: cursorStart,
-                        endTime,
-                        isFinal: true,
-                      };
-                      cursorStart = endTime;
-                      return segment;
-                    }),
-                  ];
-                }
-
-                finalSentenceBufferRef.current = remainder;
-              }
-
-              prevFinalText.current = text;
-
-              const accumulated = liveSegments.current.map((s) => s.text).join(' ');
-              setFinalText(accumulated);
-              setPartialText(finalSentenceBufferRef.current);
-              setLiveTranscript(
-                finalSentenceBufferRef.current
-                  ? appendChunk(accumulated, finalSentenceBufferRef.current)
-                  : accumulated
-              );
-            },
+            onPartial,
+            onFinal,
             onConnectionState: (state: AssemblyAIConnectionState) => {
               setStreamingState(state);
             },
@@ -234,16 +106,11 @@ export function RecordingScreen() {
             },
           };
 
-          if (liveEngine === 'cloud') {
-            // Native module handles recording + AssemblyAI real-time transcription together.
-            await AudioService.startLiveTranscription(callbacks);
-          } else {
-            // Native module handles recording + on-device real-time transcription.
-            await AudioService.startOnDeviceLiveTranscription(callbacks);
-          }
+          // Unified: LiveTranscriptionService handles both modes via the mode parameter (OCP + LSP).
+          await LiveTranscriptionService.start(liveEngine as 'cloud' | 'on-device', callbacks);
         } else {
           // No native module: record audio only, transcription happens after stop
-          await AudioService.startRecording();
+          await RecordingService.start();
         }
 
         setIsStarted(true);
@@ -262,10 +129,7 @@ export function RecordingScreen() {
 
     return () => {
       stopTimer();
-      if (partialFlushTimerRef.current) {
-        clearTimeout(partialFlushTimerRef.current);
-        partialFlushTimerRef.current = null;
-      }
+      cleanup();
     };
     // Intentional: this flow runs exactly once when entering Recording screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -276,28 +140,20 @@ export function RecordingScreen() {
   const handlePause = async () => {
     try {
       if (isPaused) {
-        if (useLiveTranscription) {
-          if (liveEngine === 'cloud') {
-            await AudioService.resumeLiveTranscription();
-          } else {
-            await AudioService.resumeOnDeviceLiveTranscription();
-          }
+        if (startedWithLiveRef.current) {
+          await LiveTranscriptionService.resume();
         } else {
-          await AudioService.resumeRecording();
+          await RecordingService.resume();
         }
         startTimer();
         setIsPaused(false);
         isPausedRef.current = false;
         logger.info('FLOW', 'Recording resumed');
       } else {
-        if (useLiveTranscription) {
-          if (liveEngine === 'cloud') {
-            await AudioService.pauseLiveTranscription();
-          } else {
-            await AudioService.pauseOnDeviceLiveTranscription();
-          }
+        if (startedWithLiveRef.current) {
+          await LiveTranscriptionService.pause();
         } else {
-          await AudioService.pauseRecording();
+          await RecordingService.pause();
         }
         stopTimer();
         setIsPaused(true);
@@ -315,21 +171,24 @@ export function RecordingScreen() {
   // ─── Stop ─────────────────────────────────────────────────────────────────
 
   const handleStop = async () => {
-    logger.info('FLOW', 'Recording stop requested');
+    if (isStopped.current) return;
     isStopped.current = true;
+    logger.info('FLOW', 'Recording stop requested', {
+      startedWithLive: startedWithLiveRef.current,
+      currentUseLiveTranscription: useLiveTranscription,
+    });
     stopTimer();
-    if (partialFlushTimerRef.current) {
-      clearTimeout(partialFlushTimerRef.current);
-      partialFlushTimerRef.current = null;
-    }
+    cleanup();
 
     let result;
-    if (useLiveTranscription) {
+    if (startedWithLiveRef.current) {
       try {
-        result = liveEngine === 'cloud'
-          ? await AudioService.stopLiveTranscription()
-          : await AudioService.stopOnDeviceLiveTranscription();
+        result = await LiveTranscriptionService.stop();
       } catch (err: any) {
+        isStopped.current = false;
+        if (!isPausedRef.current) {
+          startTimer();
+        }
         logger.error('FLOW', 'Failed to stop live transcription recording', {
           error: err?.message ?? String(err),
         });
@@ -338,41 +197,29 @@ export function RecordingScreen() {
       }
     } else {
       try {
-        result = await AudioService.stopRecording();
+        result = await RecordingService.stop();
       } catch (err: any) {
         logger.warn('RecordingScreen', 'Stop recording failed, retrying', {
           error: err?.message ?? String(err),
         });
         await new Promise((r) => setTimeout(r, 300));
         try {
-          result = await AudioService.stopRecording();
+          result = await RecordingService.stop();
         } catch (retryErr: any) {
+          isStopped.current = false;
+          if (!isPausedRef.current) {
+            startTimer();
+          }
           logger.error('RecordingScreen', 'Stop recording retry failed', {
             error: retryErr?.message ?? String(retryErr),
           });
+          Alert.alert('Error', retryErr?.message ?? 'Could not stop recording.');
+          return;
         }
       }
     }
 
-    const trimmedPartial = (pendingPartialRef.current || partialText).trim();
-    const trailingText = appendChunk(finalSentenceBufferRef.current, trimmedPartial);
-    if (trailingText) {
-      liveSegments.current = [
-        ...liveSegments.current,
-        {
-          id: generateSegmentId(),
-          text: trailingText,
-          startTime: liveSegments.current.length > 0
-            ? liveSegments.current[liveSegments.current.length - 1].endTime
-            : 0,
-          endTime: elapsedRef.current,
-          isFinal: true,
-        },
-      ];
-      setPartialText('');
-      finalSentenceBufferRef.current = '';
-    }
-
+    flush();
     const preTranscript = liveSegments.current.length > 0 ? liveSegments.current : undefined;
 
     if ((isAssemblyAiLiveMode && !canCloudLive) || (isLocalMode && !canOnDeviceLive)) {
@@ -387,14 +234,15 @@ export function RecordingScreen() {
       filePath: result?.uri ?? '',
       fileSize: result?.fileSize ?? 0,
       preTranscript,
-      transcriptionMode: effectiveTranscriptionMode,
+      transcriptionMode: effectiveModeAtStartRef.current,
       targetFolder: route.params?.targetFolder,
       targetUserFolderId: route.params?.targetUserFolderId,
+      autoProcessOnOpen: false,
     });
     logger.info('FLOW', 'Navigated to save recording screen', {
       durationSec: result?.duration || elapsed,
       hasPreTranscript: !!preTranscript,
-      transcriptionMode,
+      transcriptionMode: effectiveModeAtStartRef.current,
     });
   };
 
@@ -410,18 +258,11 @@ export function RecordingScreen() {
           logger.warn('FLOW', 'Recording discarded by user');
           isStopped.current = true;
           stopTimer();
-          if (partialFlushTimerRef.current) {
-            clearTimeout(partialFlushTimerRef.current);
-            partialFlushTimerRef.current = null;
-          }
-          if (useLiveTranscription) {
-            if (liveEngine === 'cloud') {
-              await AudioService.stopLiveTranscription().catch(() => {});
-            } else {
-              await AudioService.stopOnDeviceLiveTranscription().catch(() => {});
-            }
+          cleanup();
+          if (startedWithLiveRef.current) {
+            await LiveTranscriptionService.stop().catch(() => {});
           } else {
-            await AudioService.stopRecording().catch(() => {});
+            await RecordingService.stop().catch(() => {});
           }
           setLiveTranscript('');
           navigation.navigate('Main');
