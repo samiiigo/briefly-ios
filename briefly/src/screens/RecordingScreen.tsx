@@ -237,6 +237,7 @@ export function RecordingScreen() {
       transcriptionMode: effectiveModeAtStartRef.current,
       targetFolder: route.params?.targetFolder,
       targetUserFolderId: route.params?.targetUserFolderId,
+      markImported: route.params?.markImported,
       autoProcessOnOpen: false,
     });
     logger.info('FLOW', 'Navigated to save recording screen', {
@@ -437,7 +438,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingVertical: Spacing.sm,
   },
   headerButton: {
@@ -525,7 +526,7 @@ const styles = StyleSheet.create({
   // Live preview
   livePreviewContainer: {
     flex: 1,
-    marginHorizontal: Spacing.md,
+    marginHorizontal: Spacing.screenHorizontal,
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,

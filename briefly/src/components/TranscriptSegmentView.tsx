@@ -52,7 +52,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
     marginBottom: 2,
   },
   active: {

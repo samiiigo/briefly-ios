@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '../types';
 import { formatDuration, formatDate } from '../utils';
 import { resolveRecordingFolder } from '../utils/recordingFolder';
-import { Colors, BorderRadius } from '../utils/theme';
+import { Colors } from '../utils/theme';
 
 interface Props {
   recording: Recording;
@@ -20,6 +20,8 @@ interface Props {
   onRename?: (newTitle: string) => void;
   /** When set, card is in Recently Deleted: shows Restore and Delete permanently. */
   onRestore?: () => void;
+  /** Dense tile layout for folder grid view. */
+  compact?: boolean;
 }
 
 function getContentEmoji(recording: Recording): string {
@@ -56,26 +58,19 @@ function getContentEmoji(recording: Recording): string {
   return '📄';
 }
 
-export function RecordingCard({ recording, onPress, onDelete, onRename, onRestore }: Props) {
+export function RecordingCard({
+  recording,
+  onPress,
+  onDelete,
+  onRename,
+  onRestore,
+  compact,
+}: Props) {
   const isFailed = recording.status === 'error';
   const isFavorite = !!recording.isFavorite;
   const folder = resolveRecordingFolder(recording);
   const isRecentlyDeleted = folder === 'recently-deleted';
-  const isArchived = folder === 'archived';
   const iconEmoji = getContentEmoji(recording);
-  const folderLabel =
-    isRecentlyDeleted
-      ? 'DELETED'
-      : isArchived
-        ? 'ARCHIVED'
-        : 'UNLISTED';
-
-  const folderBadgeStyle =
-    folderLabel === 'ARCHIVED'
-      ? styles.folderArchived
-      : folderLabel === 'DELETED'
-        ? styles.folderRecentlyDeleted
-        : styles.folderUnlisted;
 
   const promptRename = () => {
     if (!onRename) return;
@@ -83,12 +78,13 @@ export function RecordingCard({ recording, onPress, onDelete, onRename, onRestor
       Alert.prompt(
         'Rename Recording',
         undefined,
-        (text) => { if (text?.trim()) onRename(text.trim()); },
+        (text) => {
+          if (text?.trim()) onRename(text.trim());
+        },
         'plain-text',
         recording.title
       );
     } else {
-      // Android: rename is available from the recording detail screen
       Alert.alert('Rename', 'Open the recording to rename it from the detail screen.');
     }
   };
@@ -138,6 +134,56 @@ export function RecordingCard({ recording, onPress, onDelete, onRename, onRestor
     }
   };
 
+  const dateText =
+    isRecentlyDeleted && recording.deletedAt
+      ? `Deleted ${formatDate(recording.deletedAt)}`
+      : formatDate(recording.createdAt);
+
+  const topRightIcons = (
+    <View style={styles.topRightIcons}>
+      {isFailed && (
+        <View style={[styles.statusIcon, styles.statusIconWarning]}>
+          <Ionicons name="warning" size={compact ? 12 : 14} color={Colors.orange} />
+        </View>
+      )}
+      {isFavorite && !isRecentlyDeleted && (
+        <View style={[styles.statusIcon, styles.favoriteIcon]}>
+          <Ionicons name="star" size={compact ? 12 : 14} color="#FFD60A" />
+        </View>
+      )}
+    </View>
+  );
+
+  if (compact) {
+    return (
+      <TouchableOpacity
+        style={[styles.card, styles.cardCompact]}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+        activeOpacity={0.7}
+      >
+        <View style={styles.iconContainerCompact}>
+          <Text style={styles.iconEmojiCompact}>{iconEmoji}</Text>
+        </View>
+
+        <View style={styles.contentCompactInner}>
+          <View style={styles.titleRowCompact}>
+            <Text style={styles.titleCompact} numberOfLines={2}>
+              {recording.title}
+            </Text>
+            {(isFailed || (isFavorite && !isRecentlyDeleted)) && (
+              <View style={styles.compactTitleIcons}>{topRightIcons}</View>
+            )}
+          </View>
+          <Text style={styles.dateCompact}>{dateText}</Text>
+          <View style={styles.durationRowCompact}>
+            <Text style={styles.durationCompact}>{formatDuration(recording.duration)}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <TouchableOpacity
       style={styles.card}
@@ -145,41 +191,21 @@ export function RecordingCard({ recording, onPress, onDelete, onRename, onRestor
       onLongPress={handleLongPress}
       activeOpacity={0.7}
     >
-      {(isFailed || isFavorite) && (
-        <View style={styles.statusRow}>
-          {isFailed && (
-            <View style={[styles.statusIcon, styles.statusIconWarning]}>
-              <Ionicons name="warning" size={14} color={Colors.orange} />
-            </View>
-          )}
-          {isFavorite && !isRecentlyDeleted && (
-            <View style={[styles.statusIcon, styles.favoriteIcon]}>
-              <Ionicons name="star" size={14} color="#FFD60A" />
-            </View>
-          )}
-        </View>
-      )}
-
       <View style={styles.iconContainer}>
         <Text style={styles.iconEmoji}>{iconEmoji}</Text>
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={1}>
-          {recording.title}
-        </Text>
-        <Text style={styles.date}>
-          {isRecentlyDeleted && recording.deletedAt
-            ? `Deleted ${formatDate(recording.deletedAt)}`
-            : formatDate(recording.createdAt)}
-        </Text>
-        <View style={styles.metaRow}>
+        <View style={styles.titleRow}>
+          <Text style={styles.title} numberOfLines={2}>
+            {recording.title}
+          </Text>
+          {(isFailed || (isFavorite && !isRecentlyDeleted)) && topRightIcons}
+        </View>
+        <Text style={styles.date}>{dateText}</Text>
+        <View style={styles.durationRow}>
           <Text style={styles.duration}>{formatDuration(recording.duration)}</Text>
         </View>
-      </View>
-
-      <View style={[styles.folderBadge, folderBadgeStyle, styles.folderBadgeRight]}>
-        <Text style={styles.folderBadgeText}>{folderLabel}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -197,13 +223,22 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.06)',
   },
-  statusRow: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
+  cardCompact: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    padding: 12,
+    marginBottom: 0,
+    minHeight: 148,
+  },
+  topRightIcons: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 0,
+  },
+  compactTitleIcons: {
+    marginLeft: 6,
+    flexShrink: 0,
   },
   statusIcon: {
     width: 28,
@@ -226,61 +261,92 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
+    flexShrink: 0,
+  },
+  iconContainerCompact: {
+    width: 52,
+    height: 52,
+    marginBottom: 10,
+    alignSelf: 'center',
+    borderRadius: 12,
+    backgroundColor: 'rgba(10,132,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconEmoji: {
     fontSize: 30,
   },
+  iconEmojiCompact: {
+    fontSize: 26,
+  },
   content: {
     flex: 1,
     minWidth: 0,
+    flexDirection: 'column',
     justifyContent: 'center',
-    marginRight: 8,
+  },
+  contentCompactInner: {
+    width: '100%',
+    alignItems: 'stretch',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 4,
+  },
+  titleRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginBottom: 4,
   },
   title: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 16,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.9)',
-    marginBottom: 3,
+    textAlign: 'left',
+  },
+  titleCompact: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'left',
   },
   date: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.5)',
-    marginBottom: 3,
+    textAlign: 'left',
+    marginBottom: 6,
   },
-  metaRow: {
+  dateCompact: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
+    textAlign: 'left',
+    marginBottom: 6,
+  },
+  durationRow: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    justifyContent: 'space-between',
+  },
+  durationRowCompact: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
   },
   duration: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.5)',
+    textAlign: 'right',
   },
-  folderBadge: {
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  folderBadgeRight: {
-    alignSelf: 'flex-end',
-  },
-  folderUnlisted: {
-    backgroundColor: 'rgba(10,132,255,0.16)',
-    borderColor: 'rgba(10,132,255,0.35)',
-  },
-  folderArchived: {
-    backgroundColor: 'rgba(191,90,242,0.18)',
-    borderColor: 'rgba(191,90,242,0.45)',
-  },
-  folderRecentlyDeleted: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  folderBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    color: '#FFFFFF',
+  durationCompact: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
+    textAlign: 'right',
   },
 });

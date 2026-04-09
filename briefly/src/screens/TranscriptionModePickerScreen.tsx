@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingVertical: Spacing.sm,
     paddingBottom: Spacing.xs,
   },
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   content: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingBottom: 100,
   },
   sectionDescription: {
@@ -116,7 +116,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     lineHeight: 20,
     marginBottom: 16,
-    marginLeft: 4,
   },
   card: {
     backgroundColor: '#1C1C1E',
@@ -126,7 +125,7 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    marginLeft: 50, // Align with text start (16 padding + 22 radio + 12 gap)
+    marginLeft: Spacing.md + 22 + 12,
   },
   optionRow: {
     flexDirection: 'row',

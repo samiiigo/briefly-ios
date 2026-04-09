@@ -11,7 +11,7 @@ import {
   LayoutChangeEvent,
   Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,6 +31,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Transcript'>;
 
 export function TranscriptScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { recordingId } = route.params;
@@ -102,7 +103,9 @@ export function TranscriptScreen() {
   if (!recording) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={{ color: Colors.textPrimary, padding: 20 }}>Recording not found.</Text>
+        <Text style={{ color: Colors.textPrimary, padding: Spacing.screenHorizontal }}>
+          Recording not found.
+        </Text>
       </SafeAreaView>
     );
   }
@@ -111,15 +114,21 @@ export function TranscriptScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color={Colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerDate}>{formatDate(recording.createdAt)}</Text>
-          <View style={{ width: 40 }} />
+          <View style={styles.headerSide}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Ionicons name="chevron-back" size={24} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.headerCenterSlot}>
+            <Text style={styles.headerDate} numberOfLines={1}>
+              {formatDate(recording.createdAt)}
+            </Text>
+          </View>
+          <View style={[styles.headerSide, styles.headerSideRight]} />
         </View>
         <View style={styles.deletedOverlay}>
           <Ionicons name="trash-outline" size={48} color={Colors.textSecondary} style={{ marginBottom: 16 }} />
-          <Text style={styles.deletedOverlayTitle}>Recording in Recently Deleted</Text>
+          <Text style={styles.deletedOverlayTitle}>Recording in Deleted</Text>
           <Text style={styles.deletedOverlayMessage}>
             Restore this recording to another folder to open it or listen to it.
           </Text>
@@ -151,13 +160,21 @@ export function TranscriptScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerDate}>{formatDate(recording.createdAt)}</Text>
-        <TouchableOpacity onPress={handleRename} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="pencil-outline" size={20} color={Colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={styles.headerSide}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.headerCenterSlot}>
+          <Text style={styles.headerDate} numberOfLines={1}>
+            {formatDate(recording.createdAt)}
+          </Text>
+        </View>
+        <View style={[styles.headerSide, styles.headerSideRight]}>
+          <TouchableOpacity onPress={handleRename} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="pencil-outline" size={20} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -272,7 +289,12 @@ export function TranscriptScreen() {
       </ScrollView>
 
       {/* Playback bar */}
-      <View style={styles.playbackBar}>
+      <View
+        style={[
+          styles.playbackBar,
+          { paddingBottom: Math.max(insets.bottom, 12) + Spacing.sm },
+        ]}
+      >
         {/* Progress */}
         <TouchableOpacity
           activeOpacity={1}
@@ -328,11 +350,23 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingVertical: Spacing.sm,
   },
-  headerDate: { fontSize: 14, color: Colors.textSecondary },
+  headerSide: {
+    width: 40,
+    justifyContent: 'center',
+  },
+  headerSideRight: {
+    alignItems: 'flex-end',
+  },
+  headerCenterSlot: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  headerDate: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
   deletedOverlay: {
     flex: 1,
     alignItems: 'center',
@@ -369,7 +403,8 @@ const styles = StyleSheet.create({
   },
   scroll: { flex: 1 },
   scrollContent: {
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
+    paddingTop: Spacing.md,
     paddingBottom: 160,
   },
   title: {
@@ -424,9 +459,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.border,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingTop: Spacing.sm,
-    paddingBottom: 30,
   },
   progressTrack: {
     height: 3,

@@ -1,4 +1,4 @@
-import { Platform, Easing } from 'react-native';
+import { Platform, Easing, TextStyle } from 'react-native';
 
 export const Colors = {
   background: '#000000',
@@ -29,8 +29,24 @@ export const Colors = {
   pauseButton: '#3A3A3C',
 };
 
+/**
+ * iOS large-title treatment: SF Pro Display at 34pt (Apple uses Display for sizes above ~20pt).
+ * Matches common HIG mocks: 700 weight, ~0.4px tracking. Collapse-to-inline title on scroll
+ * requires native navigation large-title behavior; tab screens use this for the expanded look.
+ */
+const largeTitleBase: TextStyle = {
+  fontSize: 34,
+  fontWeight: '700',
+  letterSpacing: 0.4,
+  color: Colors.textPrimary,
+  ...Platform.select({
+    ios: { fontFamily: 'SF Pro Display' },
+    default: {},
+  }),
+};
+
 export const Typography = {
-  largeTitle: { fontSize: 34, fontWeight: '700' as const, color: Colors.textPrimary },
+  largeTitle: largeTitleBase,
   title1: { fontSize: 28, fontWeight: '700' as const, color: Colors.textPrimary },
   title2: { fontSize: 22, fontWeight: '700' as const, color: Colors.textPrimary },
   title3: { fontSize: 20, fontWeight: '600' as const, color: Colors.textPrimary },
@@ -50,6 +66,8 @@ export const Spacing = {
   lg: 24,
   xl: 32,
   xxl: 48,
+  /** Horizontal inset for screen edges, headers, and list content (iOS-style 20pt gutter). */
+  screenHorizontal: 20,
   contentTop: 0,
 };
 

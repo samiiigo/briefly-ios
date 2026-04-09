@@ -19,7 +19,7 @@ import { SearchIconButton } from '../components/SearchIconButton';
 import { Recording, RootStackParamList } from '../types';
 import { ensureUniqueTitle, groupRecordingsByTime } from '../utils';
 import { resolveRecordingFolder } from '../utils/recordingFolder';
-import { Colors, Spacing, BorderRadius } from '../utils/theme';
+import { Colors, Spacing, BorderRadius, Typography } from '../utils/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -148,17 +148,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.screenHorizontal,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.sm,
   },
   headerTitle: {
-    fontSize: 34,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    letterSpacing: 0.3,
+    ...Typography.largeTitle,
+    textAlign: 'left',
   },
   listContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingTop: Spacing.contentTop,
   },
   sectionHeaderWrap: {
