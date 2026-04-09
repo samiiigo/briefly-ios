@@ -51,7 +51,7 @@ export function SaveRecordingScreen() {
   );
   const [saving, setSaving] = useState(false);
   const autoSaveTriggeredRef = useRef(false);
-  const autoProcessOnOpen = route.params.autoProcessOnOpen ?? true;
+  const autoProcessOnOpen = route.params.autoProcessOnOpen ?? false;
 
   const handleSave = useCallback(async () => {
     if (saving) return;

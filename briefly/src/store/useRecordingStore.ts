@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Recording } from '../types';
+import { AudioFileService } from '../services/audio';
 import { RecordingStorageService } from '../services/storage';
 import type { RecordingRepository } from '../services/storage';
 import { folderFlagsFor } from '../utils/recordingFolder';
@@ -130,6 +131,10 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   },
 
   permanentDelete: async (id) => {
+    const recording = get().recordings.find((r) => r.id === id);
+    if (recording?.filePath) {
+      await AudioFileService.deleteFile(recording.filePath);
+    }
     logger.info('useRecordingStore', 'Recording permanently deleted', { id });
     await recordingRepository.remove(id);
     set((state) => ({
