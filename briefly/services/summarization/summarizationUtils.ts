@@ -7,7 +7,7 @@
  */
 
 import { TranscriptSegment, KeyInsight } from '../../types';
-import { logger } from '../../utils/logger';
+import { logger } from '../../lib/logger';
 import { SummarizationResult } from './SummarizationProvider';
 
 /** Timeout for cloud summarization API calls (ms). */

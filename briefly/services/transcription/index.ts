@@ -14,8 +14,8 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import { TranscriptSegment, TranscriptionMode } from '../../types';
-import { requireAssemblyAISharedApiKey } from '../../config/assemblyAI';
-import { normalizeTranscriptionMode } from '../../utils/transcriptionMode';
+import { requireAssemblyAISharedApiKey } from '../../constants/api/assemblyAI';
+import { normalizeTranscriptionMode } from '../../lib/transcriptionMode';
 import {
   uploadAudio,
   createTranscriptJob,
@@ -23,7 +23,7 @@ import {
   AssemblyAITranscriptPayload,
 } from './AssemblyAIClient';
 import { buildSentenceSegments, buildFallbackSegments } from './segmentBuilder';
-import { logger } from '../../utils/logger';
+import { logger } from '../../lib/logger';
 
 interface AsyncTranscriptionClient {
   uploadAudio(audioUri: string, apiKey: string): Promise<string>;

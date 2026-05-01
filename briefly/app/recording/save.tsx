@@ -5,15 +5,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useRecordingStore } from '../../store/useRecordingStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { ProcessingBadge } from '../../components/ProcessingBadge';
+import { ProcessingBadge } from '../../components/recording/ProcessingBadge';
 import { RecordingFolder, TranscriptionMode } from '../../types';
-import { formatDuration, formatFileSize, generateId, generateTitle, ensureUniqueTitle } from '../../utils';
-import { normalizeTranscriptionMode, transcriptionModeDescription, transcriptionModeTitle } from '../../utils/transcriptionMode';
-import { processingModeTitle } from '../../utils/processingMode';
-import { folderFlagsFor } from '../../utils/recordingFolder';
-import { Colors, Spacing, BorderRadius } from '../../utils/theme';
-import { logger } from '../../utils/logger';
-import { consumeTransitData } from '../../utils/navigationTransit';
+import { formatDuration, formatFileSize, generateId, generateTitle, ensureUniqueTitle } from '../../lib';
+import { normalizeTranscriptionMode, transcriptionModeDescription, transcriptionModeTitle } from '../../lib/transcriptionMode';
+import { processingModeTitle } from '../../lib/processingMode';
+import { folderFlagsFor } from '../../lib/folders/recordingFolder';
+import { Colors, Spacing, BorderRadius } from '../../lib/theme';
+import { logger } from '../../lib/logger';
+import { consumeTransitData } from '../../lib/navigationTransit';
 
 export default function SaveRecordingScreen() {
   const router = useRouter();

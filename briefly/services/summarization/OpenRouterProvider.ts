@@ -7,7 +7,7 @@
 
 import Constants from 'expo-constants';
 import { CloudLLMProvider, CloudLLMConfig } from './CloudLLMProvider';
-import { OpenRouterConfig } from '../../config/openRouter';
+import { OpenRouterConfig } from '../../constants/api/openRouter';
 
 export class OpenRouterProvider extends CloudLLMProvider {
   readonly name = 'OpenRouter';

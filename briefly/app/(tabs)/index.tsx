@@ -11,14 +11,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useRecordingStore } from '../../store/useRecordingStore';
 import { RecordingService } from '../../services/audio';
-import { RecordingCard } from '../../components/RecordingCard';
-import { RecordingSwipeableRow } from '../../components/RecordingSwipeableRow';
-import { RecordButton } from '../../components/RecordButton';
-import { SearchIconButton } from '../../components/SearchIconButton';
+import { RecordingCard } from '../../components/recording/RecordingCard';
+import { RecordingSwipeableRow } from '../../components/recording/RecordingSwipeableRow';
+import { RecordButton } from '../../components/recording/RecordButton';
+import { SearchIconButton } from '../../components/common/SearchIconButton';
 import { Recording } from '../../types';
-import { ensureUniqueTitle, groupRecordingsByTime } from '../../utils';
-import { resolveRecordingFolder } from '../../utils/recordingFolder';
-import { Colors, Spacing, BorderRadius, Typography } from '../../utils/theme';
+import { ensureUniqueTitle, groupRecordingsByTime } from '../../lib';
+import { resolveRecordingFolder } from '../../lib/folders/recordingFolder';
+import { Colors, Spacing, BorderRadius, Typography } from '../../lib/theme';
 
 export default function HomeScreen() {
   const router = useRouter();

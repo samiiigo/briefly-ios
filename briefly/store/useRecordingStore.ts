@@ -3,8 +3,8 @@ import { Recording } from '../types';
 import { AudioFileService } from '../services/audio';
 import { RecordingStorageService } from '../services/storage';
 import type { RecordingRepository } from '../services/storage';
-import { folderFlagsFor } from '../utils/recordingFolder';
-import { logger } from '../utils/logger';
+import { folderFlagsFor } from '../lib/folders/recordingFolder';
+import { logger } from '../lib/logger';
 
 const RECENTLY_DELETED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 

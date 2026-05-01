@@ -14,7 +14,7 @@ import {
   extractiveSummarize,
   normalizeSummarizationResult,
 } from './summarizationUtils';
-import { logger } from '../../utils/logger';
+import { logger } from '../../lib/logger';
 
 const { BrieflyTranscriber } = NativeModules;
 

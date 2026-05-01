@@ -9,7 +9,7 @@
  */
 
 import { ProcessingMode, CloudProvider } from '../../types';
-import { requireOpenRouterSharedApiKey } from '../../config/openRouter';
+import { requireOpenRouterSharedApiKey } from '../../constants/api/openRouter';
 import { SummarizationProvider } from './SummarizationProvider';
 import { OnDeviceProvider } from './OnDeviceProvider';
 import { OpenRouterProvider } from './OpenRouterProvider';

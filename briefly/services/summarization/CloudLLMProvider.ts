@@ -17,7 +17,7 @@ import {
   parseJsonSummary,
   SYSTEM_PROMPT,
 } from './summarizationUtils';
-import { logger } from '../../utils/logger';
+import { logger } from '../../lib/logger';
 
 export interface CloudLLMConfig {
   /** Full URL for the chat completions endpoint. */

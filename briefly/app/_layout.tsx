@@ -6,9 +6,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { installRealtimeTerminalLogs, logger } from '../utils/logger';
-import { checkEnvironment } from '../utils/environmentCheck';
-import { Colors } from '../utils/theme';
+import { installRealtimeTerminalLogs, logger } from '../lib/logger';
+import { checkEnvironment } from '../lib/environmentCheck';
+import { Colors } from '../lib/theme';
 
 export default function RootLayout() {
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);

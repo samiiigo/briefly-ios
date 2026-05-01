@@ -6,13 +6,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useRecordingStore } from '../../store/useRecordingStore';
 import { usePlayback } from '../../hooks/usePlayback';
 import { useExport } from '../../hooks/useExport';
-import { KeyInsights } from '../../components/KeyInsights';
-import { TranscriptSegmentView } from '../../components/TranscriptSegmentView';
-import { ProcessingBadge } from '../../components/ProcessingBadge';
+import { KeyInsights } from '../../components/recording/KeyInsights';
+import { TranscriptSegmentView } from '../../components/recording/TranscriptSegmentView';
+import { ProcessingBadge } from '../../components/recording/ProcessingBadge';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { transcriptionModeTitle } from '../../utils/transcriptionMode';
-import { formatDuration, formatDate, ensureUniqueTitle } from '../../utils';
-import { Colors, Spacing, BorderRadius } from '../../utils/theme';
+import { transcriptionModeTitle } from '../../lib/transcriptionMode';
+import { formatDuration, formatDate, ensureUniqueTitle } from '../../lib';
+import { Colors, Spacing, BorderRadius } from '../../lib/theme';
 
 export default function TranscriptScreen() {
   const insets = useSafeAreaInsets();

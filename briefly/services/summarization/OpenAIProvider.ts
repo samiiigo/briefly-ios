@@ -6,7 +6,7 @@
 
 import Constants from 'expo-constants';
 import { CloudLLMProvider, CloudLLMConfig } from './CloudLLMProvider';
-import { OpenAIConfig } from '../../config/openai';
+import { OpenAIConfig } from '../../constants/api/openai';
 
 export class OpenAIProvider extends CloudLLMProvider {
   readonly name = 'OpenAI';

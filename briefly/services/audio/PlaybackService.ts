@@ -6,12 +6,12 @@
  * this small interface instead of the entire AudioService (ISP).
  */
 
-import { Audio } from 'expo-av';
-import { logger } from '../../utils/logger';
+import { createAudioPlayer, AudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { logger } from '../../lib/logger';
 import { PlaybackControls } from './contracts';
 
 class PlaybackServiceClass implements PlaybackControls {
-  private sound: Audio.Sound | null = null;
+  private player: AudioPlayer | null = null;
 
   async play(
     uri: string,
@@ -20,51 +20,50 @@ class PlaybackServiceClass implements PlaybackControls {
     logger.info('AUDIO', 'Starting playback', { uri });
     await this.stop();
 
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
+    await setAudioModeAsync({
+      allowsRecording: false,
+      playsInSilentMode: true,
     });
 
-    const { sound } = await Audio.Sound.createAsync(
-      { uri },
-      { shouldPlay: true },
-      (status) => {
-        if (status.isLoaded && onPlaybackStatusUpdate) {
-          onPlaybackStatusUpdate(
-            status.positionMillis / 1000,
-            (status.durationMillis ?? 0) / 1000,
-            status.isPlaying
-          );
-        }
+    const player = createAudioPlayer(uri);
+    
+    player.addListener('playbackStatusUpdate', (status) => {
+      if (onPlaybackStatusUpdate) {
+        onPlaybackStatusUpdate(
+          status.currentTime,
+          status.duration,
+          status.isPlaying
+        );
       }
-    );
+    });
 
-    this.sound = sound;
+    player.play();
+    this.player = player;
   }
 
   async pause(): Promise<void> {
-    if (this.sound) await this.sound.pauseAsync();
+    if (this.player) this.player.pause();
   }
 
   async resume(): Promise<void> {
-    if (this.sound) await this.sound.playAsync();
+    if (this.player) this.player.play();
   }
 
   async seekTo(seconds: number): Promise<void> {
-    if (this.sound) await this.sound.setPositionAsync(seconds * 1000);
+    if (this.player) await this.player.seekTo(seconds);
   }
 
   async stop(): Promise<void> {
-    if (this.sound) {
-      await this.sound.stopAsync();
-      await this.sound.unloadAsync();
-      this.sound = null;
+    if (this.player) {
+      this.player.pause();
+      this.player.remove();
+      this.player = null;
       logger.info('AUDIO', 'Playback stopped');
     }
   }
 
   async setSpeed(rate: number): Promise<void> {
-    if (this.sound) await this.sound.setRateAsync(rate, true);
+    if (this.player) this.player.playbackRate = rate;
   }
 }
 

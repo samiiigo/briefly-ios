@@ -6,7 +6,7 @@
 
 import Constants from 'expo-constants';
 import { CloudLLMProvider, CloudLLMConfig } from './CloudLLMProvider';
-import { GeminiConfig } from '../../config/gemini';
+import { GeminiConfig } from '../../constants/api/gemini';
 
 export class GeminiProvider extends CloudLLMProvider {
   readonly name = 'Gemini';

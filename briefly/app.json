@@ -39,12 +39,6 @@
       ]
     },
     "plugins": [
-      [
-        "expo-av",
-        {
-          "microphonePermission": "Briefly needs microphone access to record audio for transcription."
-        }
-      ],
       "expo-sqlite",
       "expo-audio",
       "expo-router"

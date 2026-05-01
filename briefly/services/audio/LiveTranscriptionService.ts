@@ -17,9 +17,9 @@
  */
 
 import { getInfoAsync } from 'expo-file-system/legacy';
-import { AssemblyAIConfig, requireAssemblyAISharedApiKey } from '../../config/assemblyAI';
+import { AssemblyAIConfig, requireAssemblyAISharedApiKey } from '../../constants/api/assemblyAI';
 import { AudioRecordingResult } from './types';
-import { logger } from '../../utils/logger';
+import { logger } from '../../lib/logger';
 import type { AssemblyAIConnectionState } from './AssemblyAILiveTranscription';
 import { AssemblyAILiveTranscriptionClient } from './AssemblyAILiveTranscription';
 import { AssemblyAIWebSocketService } from './AssemblyAIWebSocketService';

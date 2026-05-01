@@ -8,16 +8,16 @@ import { RecordingService } from '../../services/audio';
 import { useRecordingStore } from '../../store/useRecordingStore';
 import { useLibraryFolderPreferencesStore } from '../../store/useLibraryFolderPreferencesStore';
 import { getFolderBrowsePreferences, useFolderBrowsePreferencesStore } from '../../store/useFolderBrowsePreferencesStore';
-import { applyFolderRecordingPreferences } from '../../utils/folderRecordingPreferences';
-import { buildFolderSections } from '../../utils/folderBrowse';
-import { RecordingCard } from '../../components/RecordingCard';
-import { RecordingSwipeableRow } from '../../components/RecordingSwipeableRow';
-import { RecordButton } from '../../components/RecordButton';
-import { GlassCircleIconButton } from '../../components/GlassAddFolderButton';
-import { FolderViewOptionsSheet } from '../../components/FolderViewOptionsSheet';
+import { applyFolderRecordingPreferences } from '../../lib/folders/folderRecordingPreferences';
+import { buildFolderSections } from '../../lib/folders/folderBrowse';
+import { RecordingCard } from '../../components/recording/RecordingCard';
+import { RecordingSwipeableRow } from '../../components/recording/RecordingSwipeableRow';
+import { RecordButton } from '../../components/recording/RecordButton';
+import { GlassCircleIconButton } from '../../components/library/GlassAddFolderButton';
+import { FolderViewOptionsSheet } from '../../components/library/FolderViewOptionsSheet';
 import { Recording } from '../../types';
-import { resolveRecordingFolder } from '../../utils/recordingFolder';
-import { Spacing, Typography } from '../../utils/theme';
+import { resolveRecordingFolder } from '../../lib/folders/recordingFolder';
+import { Spacing, Typography } from '../../lib/theme';
 
 export default function FolderRecordingsScreen() {
   const router = useRouter();

@@ -5,18 +5,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { RecordingService, LiveTranscriptionService } from '../../services/audio';
-import { WaveformVisualizer } from '../../components/WaveformVisualizer';
-import { Colors, Spacing, BorderRadius } from '../../utils/theme';
+import { WaveformVisualizer } from '../../components/recording/WaveformVisualizer';
+import { Colors, Spacing, BorderRadius } from '../../lib/theme';
 import { TranscriptionMode } from '../../types';
 import { useRecordingStore } from '../../store/useRecordingStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { normalizeTranscriptionMode, transcriptionModeBadge, transcriptionModeDescription } from '../../utils/transcriptionMode';
-import { formatTimestamp } from '../../utils';
+import { normalizeTranscriptionMode, transcriptionModeBadge, transcriptionModeDescription } from '../../lib/transcriptionMode';
+import { formatTimestamp } from '../../lib';
 import type { AssemblyAIConnectionState } from '../../services/audio/AssemblyAILiveTranscription';
-import { logger } from '../../utils/logger';
+import { logger } from '../../lib/logger';
 import { useTimer } from '../../hooks/useTimer';
 import { useLiveTranscript } from '../../hooks/useLiveTranscript';
-import { setTransitData } from '../../utils/navigationTransit';
+import { setTransitData } from '../../lib/navigationTransit';
 
 export default function NewRecordingScreen() {
   const router = useRouter();

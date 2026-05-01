@@ -10,7 +10,7 @@ import { Animated } from 'react-native';
 import { PlaybackService } from '../services/audio';
 import type { PlaybackControls } from '../services/audio';
 import { TranscriptSegment } from '../types';
-import { SliderAnimation } from '../utils/theme';
+import { SliderAnimation } from '../lib/theme';
 
 interface UsePlaybackOptions {
   filePath: string;

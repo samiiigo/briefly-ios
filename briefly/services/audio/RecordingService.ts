@@ -1,123 +1,127 @@
 /**
  * RecordingService (SRP + ISP)
  *
- * Single responsibility: standard audio recording via expo-av.
+ * Single responsibility: standard audio recording via expo-audio.
  * Also owns permission requests and metering, since these are
  * intrinsically coupled to the recording lifecycle.
  */
 
-import { Audio } from 'expo-av';
+import { AudioRecorder, RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
 import { getInfoAsync } from 'expo-file-system/legacy';
 import { AudioRecordingResult } from './types';
-import { logger } from '../../utils/logger';
+import { logger } from '../../lib/logger';
 
 class RecordingServiceClass {
-  private recording: Audio.Recording | null = null;
+  private recorder: AudioRecorder | null = null;
   private _recordingPaused = false;
   private startTime: number = 0;
 
   async requestPermissions(): Promise<boolean> {
-    const { granted } = await Audio.requestPermissionsAsync();
+    const { granted } = await requestRecordingPermissionsAsync();
     logger.info('AUDIO', 'Microphone permission request completed', { granted });
     return granted;
   }
 
   async start(): Promise<void> {
-    // Clean up any leftover recording (e.g. React Strict Mode double-mount)
-    if (this.recording) {
-      logger.warn('AUDIO', 'Cleaning up previous recording before starting new one');
+    // Clean up any leftover recorder
+    if (this.recorder) {
+      logger.warn('AUDIO', 'Cleaning up previous recorder before starting new one');
       try {
-        await this.recording.stopAndUnloadAsync();
+        await this.recorder.stop();
       } catch {
-        // Ignore — the old recording may already be in an unloaded state
+        // Ignore
       }
-      this.recording = null;
+      this.recorder = null;
     }
 
     logger.info('AUDIO', 'Starting local recording');
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
+    await setAudioModeAsync({
+      allowsRecording: true,
+      playsInSilentMode: true,
     });
 
-    const { recording } = await Audio.Recording.createAsync({
-      ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      isMeteringEnabled: true,
-    });
+    const recorder = new AudioRecorder(RecordingPresets.HIGH_QUALITY);
+    await recorder.prepareToRecordAsync();
+    recorder.record();
 
-    this.recording = recording;
+    this.recorder = recorder;
     this._recordingPaused = false;
     this.startTime = Date.now();
     logger.info('AUDIO', 'Local recording started');
   }
 
   async pause(): Promise<void> {
-    if (this.recording) {
-      await this.recording.pauseAsync();
+    if (this.recorder) {
+      this.recorder.pause();
       this._recordingPaused = true;
       logger.info('AUDIO', 'Local recording paused');
     }
   }
 
   async resume(): Promise<void> {
-    if (!this.recording) return;
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
+    if (!this.recorder) return;
+    await setAudioModeAsync({
+      allowsRecording: true,
+      playsInSilentMode: true,
     });
-    await this.recording.startAsync();
+    this.recorder.record();
     this._recordingPaused = false;
     logger.info('AUDIO', 'Local recording resumed');
   }
 
   async stop(): Promise<AudioRecordingResult> {
-    if (!this.recording) {
-      logger.warn('AUDIO', 'Stop called without active recording, returning empty result');
+    if (!this.recorder) {
+      logger.warn('AUDIO', 'Stop called without active recorder, returning empty result');
       return { uri: '', duration: 0, fileSize: 0 };
     }
 
     let durationMillis = 0;
     try {
-      const status = await this.recording.getStatusAsync();
-      durationMillis = status.durationMillis ?? 0;
+      const status = this.recorder.getStatus();
+      durationMillis = status.durationMillis;
       if (status.isRecording) {
-        await this.recording.pauseAsync();
+        this.recorder.pause();
       }
     } catch (error: any) {
-      logger.error('AUDIO', 'Failed to flush recording before stop', {
+      logger.error('AUDIO', 'Failed to flush recorder before stop', {
         error: error?.message ?? String(error),
       });
     }
 
-    await this.recording.stopAndUnloadAsync();
-    const uri = this.recording.getURI()!;
+    const uri = this.recorder.uri || '';
+    await this.recorder.stop();
 
     let fileSize = 0;
-    try {
-      const info = await getInfoAsync(uri);
-      fileSize = info.exists ? ((info as any).size ?? 0) : 0;
-    } catch (error: any) {
-      logger.warn('AUDIO', 'Failed to read local recording file metadata', {
-        error: error?.message ?? String(error),
-      });
+    if (uri) {
+      try {
+        const info = await getInfoAsync(uri);
+        fileSize = info.exists ? ((info as any).size ?? 0) : 0;
+      } catch (error: any) {
+        logger.warn('AUDIO', 'Failed to read local recording file metadata', {
+          error: error?.message ?? String(error),
+        });
+      }
     }
 
     const duration = durationMillis / 1000;
-    this.recording = null;
+    this.recorder = null;
     this._recordingPaused = false;
 
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+    await setAudioModeAsync({ allowsRecording: false });
 
     logger.info('AUDIO', 'Local recording stopped', { uri, durationSec: duration, fileSize });
     return { uri, duration, fileSize };
   }
 
   async getMetering(): Promise<number> {
-    if (!this.recording) return 0;
+    if (!this.recorder) return 0;
     try {
-      const status = await this.recording.getStatusAsync();
-      if (!status.isRecording || status.metering === undefined) return 0;
-      return Math.max(0, Math.min(1, (status.metering + 60) / 60));
+      const status = this.recorder.getStatus();
+      // expo-audio might have a different metering field. 
+      // Checking Audio.types.d.ts if metering is available.
+      // Assuming 'metering' exists in status for now as it's common.
+      if (!status.isRecording || (status as any).metering === undefined) return 0;
+      return Math.max(0, Math.min(1, ((status as any).metering + 60) / 60));
     } catch {
       return 0;
     }

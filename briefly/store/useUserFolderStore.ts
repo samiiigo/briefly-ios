@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { UserFolder } from '../types';
 import { FolderStorageService } from '../services/storage';
 import type { FolderRepository } from '../services/storage';
-import { generateId } from '../utils';
-import { sortUserFolders } from '../utils/userFolderSort';
+import { generateId } from '../lib';
+import { sortUserFolders } from '../lib/folders/userFolderSort';
 
 export interface UserFolderStore {
   folders: UserFolder[];

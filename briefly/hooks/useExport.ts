@@ -10,7 +10,7 @@ import { Alert, Share } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Recording } from '../types';
-import { formatDuration, formatDate } from '../utils';
+import { formatDuration, formatDate } from '../lib';
 
 function escapeHtml(text: string) {
   return text

@@ -5,9 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { ProcessingMode } from '../types';
-import { processingModeDescription, processingModeTitle } from '../utils/processingMode';
-import { getProviderTitle, getApiKeyPlaceholder, isValidApiKeyFormat, detectCloudProviderFromKey } from '../utils/cloudProvider';
-import { Colors, Spacing } from '../utils/theme';
+import { processingModeDescription, processingModeTitle } from '../lib/processingMode';
+import { getProviderTitle, getApiKeyPlaceholder, isValidApiKeyFormat, detectCloudProviderFromKey } from '../lib/providers/cloudProvider';
+import { Colors, Spacing } from '../lib/theme';
 
 const PROCESSING_MODES: ProcessingMode[] = ['cloud-shared-openrouter', 'cloud-user-key', 'on-device'];
 

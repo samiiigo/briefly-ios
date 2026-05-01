@@ -7,9 +7,9 @@ import { useRecordingStore } from '../../store/useRecordingStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { TranscriptionService } from '../../services/transcription';
 import { SummarizationService } from '../../services/summarization';
-import { transcriptionModeTitle } from '../../utils/transcriptionMode';
-import { Colors, Spacing, BorderRadius, SliderAnimation } from '../../utils/theme';
-import { logger } from '../../utils/logger';
+import { transcriptionModeTitle } from '../../lib/transcriptionMode';
+import { Colors, Spacing, BorderRadius, SliderAnimation } from '../../lib/theme';
+import { logger } from '../../lib/logger';
 
 export default function SummarizingScreen() {
   const router = useRouter();
