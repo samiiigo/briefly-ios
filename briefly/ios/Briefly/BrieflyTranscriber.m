@@ -33,6 +33,20 @@ RCT_EXTERN_METHOD(resumeOnDeviceLiveTranscription:(RCTPromiseResolveBlock)resolv
 RCT_EXTERN_METHOD(stopOnDeviceLiveTranscription:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+// Audio capture only — JS handles the AssemblyAI WebSocket side
+RCT_EXTERN_METHOD(startAudioCapture:(NSDictionary *)options
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(pauseAudioCapture:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(resumeAudioCapture:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(stopAudioCapture:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 // Post-recording file transcription entrypoint (disabled in favor of AssemblyAI)
 RCT_EXTERN_METHOD(transcribeFile:(NSString *)filePath)
 

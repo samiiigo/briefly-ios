@@ -77,8 +77,15 @@ function resolveDefaultApiKey(): string | undefined {
 }
 
 export class AssemblyAILiveTranscriptionClient {
-  private readonly emitter = new NativeEventEmitter(BrieflyTranscriber);
+  private emitter: NativeEventEmitter | null = null;
   private readonly listeners: AssemblyAILiveListeners;
+
+  private getEmitter(): NativeEventEmitter {
+    if (!this.emitter) {
+      this.emitter = new NativeEventEmitter(BrieflyTranscriber);
+    }
+    return this.emitter;
+  }
   private subscriptions: { remove: () => void }[] = [];
   private mode: AssemblyAILiveMode = 'cloud';
 
@@ -159,7 +166,7 @@ export class AssemblyAILiveTranscriptionClient {
     this.detachListeners();
 
     this.subscriptions.push(
-      this.emitter.addListener('onPartialTranscript', (e: { text: string }) => {
+      this.getEmitter().addListener('onPartialTranscript', (e: { text: string }) => {
         const text = e?.text ?? '';
         this.listeners.onPartial?.(text);
         this.listeners.onEvent?.({ type: 'partial', text });
@@ -167,7 +174,7 @@ export class AssemblyAILiveTranscriptionClient {
     );
 
     this.subscriptions.push(
-      this.emitter.addListener('onFinalTranscript', (e: { text: string }) => {
+      this.getEmitter().addListener('onFinalTranscript', (e: { text: string }) => {
         const text = e?.text ?? '';
         this.listeners.onFinal?.(text);
         this.listeners.onEvent?.({ type: 'final', text });
@@ -175,7 +182,7 @@ export class AssemblyAILiveTranscriptionClient {
     );
 
     this.subscriptions.push(
-      this.emitter.addListener('onStreamingState', (e: { state: AssemblyAIConnectionState; reason?: string }) => {
+      this.getEmitter().addListener('onStreamingState', (e: { state: AssemblyAIConnectionState; reason?: string }) => {
         const state = e?.state ?? 'idle';
         const reason = e?.reason;
         this.listeners.onConnectionState?.(state, reason);
@@ -184,7 +191,7 @@ export class AssemblyAILiveTranscriptionClient {
     );
 
     this.subscriptions.push(
-      this.emitter.addListener('onTranscriptionError', (e: { message: string }) => {
+      this.getEmitter().addListener('onTranscriptionError', (e: { message: string }) => {
         const message = e?.message ?? 'Unknown transcription error';
         this.listeners.onError?.(message);
         this.listeners.onEvent?.({ type: 'error', message });
