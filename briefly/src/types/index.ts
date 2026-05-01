@@ -4,14 +4,21 @@ export type TranscriptionMode = 'live-assemblyai' | 'post-assemblyai' | 'local-o
 /**
  * System-managed storage buckets for recordings.
  *
- * Favorites are modeled as a boolean flag (`isFavorite`) rather than a folder;
- * "unlisted" represents the default, non-archived, non-deleted bucket.
+ * Favorites are item state (`isFavorite`) only, not a storage location. The
+ * Favorites folder aggregates favorited items; originals stay in their buckets.
+ * Imports aggregates items brought in from outside the app (`isImported`); originals
+ * stay in their storage buckets (same pattern as favorites).
+ * "unlisted" is the default non-archived, non-deleted system bucket.
  */
 export type RecordingFolder = 'unlisted' | 'archived' | 'recently-deleted';
 
 export interface UserFolder {
   id: string;
   name: string;
+  /** When true, folder is listed first (with other pinned folders) in Library. */
+  pinned?: boolean;
+  /** Set when pinned; most recently pinned sorts first among pinned folders. */
+  pinnedAt?: number;
 }
 
 export type RecordingStatus =
@@ -51,6 +58,8 @@ export interface Recording {
   folder?: RecordingFolder;
   userFolderId?: string;
   isFavorite?: boolean;
+  /** True when the file was brought in from outside the app (import) or saved from the Imports folder. */
+  isImported?: boolean;
   isArchived?: boolean;
   /** Set when moved to Recently Deleted; cleared on restore. Used for purge after retention. */
   deletedAt?: number;
@@ -68,6 +77,8 @@ export type RootStackParamList = {
         transcriptionModeOverride?: TranscriptionMode;
         targetFolder?: RecordingFolder;
         targetUserFolderId?: string;
+        /** When true, new recording is tagged for the Imports library folder. */
+        markImported?: boolean;
       }
     | undefined;
   SaveRecording: {
@@ -78,10 +89,12 @@ export type RootStackParamList = {
     transcriptionMode?: TranscriptionMode;
     targetFolder?: RecordingFolder;
     targetUserFolderId?: string;
+    markImported?: boolean;
     autoProcessOnOpen?: boolean;
   };
   Summarizing: { recordingId: string };
   Transcript: { recordingId: string };
+  /** Full folder browser (all user folders). */
   FolderList: undefined;
   FolderRecordings: {
     folderId: string;

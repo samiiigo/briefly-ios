@@ -116,7 +116,8 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
 
   deleteRecording: async (id) => {
     logger.info('useRecordingStore', 'Recording soft-deleted', { id });
-    const flags = folderFlagsFor('recently-deleted');
+    const recording = get().recordings.find((r) => r.id === id);
+    const flags = folderFlagsFor('recently-deleted', recording);
     await recordingRepository.update(id, flags);
     set((state) => ({
       recordings: state.recordings.map((r) =>

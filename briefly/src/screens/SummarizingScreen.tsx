@@ -226,13 +226,17 @@ export function SummarizingScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleCancel} style={styles.closeBtn}>
-          <Ionicons name="close" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {stage === 'transcribing' ? 'Transcribing' : 'Summarizing'}
-        </Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.headerSide}>
+          <TouchableOpacity onPress={handleCancel} style={styles.closeBtn}>
+            <Ionicons name="close" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.headerCenterSlot}>
+          <Text style={styles.headerTitle}>
+            {stage === 'transcribing' ? 'Transcribing' : 'Summarizing'}
+          </Text>
+        </View>
+        <View style={[styles.headerSide, styles.headerSideRight]} />
       </View>
 
       <View style={styles.content}>
@@ -295,19 +299,31 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingVertical: Spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.border,
   },
+  headerSide: {
+    width: 40,
+    justifyContent: 'center',
+  },
+  headerSideRight: {
+    alignItems: 'flex-end',
+  },
+  headerCenterSlot: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0,
+  },
   closeBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
+  headerTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary, textAlign: 'center' },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: Spacing.screenHorizontal,
   },
   iconCircle: {
     width: 120,
@@ -361,7 +377,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   actions: {
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
+    paddingTop: Spacing.md,
     paddingBottom: Spacing.xl,
     gap: Spacing.md,
     alignItems: 'center',

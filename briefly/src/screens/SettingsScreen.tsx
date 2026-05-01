@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.xs,
   },
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   content: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingBottom: 24,
   },
   contentGrow: {
@@ -188,14 +188,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: 24,
     marginBottom: 6,
-    marginLeft: 4,
   },
   sectionDescription: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.7)',
     lineHeight: 20,
     marginBottom: 12,
-    marginLeft: 4,
   },
   card: {
     backgroundColor: '#1C1C1E',
@@ -205,7 +203,7 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    marginLeft: 16,
+    marginLeft: Spacing.md + 24 + 12,
   },
   // Storage / Preference rows
   row: {

@@ -3,6 +3,7 @@ import { UserFolder } from '../types';
 import { FolderStorageService } from '../services/storage';
 import type { FolderRepository } from '../services/storage';
 import { generateId } from '../utils';
+import { sortUserFolders } from '../utils/userFolderSort';
 
 export interface UserFolderStore {
   folders: UserFolder[];
@@ -11,6 +12,7 @@ export interface UserFolderStore {
   addFolder: (name: string) => Promise<UserFolder>;
   renameFolder: (id: string, name: string) => Promise<void>;
   deleteFolder: (id: string) => Promise<void>;
+  toggleFolderPinned: (id: string) => Promise<void>;
 }
 
 function normalizeFolderName(name: string): string {
@@ -42,7 +44,8 @@ export const useUserFolderStore = create<UserFolderStore>((set, get) => ({
   hasLoaded: false,
 
   loadFolders: async () => {
-    const folders = await folderRepository.loadAll();
+    const raw = await folderRepository.loadAll();
+    const folders = sortUserFolders(raw);
     set({ folders, hasLoaded: true });
   },
 
@@ -54,7 +57,7 @@ export const useUserFolderStore = create<UserFolderStore>((set, get) => ({
     if (duplicate) throw new Error('A folder with this name already exists');
     const folder: UserFolder = { id: `uf_${generateId()}`, name: trimmed };
     await folderRepository.save(folder);
-    set((state) => ({ folders: [...state.folders, folder] }));
+    set((state) => ({ folders: sortUserFolders([...state.folders, folder]) }));
     return folder;
   },
 
@@ -69,7 +72,26 @@ export const useUserFolderStore = create<UserFolderStore>((set, get) => ({
     const updated = { ...folder, name: trimmed };
     await folderRepository.save(updated);
     set((state) => ({
-      folders: state.folders.map((folderItem) => (folderItem.id === id ? updated : folderItem)),
+      folders: sortUserFolders(
+        state.folders.map((folderItem) => (folderItem.id === id ? updated : folderItem))
+      ),
+    }));
+  },
+
+  toggleFolderPinned: async (id: string) => {
+    const existing = get().folders.find((f) => f.id === id);
+    if (!existing) return;
+    const nextPinned = !existing.pinned;
+    const updated: UserFolder = {
+      ...existing,
+      pinned: nextPinned,
+      pinnedAt: nextPinned ? Date.now() : undefined,
+    };
+    await folderRepository.save(updated);
+    set((state) => ({
+      folders: sortUserFolders(
+        state.folders.map((f) => (f.id === id ? updated : f))
+      ),
     }));
   },
 

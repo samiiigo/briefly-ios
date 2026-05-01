@@ -18,6 +18,7 @@ import { useRecordingStore } from '../store/useRecordingStore';
 import { useUserFolderStore } from '../store/useUserFolderStore';
 import { folderFlagsFor } from '../utils/recordingFolder';
 import { RecordingFolder } from '../types';
+import { BUILTIN_MOVE_ORDER, BUILT_IN_FOLDERS } from '../constants/builtInFolders';
 
 interface RecordingSwipeableRowProps {
   recording: Recording;
@@ -51,31 +52,43 @@ export function RecordingSwipeableRow({
 
   const moveToArchive = useCallback(() => {
     swipeableRef.current?.close();
-    updateRecording(recording.id, folderFlagsFor('archived'));
-  }, [recording.id, updateRecording]);
+    updateRecording(recording.id, {
+      ...folderFlagsFor('archived', recording),
+      userFolderId: undefined,
+    });
+  }, [recording, updateRecording]);
 
   const removeFromArchive = useCallback(() => {
     swipeableRef.current?.close();
-    updateRecording(recording.id, folderFlagsFor('unlisted'));
-  }, [recording.id, updateRecording]);
+    updateRecording(recording.id, {
+      ...folderFlagsFor('unlisted', recording),
+      userFolderId: undefined,
+    });
+  }, [recording, updateRecording]);
 
   const handleMoveTo = useCallback(
     (dest: MoveDestination) => {
       swipeableRef.current?.close();
       if (dest.type === 'built-in') {
-        updateRecording(recording.id, folderFlagsFor(dest.id));
+        updateRecording(recording.id, {
+          ...folderFlagsFor(dest.id, recording),
+          userFolderId: undefined,
+        });
       } else {
-        updateRecording(recording.id, { ...folderFlagsFor('unlisted'), userFolderId: dest.id });
+        updateRecording(recording.id, {
+          ...folderFlagsFor('unlisted', recording),
+          userFolderId: dest.id,
+        });
       }
     },
-    [recording.id, updateRecording]
+    [recording, updateRecording]
   );
 
   const moveDestinations = useCallback((folderList = folders): MoveDestination[] => {
-    const builtIn: MoveDestination[] = [
-      { type: 'built-in', id: 'unlisted' },
-      { type: 'built-in', id: 'archived' },
-    ];
+    const builtIn: MoveDestination[] = BUILTIN_MOVE_ORDER.map((id) => ({
+      type: 'built-in' as const,
+      id,
+    }));
     const user = folderList.map((folder) => ({
       type: 'user' as const,
       id: folder.id,
@@ -88,7 +101,12 @@ export function RecordingSwipeableRow({
     await loadFolders();
     const latestFolders = useUserFolderStore.getState().folders;
     const dests = moveDestinations(latestFolders);
-    const names = ['Unlisted', 'Archived', ...latestFolders.map((folder) => folder.name)];
+    const names = [
+      ...BUILTIN_MOVE_ORDER.map(
+        (id) => BUILT_IN_FOLDERS.find((f) => f.id === id)!.name
+      ),
+      ...latestFolders.map((folder) => folder.name),
+    ];
     if (Platform.OS === 'ios' && names.length <= 10) {
       ActionSheetIOS.showActionSheetWithOptions(
         {
@@ -109,8 +127,10 @@ export function RecordingSwipeableRow({
   const [moveModalVisible, setMoveModalVisible] = React.useState(false);
   const destsForModal = moveDestinations();
   const moveModalOptions = [
-    { label: 'Unlisted', dest: destsForModal.find((d) => d.type === 'built-in' && d.id === 'unlisted')! },
-    { label: 'Archived', dest: destsForModal.find((d) => d.type === 'built-in' && d.id === 'archived')! },
+    ...BUILTIN_MOVE_ORDER.map((id) => ({
+      label: BUILT_IN_FOLDERS.find((f) => f.id === id)!.name,
+      dest: destsForModal.find((d) => d.type === 'built-in' && d.id === id)!,
+    })),
     ...folders.map((folder) => ({
       label: folder.name,
       dest: { type: 'user' as const, id: folder.id, name: folder.name } as MoveDestination,

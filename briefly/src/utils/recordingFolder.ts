@@ -3,9 +3,8 @@ import { Recording, RecordingFolder } from '../types';
 /**
  * Resolves the primary system folder bucket for a recording.
  *
- * Favorites are modeled as a separate boolean flag and do not
- * change the underlying folder bucket; a favorite recording is
- * typically still "unlisted" or "archived".
+ * Favorites and Imports are item-level flags (`isFavorite`, `isImported`); the
+ * library folders are aggregated views. They do not live in separate buckets.
  */
 export function resolveRecordingFolder(recording: Recording): RecordingFolder {
   if (recording.deletedAt != null) {
@@ -27,13 +26,22 @@ export function resolveRecordingFolder(recording: Recording): RecordingFolder {
   return 'unlisted';
 }
 
+/**
+ * Maps a target folder to persisted flags. Pass `current` when updating an
+ * existing recording so `isFavorite` and `isImported` are preserved (not locations).
+ */
 export function folderFlagsFor(
-  folder: RecordingFolder
-): Pick<Recording, 'folder' | 'isFavorite' | 'isArchived' | 'deletedAt'> {
+  folder: RecordingFolder,
+  current?: Pick<Recording, 'isFavorite' | 'isImported'>
+): Pick<Recording, 'folder' | 'isFavorite' | 'isImported' | 'isArchived' | 'deletedAt'> {
+  const keepFavorite = !!current?.isFavorite;
+  const keepImported = !!current?.isImported;
+
   if (folder === 'recently-deleted') {
     return {
       folder: 'unlisted',
-      isFavorite: false,
+      isFavorite: keepFavorite,
+      isImported: keepImported,
       isArchived: false,
       deletedAt: Date.now(),
     };
@@ -42,16 +50,17 @@ export function folderFlagsFor(
   if (folder === 'archived') {
     return {
       folder: 'archived',
-      isFavorite: false,
+      isFavorite: keepFavorite,
+      isImported: keepImported,
       isArchived: true,
       deletedAt: undefined,
     };
   }
 
-  // 'unlisted' default bucket – favorites are modeled via `isFavorite`.
   return {
     folder: 'unlisted',
-    isFavorite: false,
+    isFavorite: keepFavorite,
+    isImported: keepImported,
     isArchived: false,
     deletedAt: undefined,
   };

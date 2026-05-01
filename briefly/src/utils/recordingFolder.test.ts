@@ -39,16 +39,51 @@ describe('recording folder helpers', () => {
     assert.deepEqual(folderFlagsFor('archived'), {
       folder: 'archived',
       isFavorite: false,
+      isImported: false,
       isArchived: true,
       deletedAt: undefined,
     });
   });
 
-  it('folderFlagsFor(recently-deleted) sets deletedAt and clears folder flags', () => {
+  it('preserves isFavorite when moving buckets if current recording is passed', () => {
+    assert.deepEqual(folderFlagsFor('archived', { isFavorite: true }), {
+      folder: 'archived',
+      isFavorite: true,
+      isImported: false,
+      isArchived: true,
+      deletedAt: undefined,
+    });
+    assert.deepEqual(folderFlagsFor('unlisted', { isFavorite: true }), {
+      folder: 'unlisted',
+      isFavorite: true,
+      isImported: false,
+      isArchived: false,
+      deletedAt: undefined,
+    });
+  });
+
+  it('preserves isImported when moving buckets if current recording is passed', () => {
+    assert.deepEqual(folderFlagsFor('archived', { isImported: true }), {
+      folder: 'archived',
+      isFavorite: false,
+      isImported: true,
+      isArchived: true,
+      deletedAt: undefined,
+    });
+  });
+
+  it('folderFlagsFor(recently-deleted) sets deletedAt; isFavorite defaults false without current', () => {
     const out = folderFlagsFor('recently-deleted');
     assert.equal(out.folder, 'unlisted');
     assert.equal(out.isFavorite, false);
+    assert.equal(out.isImported, false);
     assert.equal(out.isArchived, false);
+    assert.ok(typeof out.deletedAt === 'number' && out.deletedAt > 0);
+  });
+
+  it('folderFlagsFor(recently-deleted) preserves isFavorite when current is passed', () => {
+    const out = folderFlagsFor('recently-deleted', { isFavorite: true });
+    assert.equal(out.isFavorite, true);
     assert.ok(typeof out.deletedAt === 'number' && out.deletedAt > 0);
   });
 });

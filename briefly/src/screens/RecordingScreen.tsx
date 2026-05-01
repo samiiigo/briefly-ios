@@ -24,6 +24,7 @@ import {
   transcriptionModeBadge,
   transcriptionModeDescription,
 } from '../utils/transcriptionMode';
+import { formatTimestamp } from '../utils';
 import type { AssemblyAIConnectionState } from '../services/audio/AssemblyAILiveTranscription';
 import { logger } from '../utils/logger';
 import { useTimer } from '../hooks/useTimer';
@@ -224,8 +225,10 @@ export function RecordingScreen() {
 
     if ((isAssemblyAiLiveMode && !canCloudLive) || (isLocalMode && !canOnDeviceLive)) {
       Alert.alert(
-        'Live transcription unavailable in this build',
-        'This run cannot stream live transcription because the native BrieflyTranscriber module is unavailable. The app will keep your selected mode, but this recording will be transcribed after stop. To enable streaming, run a native dev build (npx expo run:ios or npx expo run:android) and launch with --dev-client.'
+        'Live transcription unavailable',
+        isLocalMode
+          ? 'On-device live transcription requires the native BrieflyTranscriber module. This recording used post-recording transcription instead.'
+          : 'Live transcription is not available on this platform. This recording used post-recording transcription instead.'
       );
     }
 
@@ -237,6 +240,7 @@ export function RecordingScreen() {
       transcriptionMode: effectiveModeAtStartRef.current,
       targetFolder: route.params?.targetFolder,
       targetUserFolderId: route.params?.targetUserFolderId,
+      markImported: route.params?.markImported,
       autoProcessOnOpen: false,
     });
     logger.info('FLOW', 'Navigated to save recording screen', {
@@ -280,15 +284,14 @@ export function RecordingScreen() {
   const hasAnyText = finalText.length > 0 || partialText.length > 0;
 
   const liveUnavailableMessage = (() => {
-    const modeLabel = isAssemblyAiLiveMode ? 'Live (AssemblyAI)' : 'Local (on-device)';
-    const capabilityLabel = isAssemblyAiLiveMode
-      ? 'AssemblyAI live streaming with BrieflyTranscriber'
-      : 'native on-device speech recognition with BrieflyTranscriber';
     const fallbackLine = 'This recording will fall back to post-recording AssemblyAI transcription after you stop.';
-    if (Constants.appOwnership === 'expo') {
-      return `${modeLabel} requires ${capabilityLabel}. This run is in Expo Go, which does not include the native transcription module. Next steps: run npx expo run:ios or npx expo run:android and retry. ${fallbackLine}`;
+    if (isLocalMode) {
+      if (Constants.appOwnership === 'expo') {
+        return `On-device live transcription requires the native BrieflyTranscriber module, which is not available in Expo Go. ${fallbackLine}`;
+      }
+      return `On-device live transcription requires the native BrieflyTranscriber module on ${Platform.OS}. Rebuild the app with the native module enabled. ${fallbackLine}`;
     }
-    return `${modeLabel} requires ${capabilityLabel} on ${Platform.OS}. This build is missing that capability. Next steps: enable the native transcription module and rebuild the app. ${fallbackLine}`;
+    return `Live (AssemblyAI) transcription is not available on this platform. ${fallbackLine}`;
   })();
 
   const livePreviewPlaceholder = useLiveTranscription
@@ -390,13 +393,20 @@ export function RecordingScreen() {
             }}
           >
             {hasAnyText ? (
-              <Text style={styles.liveTranscriptText}>
-                {finalText}
-                {finalText && partialText ? ' ' : ''}
+              <>
+                {liveSegments.current.map((seg) => (
+                  <View key={seg.id} style={styles.segmentBlock}>
+                    <Text style={styles.segmentTimestamp}>{formatTimestamp(seg.startTime)}</Text>
+                    <Text style={styles.segmentText}>{seg.text}</Text>
+                  </View>
+                ))}
                 {partialText ? (
-                  <Text style={styles.partialText}>{partialText}</Text>
+                  <View style={styles.segmentBlock}>
+                    <View style={styles.segmentTimestampSpacer} />
+                    <Text style={[styles.segmentText, styles.partialSegmentText]}>{partialText}</Text>
+                  </View>
                 ) : null}
-              </Text>
+              </>
             ) : (
               <Text style={styles.liveTranscriptPlaceholder}>{livePreviewPlaceholder}</Text>
             )}
@@ -437,7 +447,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingVertical: Spacing.sm,
   },
   headerButton: {
@@ -525,7 +535,7 @@ const styles = StyleSheet.create({
   // Live preview
   livePreviewContainer: {
     flex: 1,
-    marginHorizontal: Spacing.md,
+    marginHorizontal: Spacing.screenHorizontal,
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
@@ -564,12 +574,28 @@ const styles = StyleSheet.create({
   livePreviewScroll: {
     flex: 1,
   },
-  liveTranscriptText: {
+  segmentBlock: {
+    flexDirection: 'row',
+    paddingVertical: 5,
+    gap: 8,
+  },
+  segmentTimestamp: {
+    width: 38,
+    fontSize: 12,
+    color: Colors.textTertiary,
+    paddingTop: 3,
+    fontVariant: ['tabular-nums'],
+  },
+  segmentTimestampSpacer: {
+    width: 38,
+  },
+  segmentText: {
+    flex: 1,
     fontSize: 15,
     color: Colors.textPrimary,
     lineHeight: 22,
   },
-  partialText: {
+  partialSegmentText: {
     color: Colors.textSecondary,
     fontStyle: 'italic',
   },

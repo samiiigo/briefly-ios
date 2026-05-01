@@ -40,6 +40,7 @@ export function SaveRecordingScreen() {
   const { duration, filePath, fileSize, preTranscript } = route.params;
   const targetFolder: RecordingFolder = route.params.targetFolder ?? 'unlisted';
   const targetUserFolderId = route.params.targetUserFolderId;
+  const markImported = route.params.markImported ?? false;
 
   const { addRecording, recordings } = useRecordingStore();
   const { defaultProcessingMode, defaultTranscriptionMode } = useSettingsStore();
@@ -80,6 +81,7 @@ export function SaveRecordingScreen() {
       processingMode: defaultProcessingMode,
       folder: targetFolder,
       ...folderFlagsFor(targetFolder),
+      ...(markImported ? { isImported: true } : {}),
       userFolderId: targetUserFolderId,
       status: 'saved' as const,
       transcript: preTranscript, // pre-built from live/local chunks captured during recording
@@ -99,6 +101,7 @@ export function SaveRecordingScreen() {
     transcriptionMode,
     targetFolder,
     targetUserFolderId,
+    markImported,
     preTranscript,
     title,
     existingTitles,
@@ -145,11 +148,15 @@ export function SaveRecordingScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
-          <Ionicons name="close" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Save Recording</Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.headerSide}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
+            <Ionicons name="close" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.headerCenterSlot}>
+          <Text style={styles.headerTitle}>Save Recording</Text>
+        </View>
+        <View style={[styles.headerSide, styles.headerSideRight]} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -191,7 +198,7 @@ export function SaveRecordingScreen() {
                 {targetUserFolderId
                   ? 'User folder'
                   : targetFolder === 'archived'
-                    ? 'Archived'
+                    ? 'Archives'
                     : 'Unlisted'}
               </Text>
             </View>
@@ -247,10 +254,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingVertical: Spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.border,
+  },
+  headerSide: {
+    width: 40,
+    justifyContent: 'center',
+  },
+  headerSideRight: {
+    alignItems: 'flex-end',
+  },
+  headerCenterSlot: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0,
   },
   closeBtn: {
     width: 40,
@@ -262,9 +282,12 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: Colors.textPrimary,
+    textAlign: 'center',
   },
   content: {
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
   },
   label: {
     fontSize: 13,
@@ -329,7 +352,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   actions: {
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
+    paddingTop: Spacing.md,
     paddingBottom: Spacing.xl,
     gap: Spacing.md,
   },

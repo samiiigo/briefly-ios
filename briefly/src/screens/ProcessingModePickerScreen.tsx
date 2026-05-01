@@ -155,11 +155,9 @@ export function ProcessingModePickerScreen() {
               </View>
               {apiKeyInput.trim().length > 0 && isValidFormat && (
                 <View style={styles.detectedRow}>
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={14}
-                    color={Colors.primary}
-                  />
+                  <View style={styles.apiKeyIconSlot}>
+                    <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
+                  </View>
                   <Text style={styles.detectedText}>
                     Detected: {getProviderTitle(cloudProvider)}
                   </Text>
@@ -167,14 +165,10 @@ export function ProcessingModePickerScreen() {
               )}
               {apiKeyInput.trim().length > 0 && !isValidFormat && (
                 <View style={styles.detectedRow}>
-                  <Ionicons
-                    name="help-circle"
-                    size={14}
-                    color={Colors.orange}
-                  />
-                  <Text
-                    style={[styles.detectedText, { color: Colors.orange }]}
-                  >
+                  <View style={styles.apiKeyIconSlot}>
+                    <Ionicons name="help-circle" size={14} color={Colors.orange} />
+                  </View>
+                  <Text style={[styles.detectedText, styles.detectedTextWarning]}>
                     Key format not recognized yet. Expected patterns include sk-or-..., sk-proj-..., or AIza...
                   </Text>
                 </View>
@@ -195,7 +189,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingVertical: Spacing.sm,
     paddingBottom: Spacing.xs,
   },
@@ -210,7 +204,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   content: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingBottom: 100,
   },
   sectionLabel: {
@@ -220,14 +214,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: 24,
     marginBottom: 6,
-    marginLeft: 4,
   },
   sectionDescription: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.7)',
     lineHeight: 20,
     marginBottom: 16,
-    marginLeft: 4,
   },
   card: {
     backgroundColor: '#1C1C1E',
@@ -237,7 +229,7 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    marginLeft: 50, // Align with text start (16 padding + 22 radio + 12 gap)
+    marginLeft: Spacing.md + 22 + 12,
   },
   optionRow: {
     flexDirection: 'row',
@@ -305,14 +297,17 @@ const styles = StyleSheet.create({
   detectedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingLeft: 50,
-    paddingRight: 16,
+    paddingHorizontal: Spacing.md,
     paddingTop: 8,
     paddingBottom: 12,
+    gap: 12,
   },
   detectedText: {
+    flex: 1,
     fontSize: 13,
     color: Colors.primary,
+  },
+  detectedTextWarning: {
+    color: Colors.orange,
   },
 });

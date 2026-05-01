@@ -320,7 +320,7 @@ private final class AssemblyAIStreamingClient {
   func endSession() {
     queue.async {
       guard let task = self.socketTask else { return }
-      let endMessage = #"{"terminate_session": true}"#
+      let endMessage = #"{"type": "Terminate"}"#
       task.send(.string(endMessage)) { [weak self] error in
         if let error {
           self?.onMain {
@@ -366,7 +366,7 @@ private final class AssemblyAIStreamingClient {
     let task = session.webSocketTask(with: request)
     socketTask = task
     task.resume()
-    emitState(.open, reason: nil)
+    // .open is emitted when the "Begin" message arrives, not here
     receiveLoop()
   }
 
@@ -402,8 +402,12 @@ private final class AssemblyAIStreamingClient {
     }
 
     let eventType = (payload["type"] as? String)?.lowercased()
-    let transcript = (payload["transcript"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-    let isEndOfTurn = (payload["end_of_turn"] as? Bool) ?? false
+
+    // v3 API: session established
+    if eventType == "begin" {
+      emitState(.open, reason: nil)
+      return
+    }
 
     if eventType == "error" {
       let message = payload["error"] as? String
@@ -421,11 +425,16 @@ private final class AssemblyAIStreamingClient {
       return
     }
 
-    guard !transcript.isEmpty else { return }
-    if isEndOfTurn {
-      onMain { self.onFinal?(transcript) }
-    } else {
-      onMain { self.onPartial?(transcript) }
+    // v3 API: real-time transcript turn
+    if eventType == "turn" {
+      let transcript = (payload["transcript"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !transcript.isEmpty else { return }
+      let isFinalTurn = (payload["turn_is_formatted"] as? Bool) ?? false
+      if isFinalTurn {
+        onMain { self.onFinal?(transcript) }
+      } else {
+        onMain { self.onPartial?(transcript) }
+      }
     }
   }
 
@@ -474,7 +483,7 @@ private final class AssemblyAIStreamingClient {
 @objc(BrieflyTranscriber)
 class BrieflyTranscriber: RCTEventEmitter {
 
-  // MARK: - Live session state
+  // MARK: - Live session state (legacy cloud path — WebSocket now handled in JS)
 
   private var audioCapture: LiveAudioCapture?
   private var streamingClient: AssemblyAIStreamingClient?
@@ -485,6 +494,13 @@ class BrieflyTranscriber: RCTEventEmitter {
   private var isLive = false
   private var isPaused = false
   private var hasListeners = false
+
+  // MARK: - Audio-capture-only state (JS handles the WebSocket/AssemblyAI side)
+
+  private var captureSes: LiveAudioCapture?
+  private var captureURL: URL?
+  private var captureDate: Date?
+  private var isCaptureActive = false
 
   // MARK: - RCTEventEmitter
 
@@ -498,6 +514,7 @@ class BrieflyTranscriber: RCTEventEmitter {
       "onTranscriptSegment",     // word-level segment from post-recording file transcription
       "onTranscriptionComplete", // post-recording file transcription finished
       "onTranscriptionError",    // any error
+      "onPCMChunk",              // raw PCM audio chunk for JS-side streaming (base64 encoded)
     ]
   }
 
@@ -752,6 +769,82 @@ class BrieflyTranscriber: RCTEventEmitter {
       "uri": result.uri,
       "duration": result.duration
     ])
+  }
+
+  // MARK: - Audio Capture Only (PCM chunks → JS WebSocket)
+
+  @objc func startAudioCapture(
+    _ options: NSDictionary,
+    resolver resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    DispatchQueue.main.async {
+      if self.isCaptureActive {
+        reject("ALREADY_CAPTURING", "Audio capture already in progress.", nil)
+        return
+      }
+
+      let sampleRate = options["sampleRate"] as? Int ?? 16000
+      let capture = LiveAudioCapture(sampleRate: Double(sampleRate))
+
+      capture.onPCMChunk = { [weak self] data in
+        guard let self, self.hasListeners, self.isCaptureActive else { return }
+        let b64 = data.base64EncodedString()
+        self.sendEvent(withName: "onPCMChunk", body: ["data": b64])
+      }
+      capture.onError = { [weak self] message in
+        self?.sendError(message)
+      }
+
+      do {
+        try capture.start()
+      } catch {
+        reject("AUDIO_CAPTURE", error.localizedDescription, error)
+        return
+      }
+
+      self.captureSes = capture
+      self.captureURL = capture.outputURL
+      self.captureDate = Date()
+      self.isCaptureActive = true
+      resolve(["sampleRate": sampleRate])
+    }
+  }
+
+  @objc func pauseAudioCapture(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    captureSes?.pause()
+    resolve(nil)
+  }
+
+  @objc func resumeAudioCapture(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    do {
+      try captureSes?.resume()
+      resolve(nil)
+    } catch {
+      reject("ENGINE_START", error.localizedDescription, error)
+    }
+  }
+
+  @objc func stopAudioCapture(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    let duration = captureDate.map { Date().timeIntervalSince($0) } ?? 0
+    let uri = captureURL?.absoluteString ?? ""
+
+    captureSes?.stop()
+    captureSes = nil
+    captureURL = nil
+    captureDate = nil
+    isCaptureActive = false
+
+    resolve(["uri": uri, "duration": duration])
   }
 
   // MARK: - Post-recording file transcription

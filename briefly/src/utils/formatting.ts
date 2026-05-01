@@ -12,6 +12,24 @@ function startOfDay(d: Date): Date {
   return copy;
 }
 
+/** Monday 00:00 local time for the ISO-style week containing `d`. */
+function startOfWeekMonday(d: Date): Date {
+  const x = new Date(d);
+  const day = x.getDay(); // 0 Sun … 6 Sat
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  x.setDate(x.getDate() + mondayOffset);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function sameWeek(a: Date, b: Date): boolean {
+  return startOfWeekMonday(a).getTime() === startOfWeekMonday(b).getTime();
+}
+
+function sameMonthAndYear(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
 export function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -45,6 +63,11 @@ export function formatDate(timestamp: number): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/**
+ * Section title for grouping recordings by created time (Home, folder browse).
+ * Uses calendar-aware buckets: Today → Yesterday → This week → Last week →
+ * This month → Last month → month + year for older items.
+ */
 export function formatGroupLabel(timestamp: number): string {
   const ts = toTimestampMs(timestamp);
   const date = new Date(ts);
@@ -57,8 +80,27 @@ export function formatGroupLabel(timestamp: number): string {
 
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Yesterday';
-  if (diffDays >= 2 && diffDays <= 7) return 'Previous 7 Days';
-  if (diffDays >= 8 && diffDays <= 30) return 'Previous 30 Days';
+
+  if (diffDays >= 2 && sameWeek(date, now)) {
+    return 'This week';
+  }
+
+  const mondayThisWeek = startOfWeekMonday(now);
+  const mondayLastWeek = new Date(mondayThisWeek);
+  mondayLastWeek.setDate(mondayLastWeek.getDate() - 7);
+
+  if (sameWeek(date, mondayLastWeek)) {
+    return 'Last week';
+  }
+
+  if (sameMonthAndYear(date, now)) {
+    return 'This month';
+  }
+
+  const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  if (sameMonthAndYear(date, firstOfLastMonth)) {
+    return 'Last month';
+  }
 
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
