@@ -1,15 +1,16 @@
 import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppNavigator } from './navigation/AppNavigator';
-import { useRecordingStore } from './store/useRecordingStore';
-import { useSettingsStore } from './store/useSettingsStore';
-import { installRealtimeTerminalLogs, logger } from './utils/logger';
-import { checkEnvironment } from './utils/environmentCheck';
+import { Stack } from 'expo-router';
+import { useRecordingStore } from '../store/useRecordingStore';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { installRealtimeTerminalLogs, logger } from '../utils/logger';
+import { checkEnvironment } from '../utils/environmentCheck';
+import { Colors } from '../utils/theme';
 
-export default function App() {
+export default function RootLayout() {
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);
 
   useEffect(() => {
@@ -17,8 +18,6 @@ export default function App() {
     logger.info('SYSTEM', 'App startup: loading recordings from storage');
     loadRecordings();
 
-    // Run environment check after the settings store has finished hydrating
-    // from AsyncStorage. If already hydrated, run immediately.
     const runEnvCheck = () => {
       const env = checkEnvironment();
       logger.info('SYSTEM', 'Environment check', {
@@ -44,7 +43,20 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <AppNavigator />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: Colors.background },
+            animation: 'slide_from_right',
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+          <Stack.Screen name="recording" />
+          <Stack.Screen name="folder" />
+          <Stack.Screen name="transcription-mode" />
+          <Stack.Screen name="processing-mode" />
+          <Stack.Screen name="+not-found" />
+        </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
