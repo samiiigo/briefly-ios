@@ -13,20 +13,19 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useRouter } from 'expo-router';
 import { useRecordingStore } from '../store/useRecordingStore';
 import { useUserFolderStore } from '../store/useUserFolderStore';
 import { useFolderListLayoutStore } from '../store/useFolderListLayoutStore';
 import { GlassAddFolderButton, GlassCircleIconButton } from './GlassAddFolderButton';
 import { FolderListViewOptionsSheet } from './FolderListViewOptionsSheet';
-import { RootStackParamList } from '../types';
+
 import { resolveRecordingFolder } from '../utils/recordingFolder';
 import { Spacing, Typography } from '../utils/theme';
 import { BUILT_IN_FOLDERS } from '../constants/builtInFolders';
 import { FolderUserSwipeableRow } from './FolderUserSwipeableRow';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+
 
 export const MAX_USER_FOLDERS_PREVIEW = 6;
 
@@ -57,7 +56,7 @@ export function LibraryFolderBrowser({
   showBack = false,
   stackTitle = 'All folders',
 }: LibraryFolderBrowserProps) {
-  const navigation = useNavigation<Nav>();
+  const router = useRouter();
   const recordings = useRecordingStore((s) => s.recordings);
   const { folders, loadFolders, addFolder, toggleFolderPinned } = useUserFolderStore();
   const layout = useFolderListLayoutStore((s) => s.layout);
@@ -142,8 +141,8 @@ export function LibraryFolderBrowser({
   }, [builtInTiles, userTiles, maxUserFolders]);
 
   const openFullFolders = useCallback(() => {
-    navigation.navigate('FolderList');
-  }, [navigation]);
+    router.push('/folder/list');
+  }, [router]);
 
   const handleAddFolder = useCallback(() => {
     if (Platform.OS === 'ios') {
@@ -181,9 +180,9 @@ export function LibraryFolderBrowser({
 
   const openFolder = useCallback(
     (folderId: string, folderName: string, folderType: 'built-in' | 'user') => {
-      navigation.navigate('FolderRecordings', { folderId, folderName, folderType });
+      router.push({ pathname: `/folder/${folderId}` as any, params: { folderName, folderType } });
     },
-    [navigation]
+    [router]
   );
 
   const handleToggleUserFolderPin = useCallback(
@@ -371,7 +370,7 @@ export function LibraryFolderBrowser({
       <View style={styles.header}>
         {showBack ? (
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={() => router.back()}
             style={styles.headerIconBtn}
             activeOpacity={0.8}
             accessibilityRole="button"
