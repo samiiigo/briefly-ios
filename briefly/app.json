@@ -26,26 +26,11 @@
         "usesNonExemptEncryption": false
       }
     },
-    "android": {
-      "package": "com.briefly.app",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundColor": "#000000"
-      },
-      "permissions": [
-        "RECORD_AUDIO",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
-      ]
-    },
     "plugins": [
       "expo-sqlite",
       "expo-audio",
       "expo-router"
     ],
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
     "extra": {
       "assemblyAiApiKey": "",
       "openRouterSharedApiKey": "",

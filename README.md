@@ -1,13 +1,11 @@
 Briefly
 =======
 
-**Briefly** is a cross‑platform, privacy‑first AI transcription app. It records speech, converts it to text, and generates concise summaries using either fully local processing or a secure cloud mode—no subscriptions, no data retention.
+**Briefly** is an iOS-first, privacy-first AI transcription app. It records speech, converts it to text, and generates concise summaries using either fully local processing or a secure cloud mode with no subscriptions and no data retention.
 
 The codebase in this repo is the React Native / Expo app that targets:
 
 - iOS
-- Android
-- (Optionally) desktop shells that reuse the same React code
 
 The goal is to feel as fast and local as a traditional voice recorder while adding just enough AI to make your recordings useful.
 
@@ -69,7 +67,6 @@ This README intentionally stays high level; see `Briefly.md` for more product‑
 - **Expo CLI** and optional native tooling:
   - `npm install -g expo-cli` (or use `npx expo` with the local binary)
   - For iOS: Xcode + iOS Simulator (on macOS)
-  - For Android: Android Studio + an Android emulator or device
 
 ### Install dependencies
 
@@ -122,16 +119,7 @@ Edit `briefly/app.json` and add to the `expo.extra` section:
 
 #### Option 3: Native build settings (development builds / CI)
 
-For native builds, you can also inject AssemblyAI at native compile time:
-
-- Android: set `ASSEMBLYAI_API_KEY` as a Gradle property or environment variable.
-- iOS: set `expo.ios.infoPlist.ASSEMBLYAI_API_KEY` in `briefly/app.json` (or inject the value during CI build).
-
-Example (Android):
-
-```bash
-ASSEMBLYAI_API_KEY=your_assemblyai_key ./gradlew assembleDebug
-```
+For native builds, you can also inject AssemblyAI at native compile time by setting `expo.ios.infoPlist.ASSEMBLYAI_API_KEY` in `briefly/app.json` (or by injecting the value during CI builds).
 
 #### Obtaining API keys
 
@@ -149,20 +137,13 @@ npm run start
 Then:
 
 - Press **`i`** in the Expo CLI to run on iOS Simulator (macOS only), or
-- Press **`a`** to run on an Android emulator/device, or
-- Scan the QR code with the Expo Go app.
+- Scan the QR code with the Expo Go app on iOS.
 
 You can also use the convenience scripts:
 
 ```bash
-# Android (native build)
-npm run android
-
 # iOS (native build, macOS only)
 npm run ios
-
-# Web preview
-npm run web
 ```
 
 ---
@@ -172,17 +153,10 @@ npm run web
 This project is set up for EAS (Expo Application Services) builds:
 
 ```bash
-# Build for Android
-npm run build:android
-
 # Build for iOS
 npm run build:ios
 
-# Build both platforms
-npm run build:all
-
 # Submit to stores (after configuring EAS)
-npm run submit:android
 npm run submit:ios
 ```
 
