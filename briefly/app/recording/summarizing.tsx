@@ -3,13 +3,13 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useRecordingStore } from '../../store/useRecordingStore';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import { TranscriptionService } from '../../services/transcription';
-import { SummarizationService } from '../../services/summarization';
-import { transcriptionModeTitle } from '../../lib/transcriptionMode';
-import { Colors, Spacing, BorderRadius, SliderAnimation } from '../../lib/theme';
-import { logger } from '../../lib/logger';
+import { useRecordingStore } from '@/context/useRecordingStore';
+import { useSettingsStore } from '@/context/useSettingsStore';
+import { TranscriptionService } from '@/services/transcription';
+import { SummarizationService } from '@/services/summarization';
+import { transcriptionModeTitle } from '@/utils/transcriptionMode';
+import { Colors, Spacing, BorderRadius, SliderAnimation } from '@/theme';
+import { logger } from '@/utils/logger';
 
 export default function SummarizingScreen() {
   const router = useRouter();

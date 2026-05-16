@@ -3,16 +3,16 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform, 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useRecordingStore } from '../../store/useRecordingStore';
-import { usePlayback } from '../../hooks/usePlayback';
-import { useExport } from '../../hooks/useExport';
-import { KeyInsights } from '../../components/recording/KeyInsights';
-import { TranscriptSegmentView } from '../../components/recording/TranscriptSegmentView';
-import { ProcessingBadge } from '../../components/recording/ProcessingBadge';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import { transcriptionModeTitle } from '../../lib/transcriptionMode';
-import { formatDuration, formatDate, ensureUniqueTitle } from '../../lib';
-import { Colors, Spacing, BorderRadius } from '../../lib/theme';
+import { useRecordingStore } from '@/context/useRecordingStore';
+import { usePlayback } from '@/hooks/usePlayback';
+import { useExport } from '@/hooks/useExport';
+import { KeyInsights } from '@/components/features/recording/KeyInsights';
+import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
+import { ProcessingBadge } from '@/components/features/recording/ProcessingBadge';
+import { useSettingsStore } from '@/context/useSettingsStore';
+import { transcriptionModeTitle } from '@/utils/transcriptionMode';
+import { formatDuration, formatDate, ensureUniqueTitle } from '@/utils';
+import { Colors, Spacing, BorderRadius } from '@/theme';
 
 export default function TranscriptScreen() {
   const insets = useSafeAreaInsets();

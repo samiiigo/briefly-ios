@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LibraryFolderBrowser, MAX_USER_FOLDERS_PREVIEW } from '../../components/library/LibraryFolderBrowser';
-import { Colors } from '../../lib/theme';
+import { LibraryFolderBrowser, MAX_USER_FOLDERS_PREVIEW } from '@/components/features/library/LibraryFolderBrowser';
+import { Colors } from '@/theme';
 
 export default function HistoryScreen() {
   return (

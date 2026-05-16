@@ -3,11 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useSettingsStore } from '../store/useSettingsStore';
-import { ProcessingMode } from '../types';
-import { processingModeDescription, processingModeTitle } from '../lib/processingMode';
-import { getProviderTitle, getApiKeyPlaceholder, isValidApiKeyFormat, detectCloudProviderFromKey } from '../lib/providers/cloudProvider';
-import { Colors, Spacing } from '../lib/theme';
+import { useSettingsStore } from '@/context/useSettingsStore';
+import { ProcessingMode } from '@/types';
+import { processingModeDescription, processingModeTitle } from '@/utils/processingMode';
+import { getProviderTitle, getApiKeyPlaceholder, isValidApiKeyFormat, detectCloudProviderFromKey } from '@/utils/providers/cloudProvider';
+import { Colors, Spacing } from '@/theme';
 
 const PROCESSING_MODES: ProcessingMode[] = ['cloud-shared-openrouter', 'cloud-user-key', 'on-device'];
 

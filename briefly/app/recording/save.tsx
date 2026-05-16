@@ -3,17 +3,17 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useRecordingStore } from '../../store/useRecordingStore';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import { ProcessingBadge } from '../../components/recording/ProcessingBadge';
-import { RecordingFolder, TranscriptionMode } from '../../types';
-import { formatDuration, formatFileSize, generateId, generateTitle, ensureUniqueTitle } from '../../lib';
-import { normalizeTranscriptionMode, transcriptionModeDescription, transcriptionModeTitle } from '../../lib/transcriptionMode';
-import { processingModeTitle } from '../../lib/processingMode';
-import { folderFlagsFor } from '../../lib/folders/recordingFolder';
-import { Colors, Spacing, BorderRadius } from '../../lib/theme';
-import { logger } from '../../lib/logger';
-import { consumeTransitData } from '../../lib/navigationTransit';
+import { useRecordingStore } from '@/context/useRecordingStore';
+import { useSettingsStore } from '@/context/useSettingsStore';
+import { ProcessingBadge } from '@/components/features/recording/ProcessingBadge';
+import { RecordingFolder, TranscriptionMode } from '@/types';
+import { formatDuration, formatFileSize, generateId, generateTitle, ensureUniqueTitle } from '@/utils';
+import { normalizeTranscriptionMode, transcriptionModeDescription, transcriptionModeTitle } from '@/utils/transcriptionMode';
+import { processingModeTitle } from '@/utils/processingMode';
+import { folderFlagsFor } from '@/utils/folders/recordingFolder';
+import { Colors, Spacing, BorderRadius } from '@/theme';
+import { logger } from '@/utils/logger';
+import { consumeTransitData } from '@/utils/navigationTransit';
 
 export default function SaveRecordingScreen() {
   const router = useRouter();

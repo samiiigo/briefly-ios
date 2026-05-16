@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { Colors } from '../../lib/theme';
+import { Colors } from '@/theme';
 
 export default function RecordingLayout() {
   return (

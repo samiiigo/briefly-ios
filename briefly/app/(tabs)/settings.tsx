@@ -11,10 +11,10 @@ import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import { transcriptionModeTitle } from '../../lib/transcriptionMode';
-import { processingModeTitle } from '../../lib/processingMode';
-import { Colors, Spacing } from '../../lib/theme';
+import { useSettingsStore } from '@/context/useSettingsStore';
+import { transcriptionModeTitle } from '@/utils/transcriptionMode';
+import { processingModeTitle } from '@/utils/processingMode';
+import { Colors, Spacing } from '@/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();

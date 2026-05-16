@@ -9,16 +9,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useRecordingStore } from '../../store/useRecordingStore';
-import { RecordingService } from '../../services/audio';
-import { RecordingCard } from '../../components/recording/RecordingCard';
-import { RecordingSwipeableRow } from '../../components/recording/RecordingSwipeableRow';
-import { RecordButton } from '../../components/recording/RecordButton';
-import { SearchIconButton } from '../../components/common/SearchIconButton';
-import { Recording } from '../../types';
-import { ensureUniqueTitle, groupRecordingsByTime } from '../../lib';
-import { resolveRecordingFolder } from '../../lib/folders/recordingFolder';
-import { Colors, Spacing, BorderRadius, Typography } from '../../lib/theme';
+import { useRecordingStore } from '@/context/useRecordingStore';
+import { RecordingService } from '@/services/audio';
+import { RecordingCard } from '@/components/features/recording/RecordingCard';
+import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
+import { RecordButton } from '@/components/features/recording/RecordButton';
+import { SearchIconButton } from '@/components/ui/SearchIconButton';
+import { Recording } from '@/types';
+import { ensureUniqueTitle, groupRecordingsByTime } from '@/utils';
+import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
+import { Colors, Spacing, BorderRadius, Typography } from '@/theme';
 
 export default function HomeScreen() {
   const router = useRouter();

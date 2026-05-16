@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useSettingsStore } from '../store/useSettingsStore';
-import { TranscriptionMode } from '../types';
-import { normalizeTranscriptionMode, transcriptionModeDescription, transcriptionModeTitle } from '../lib/transcriptionMode';
-import { Colors, Spacing } from '../lib/theme';
+import { useSettingsStore } from '@/context/useSettingsStore';
+import { TranscriptionMode } from '@/types';
+import { normalizeTranscriptionMode, transcriptionModeDescription, transcriptionModeTitle } from '@/utils/transcriptionMode';
+import { Colors, Spacing } from '@/theme';
 
 const TRANSCRIPTION_MODES: TranscriptionMode[] = ['live-assemblyai', 'post-assemblyai', 'local-on-device'];
 

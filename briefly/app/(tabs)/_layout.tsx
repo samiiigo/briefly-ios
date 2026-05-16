@@ -2,7 +2,7 @@ import { Platform, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { Colors } from '../../lib/theme';
+import { Colors } from '@/theme';
 
 export default function TabsLayout() {
   return (
