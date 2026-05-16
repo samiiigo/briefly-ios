@@ -83,7 +83,9 @@ export default function FolderRecordingsScreen() {
         <View style={styles.headerRight}><GlassCircleIconButton ionIcon="ellipsis-horizontal" iconSize={22} onPress={() => setViewSheetVisible(true)} accessibilityLabel="View options" /></View>
       </View>
       {listEmpty ? <View style={styles.emptyWrap}><Text style={styles.emptyText}>No recordings match this view.</Text></View> : effectiveLayout === 'grid' ? <FlatList key={`grid-${folderKey}`} data={flatData} numColumns={2} keyExtractor={item => item.id} columnWrapperStyle={styles.gridRow} contentContainerStyle={styles.contentGrid} renderItem={renderGridItem} /> : <SectionList sections={sections} keyExtractor={item => item.id} contentContainerStyle={styles.content} stickySectionHeadersEnabled renderSectionHeader={({ section }) => section.title ? <View style={styles.sectionHeaderWrap}><Text style={styles.sectionHeader}>{section.title}</Text></View> : null} renderItem={({ item }) => <View>{renderCard(item, false)}</View>} />}
-      {!isRecentlyDeleted && <RecordButton onPress={handleRecordIntoFolder} />}
+      {!isRecentlyDeleted && (
+        <RecordButton onPress={handleRecordIntoFolder} style={{ bottom: 90 }} />
+      )}
       <FolderViewOptionsSheet visible={viewSheetVisible} folderKey={folderKey} onClose={() => setViewSheetVisible(false)} />
     </SafeAreaView>
   );

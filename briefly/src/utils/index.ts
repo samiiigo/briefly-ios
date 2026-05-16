@@ -12,6 +12,8 @@ export {
   formatTimestamp,
   formatDate,
   formatGroupLabel,
+  formatRecentsCardDate,
+  formatRecentsGroupLabel,
   formatFileSize,
 } from './formatting';
 

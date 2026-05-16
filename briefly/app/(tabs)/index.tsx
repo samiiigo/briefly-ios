@@ -11,14 +11,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { RecordingService } from '@/services/audio';
-import { RecordingCard } from '@/components/features/recording/RecordingCard';
+import { RecentsHeader } from '@/components/features/recents/RecentsHeader';
+import { RecentsEntryCard } from '@/components/features/recents/RecentsEntryCard';
 import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
 import { RecordButton } from '@/components/features/recording/RecordButton';
-import { SearchIconButton } from '@/components/ui/SearchIconButton';
 import { Recording } from '@/types';
-import { ensureUniqueTitle, groupRecordingsByTime } from '@/utils';
+import {
+  ensureUniqueTitle,
+  groupRecordingsByTime,
+  formatRecentsGroupLabel,
+} from '@/utils';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
-import { Colors, Spacing, BorderRadius, Typography } from '@/theme';
+import { Colors, Spacing } from '@/theme';
+
+const LIST_BOTTOM_PADDING = 140;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -37,14 +43,21 @@ export default function HomeScreen() {
     return () => clearInterval(intervalId);
   }, []);
 
-  const handleRename = useCallback(async (recording: Recording, newTitle: string) => {
-    const existingTitles = recordings.filter((r) => r.id !== recording.id).map((r) => r.title);
-    try {
-      await updateRecording(recording.id, { title: ensureUniqueTitle(newTitle, existingTitles) });
-    } catch (err) {
-      console.error('Failed to rename recording:', err);
-    }
-  }, [recordings, updateRecording]);
+  const handleRename = useCallback(
+    async (recording: Recording, newTitle: string) => {
+      const existingTitles = recordings
+        .filter((r) => r.id !== recording.id)
+        .map((r) => r.title);
+      try {
+        await updateRecording(recording.id, {
+          title: ensureUniqueTitle(newTitle, existingTitles),
+        });
+      } catch (err) {
+        console.error('Failed to rename recording:', err);
+      }
+    },
+    [recordings, updateRecording]
+  );
 
   useEffect(() => {
     loadRecordings();
@@ -57,30 +70,27 @@ export default function HomeScreen() {
   }, [router]);
 
   const visibleRecordings = useMemo(
-    () => recordings.filter(
-      (r) => r.deletedAt == null && resolveRecordingFolder(r) !== 'archived'
-    ),
+    () =>
+      recordings.filter(
+        (r) => r.deletedAt == null && resolveRecordingFolder(r) !== 'archived'
+      ),
     [recordings]
   );
 
   const sections = useMemo(() => {
     void now;
-    return groupRecordingsByTime(visibleRecordings);
+    return groupRecordingsByTime(visibleRecordings, formatRecentsGroupLabel);
   }, [visibleRecordings, now]);
-
 
   if (visibleRecordings.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Briefly</Text>
-          <SearchIconButton />
-        </View>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <RecentsHeader />
 
         <View style={styles.emptyState}>
           <View style={styles.emptyIconRing}>
             <View style={styles.emptyIconInner}>
-              <Ionicons name="mic" size={40} color={Colors.textSecondary} />
+              <Ionicons name="mic" size={40} color={Colors.subtext} />
             </View>
           </View>
           <Text style={styles.emptyTitle}>No recordings yet</Text>
@@ -99,21 +109,19 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Briefly</Text>
-        <SearchIconButton />
-      </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <RecentsHeader />
 
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        stickySectionHeadersEnabled
+        stickySectionHeadersEnabled={false}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={styles.itemGap} />}
+        SectionSeparatorComponent={() => <View style={styles.sectionGap} />}
         renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeaderWrap}>
-            <Text style={styles.sectionHeader}>{section.title}</Text>
-          </View>
+          <Text style={styles.sectionHeader}>{section.title}</Text>
         )}
         renderItem={({ item }) => (
           <RecordingSwipeableRow
@@ -121,7 +129,7 @@ export default function HomeScreen() {
             onPress={() => router.push(`/recording/${item.id}`)}
             onDelete={() => deleteRecording(item.id)}
           >
-            <RecordingCard
+            <RecentsEntryCard
               recording={item}
               onPress={() => router.push(`/recording/${item.id}`)}
               onDelete={() => deleteRecording(item.id)}
@@ -141,39 +149,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.screenHorizontal,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.largeTitle,
-    textAlign: 'left',
-  },
   listContent: {
-    paddingHorizontal: Spacing.screenHorizontal,
-    paddingTop: Spacing.contentTop,
-  },
-  sectionHeaderWrap: {
-    backgroundColor: Colors.background,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: LIST_BOTTOM_PADDING,
   },
   sectionHeader: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.5)',
-    letterSpacing: 0.5,
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 16,
+    color: Colors.subtext,
+    marginBottom: 0,
+    paddingHorizontal: Spacing.sm,
   },
-  // Empty state
+  itemGap: {
+    height: 12,
+  },
+  sectionGap: {
+    height: 8,
+  },
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.xl,
+    paddingBottom: LIST_BOTTOM_PADDING,
   },
   emptyIconRing: {
     width: 160,
@@ -189,7 +188,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -201,7 +200,7 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 15,
-    color: Colors.textSecondary,
+    color: Colors.subtext,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: Spacing.xl,
@@ -209,12 +208,12 @@ const styles = StyleSheet.create({
   startButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.primary,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.lg,
+    borderRadius: 16,
     gap: Spacing.sm,
   },
   startButtonDot: {

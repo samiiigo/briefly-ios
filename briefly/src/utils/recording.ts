@@ -22,7 +22,8 @@ export function ensureUniqueTitle(title: string, existingTitles: string[]): stri
 }
 
 export function groupRecordingsByTime(
-  recordings: Recording[]
+  recordings: Recording[],
+  labelFormatter: (timestamp: number) => string = formatGroupLabel
 ): { title: string; data: Recording[] }[] {
   if (!recordings.length) return [];
 
@@ -31,7 +32,7 @@ export function groupRecordingsByTime(
   const sectionMap = new Map<string, Recording[]>();
 
   for (const recording of sorted) {
-    const label = formatGroupLabel(recording.createdAt);
+    const label = labelFormatter(recording.createdAt);
     let bucket = sectionMap.get(label);
     if (!bucket) {
       bucket = [];

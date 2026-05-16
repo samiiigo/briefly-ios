@@ -16,7 +16,10 @@ export const Colors = {
 
   textPrimary: '#FFFFFF',
   textSecondary: '#8E8E93',
+  /** Recents feed secondary labels (matches design mock). */
+  subtext: '#98989E',
   textTertiary: '#48484A',
+  danger: '#FF453A',
 
   onDeviceBadge: 'rgba(52, 199, 89, 0.15)',
   onDeviceText: '#34C759',
@@ -76,6 +79,8 @@ export const BorderRadius = {
   md: 12,
   lg: 16,
   xl: 20,
+  /** Entry cards on the recents feed (rounded-3xl). */
+  cardXL: 24,
   full: 9999,
 };
 
