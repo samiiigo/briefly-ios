@@ -1,4 +1,8 @@
-import { Platform, Easing, TextStyle } from 'react-native';
+import { Easing, Platform } from 'react-native';
+import { appFont, withAppFont } from './fonts';
+
+export { Fonts, fontFamilyForSize, withAppFont, appFont, SF_DISPLAY_MIN_SIZE } from './fonts';
+export { installAppFonts } from './installAppFonts';
 
 export const Colors = {
   background: '#000000',
@@ -32,34 +36,24 @@ export const Colors = {
   pauseButton: '#3A3A3C',
 };
 
-/**
- * iOS large-title treatment: SF Pro Display at 34pt (Apple uses Display for sizes above ~20pt).
- * Matches common HIG mocks: 700 weight, ~0.4px tracking. Collapse-to-inline title on scroll
- * requires native navigation large-title behavior; tab screens use this for the expanded look.
- */
-const largeTitleBase: TextStyle = {
-  fontSize: 34,
-  fontWeight: '700',
-  letterSpacing: 0.4,
-  color: Colors.textPrimary,
-  ...Platform.select({
-    ios: { fontFamily: 'SF Pro Display' },
-    default: {},
-  }),
-};
-
+/** SF Pro scale — Display for ≥20pt, Text below (Apple HIG). */
 export const Typography = {
-  largeTitle: largeTitleBase,
-  title1: { fontSize: 28, fontWeight: '700' as const, color: Colors.textPrimary },
-  title2: { fontSize: 22, fontWeight: '700' as const, color: Colors.textPrimary },
-  title3: { fontSize: 20, fontWeight: '600' as const, color: Colors.textPrimary },
-  headline: { fontSize: 17, fontWeight: '600' as const, color: Colors.textPrimary },
-  body: { fontSize: 17, fontWeight: '400' as const, color: Colors.textPrimary },
-  callout: { fontSize: 16, fontWeight: '400' as const, color: Colors.textPrimary },
-  subhead: { fontSize: 15, fontWeight: '400' as const, color: Colors.textPrimary },
-  footnote: { fontSize: 13, fontWeight: '400' as const, color: Colors.textSecondary },
-  caption1: { fontSize: 12, fontWeight: '400' as const, color: Colors.textSecondary },
-  caption2: { fontSize: 11, fontWeight: '400' as const, color: Colors.textSecondary },
+  largeTitle: withAppFont({
+    fontSize: 34,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    color: Colors.textPrimary,
+  }),
+  title1: appFont(28, '700', Colors.textPrimary),
+  title2: appFont(22, '700', Colors.textPrimary),
+  title3: appFont(20, '600', Colors.textPrimary),
+  headline: appFont(17, '600', Colors.textPrimary),
+  body: appFont(17, '400', Colors.textPrimary),
+  callout: appFont(16, '400', Colors.textPrimary),
+  subhead: appFont(15, '400', Colors.textPrimary),
+  footnote: appFont(13, '400', Colors.textSecondary),
+  caption1: appFont(12, '400', Colors.textSecondary),
+  caption2: appFont(11, '400', Colors.textSecondary),
 };
 
 export const Spacing = {

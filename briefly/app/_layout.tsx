@@ -8,7 +8,9 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { installRealtimeTerminalLogs, logger } from '@/utils/logger';
 import { checkEnvironment } from '@/utils/environmentCheck';
-import { Colors } from '@/theme';
+import { Colors, installAppFonts } from '@/theme';
+
+installAppFonts();
 
 export default function RootLayout() {
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);

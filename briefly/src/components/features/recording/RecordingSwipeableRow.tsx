@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, isValidElement, cloneElement } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,24 @@ import {
   FlatList,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import type { Recording } from '@/types';
+import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useUserFolderStore } from '@/context/useUserFolderStore';
 import { folderFlagsFor } from '@/utils/folders/recordingFolder';
 import { RecordingFolder } from '@/types';
 import { BUILTIN_MOVE_ORDER, BUILT_IN_FOLDERS } from '@/constants/builtInFolders';
+import { SWIPE_ACTION_GAP } from './SwipeableAnimatedAction';
+import { SwipeableAnimatedAction } from './SwipeableAnimatedAction';
+import { SwipeableMotionCard } from './SwipeableMotionCard';
+import {
+  RECORDING_SWIPE_FRICTION,
+  RECORDING_SWIPE_OVERSHOOT_FRICTION,
+  RECORDING_SWIPE_SPRING,
+} from './recordingSwipeSpring';
 
 interface RecordingSwipeableRowProps {
   recording: Recording;
@@ -42,8 +52,55 @@ export function RecordingSwipeableRow({
   isRecentlyDeleted = false,
 }: RecordingSwipeableRowProps) {
   const swipeableRef = useRef<React.ElementRef<typeof Swipeable> | null>(null);
+  const dragTranslation = useSharedValue(0);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
   const { folders, loadFolders } = useUserFolderStore();
+
+  const closeThisRow = useCallback(() => {
+    swipeableRef.current?.close();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      useActiveSwipeableStore.getState().release(recording.id);
+    };
+  }, [recording.id]);
+
+  const handleSwipeableOpen = useCallback(() => {
+    useActiveSwipeableStore.getState().open(recording.id, closeThisRow);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [closeThisRow, recording.id]);
+
+  const handleSwipeableClose = useCallback(() => {
+    useActiveSwipeableStore.getState().release(recording.id);
+  }, [recording.id]);
+
+  const handleSwipeableOpenStartDrag = useCallback(() => {
+    const { activeId, closeActive } = useActiveSwipeableStore.getState();
+    if (activeId && activeId !== recording.id) {
+      closeActive();
+    }
+  }, [recording.id]);
+
+  const wrapChildPress = useCallback(
+    (child: React.ReactNode) => {
+      if (!isValidElement<{ onPress?: () => void }>(child)) {
+        return child;
+      }
+      const childOnPress = child.props.onPress;
+      return cloneElement(child, {
+        onPress: () => {
+          useActiveSwipeableStore.getState().closeActive();
+          if (childOnPress) {
+            childOnPress();
+          } else {
+            onPress();
+          }
+        },
+      });
+    },
+    [onPress]
+  );
 
   const toggleFavorite = useCallback(() => {
     swipeableRef.current?.close();
@@ -98,6 +155,7 @@ export function RecordingSwipeableRow({
   }, [folders]);
 
   const showMoveSheet = useCallback(async () => {
+    closeThisRow();
     await loadFolders();
     const latestFolders = useUserFolderStore.getState().folders;
     const dests = moveDestinations(latestFolders);
@@ -122,7 +180,7 @@ export function RecordingSwipeableRow({
     } else {
       setMoveModalVisible(true);
     }
-  }, [loadFolders, moveDestinations, handleMoveTo]);
+  }, [closeThisRow, loadFolders, moveDestinations, handleMoveTo]);
 
   const [moveModalVisible, setMoveModalVisible] = React.useState(false);
   const destsForModal = moveDestinations();
@@ -156,93 +214,142 @@ export function RecordingSwipeableRow({
     onRestore?.();
   }, [onRestore]);
 
-  const renderRightActions = () => (
-    <View style={styles.trailingActions}>
-      {isRecentlyDeleted ? (
-        <TouchableOpacity
-          style={[styles.trailingButton, styles.trailingButtonWide, styles.deleteButton]}
-          onPress={handleDelete}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="trash" size={22} color="#FFFFFF" />
-          <Text style={styles.trailingButtonLabel}>Delete Forever</Text>
-        </TouchableOpacity>
-      ) : (
-        <>
-          <TouchableOpacity
-            style={[styles.trailingButton, styles.archiveButton]}
-            onPress={recording.isArchived ? removeFromArchive : moveToArchive}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name={recording.isArchived ? 'arrow-undo' : 'archive'}
-              size={22}
-              color="#FFFFFF"
+  const renderRightActions = useCallback(
+    (progress: SharedValue<number>, translation: SharedValue<number>) => {
+      dragTranslation.value = translation.value;
+
+      if (isRecentlyDeleted) {
+        return (
+          <View style={styles.trailingActions}>
+            <SwipeableAnimatedAction
+              progress={progress}
+              index={0}
+              count={1}
+              side="trailing"
+              backgroundColor="#FF3B30"
+              icon="trash"
+              label="Delete Forever"
+              onPress={handleDelete}
+              numberOfLines={2}
             />
-            <Text style={styles.trailingButtonLabel}>
-              {recording.isArchived ? 'Unarchive' : 'Archive'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.trailingButton, styles.moveButton]}
+          </View>
+        );
+      }
+
+      return (
+        <View style={styles.trailingActions}>
+          <SwipeableAnimatedAction
+            progress={progress}
+            index={0}
+            count={3}
+            side="trailing"
+            backgroundColor="#5E5CE6"
+            icon={recording.isArchived ? 'arrow-undo' : 'archive'}
+            label={recording.isArchived ? 'Unarchive' : 'Archive'}
+            onPress={recording.isArchived ? removeFromArchive : moveToArchive}
+            numberOfLines={2}
+          />
+          <SwipeableAnimatedAction
+            progress={progress}
+            index={1}
+            count={3}
+            side="trailing"
+            backgroundColor="#34C759"
+            icon="folder-open"
+            label="Move"
             onPress={showMoveSheet}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="folder-open" size={22} color="#FFFFFF" />
-            <Text style={styles.trailingButtonLabel}>Move</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.trailingButton, styles.deleteButton]}
+          />
+          <SwipeableAnimatedAction
+            progress={progress}
+            index={2}
+            count={3}
+            side="trailing"
+            backgroundColor="#FF3B30"
+            icon="trash"
+            label="Delete"
             onPress={handleDelete}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="trash" size={22} color="#FFFFFF" />
-            <Text style={styles.trailingButtonLabel}>Delete</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
+          />
+        </View>
+      );
+    },
+    [
+      handleDelete,
+      isRecentlyDeleted,
+      moveToArchive,
+      recording.isArchived,
+      removeFromArchive,
+      showMoveSheet,
+      dragTranslation,
+    ]
   );
 
-  const renderLeftActions = () =>
-    isRecentlyDeleted && onRestore ? (
-      <TouchableOpacity
-        style={[styles.leadingAction, styles.leadingActionRecover]}
-        onPress={handleRecover}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="arrow-undo" size={24} color="#FFFFFF" />
-        <Text style={styles.leadingActionLabel}>Recover</Text>
-      </TouchableOpacity>
-    ) : (
-      <TouchableOpacity
-        style={styles.leadingAction}
-        onPress={toggleFavorite}
-        activeOpacity={0.8}
-      >
-        <Ionicons
-          name={recording.isFavorite ? 'star' : 'star-outline'}
-          size={24}
-          color="#FFFFFF"
+  const renderLeftActions = useCallback(
+    (progress: SharedValue<number>, translation: SharedValue<number>) => {
+      dragTranslation.value = translation.value;
+
+      if (isRecentlyDeleted && onRestore) {
+        return (
+          <SwipeableAnimatedAction
+            progress={progress}
+            index={0}
+            count={1}
+            side="leading"
+            backgroundColor="#0A84FF"
+            icon="arrow-undo"
+            label="Recover"
+            onPress={handleRecover}
+            marginRight={SWIPE_ACTION_GAP}
+            numberOfLines={2}
+          />
+        );
+      }
+
+      return (
+        <SwipeableAnimatedAction
+          progress={progress}
+          index={0}
+          count={1}
+          side="leading"
+          backgroundColor="#FF9F0A"
+          icon={recording.isFavorite ? 'star' : 'star-outline'}
+          label={recording.isFavorite ? 'Unfavorite' : 'Favorite'}
+          onPress={toggleFavorite}
+          marginRight={SWIPE_ACTION_GAP}
+          numberOfLines={2}
         />
-        <Text style={styles.leadingActionLabel}>
-          {recording.isFavorite ? 'Unfavorite' : 'Favorite'}
-        </Text>
-      </TouchableOpacity>
-    );
+      );
+    },
+    [
+      handleRecover,
+      isRecentlyDeleted,
+      onRestore,
+      recording.isFavorite,
+      toggleFavorite,
+      dragTranslation,
+    ]
+  );
 
   return (
     <>
       <Swipeable
         ref={swipeableRef}
+        friction={RECORDING_SWIPE_FRICTION}
+        overshootFriction={RECORDING_SWIPE_OVERSHOOT_FRICTION}
         overshootLeft={false}
         overshootRight={false}
-        rightThreshold={40}
-        leftThreshold={40}
+        rightThreshold={36}
+        leftThreshold={36}
+        enableTrackpadTwoFingerGesture={Platform.OS === 'ios'}
+        animationOptions={RECORDING_SWIPE_SPRING}
+        onSwipeableOpen={handleSwipeableOpen}
+        onSwipeableClose={handleSwipeableClose}
+        onSwipeableOpenStartDrag={handleSwipeableOpenStartDrag}
         renderRightActions={renderRightActions}
         renderLeftActions={renderLeftActions}
       >
-        {children}
+        <SwipeableMotionCard translation={dragTranslation}>
+          {wrapChildPress(children)}
+        </SwipeableMotionCard>
       </Swipeable>
 
       <Modal
@@ -286,59 +393,13 @@ export function RecordingSwipeableRow({
   );
 }
 
-const ACTION_WIDTH = 80;
-const LEADING_WIDTH = 100;
-
 const styles = StyleSheet.create({
-  leadingAction: {
-    width: LEADING_WIDTH,
-    marginBottom: 12,
-    borderRadius: 16,
-    backgroundColor: '#FF9F0A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  leadingActionLabel: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  leadingActionRecover: {
-    backgroundColor: '#0A84FF',
-  },
   trailingActions: {
     flexDirection: 'row',
-    marginBottom: 12,
-    gap: 0,
-  },
-  trailingButton: {
-    width: ACTION_WIDTH,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  trailingButtonWide: {
-    width: 120,
-  },
-  trailingButtonLabel: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  archiveButton: {
-    backgroundColor: '#5E5CE6',
-  },
-  moveButton: {
-    backgroundColor: '#34C759',
-  },
-  restoreButton: {
-    backgroundColor: '#0A84FF',
-  },
-  deleteButton: {
-    backgroundColor: '#FF3B30',
+    alignItems: 'stretch',
+    gap: SWIPE_ACTION_GAP,
+    paddingLeft: SWIPE_ACTION_GAP,
+    paddingRight: SWIPE_ACTION_GAP / 2,
   },
   moveModalOverlay: {
     flex: 1,

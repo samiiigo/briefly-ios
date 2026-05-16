@@ -8,13 +8,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { RecordingService } from '@/services/audio';
 import { RecentsHeader } from '@/components/features/recents/RecentsHeader';
 import { RecentsEntryCard } from '@/components/features/recents/RecentsEntryCard';
 import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
-import { RecordButton } from '@/components/features/recording/RecordButton';
 import { Recording } from '@/types';
 import {
   ensureUniqueTitle,
@@ -22,7 +22,7 @@ import {
   formatRecentsGroupLabel,
 } from '@/utils';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
-import { Colors, Spacing } from '@/theme';
+import { Colors, Spacing, withAppFont } from '@/theme';
 
 const LIST_BOTTOM_PADDING = 140;
 
@@ -82,6 +82,16 @@ export default function HomeScreen() {
     return groupRecordingsByTime(visibleRecordings, formatRecentsGroupLabel);
   }, [visibleRecordings, now]);
 
+  const closeOpenSwipe = useCallback(() => {
+    useActiveSwipeableStore.getState().closeActive();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => closeOpenSwipe();
+    }, [closeOpenSwipe])
+  );
+
   if (visibleRecordings.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -103,7 +113,6 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <RecordButton onPress={handleStartRecording} />
       </SafeAreaView>
     );
   }
@@ -118,6 +127,8 @@ export default function HomeScreen() {
         contentContainerStyle={styles.listContent}
         stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={closeOpenSwipe}
+        onMomentumScrollBegin={closeOpenSwipe}
         ItemSeparatorComponent={() => <View style={styles.itemGap} />}
         SectionSeparatorComponent={() => <View style={styles.sectionGap} />}
         renderSectionHeader={({ section }) => (
@@ -138,8 +149,6 @@ export default function HomeScreen() {
           </RecordingSwipeableRow>
         )}
       />
-
-      <RecordButton onPress={handleStartRecording} />
     </SafeAreaView>
   );
 }
@@ -153,14 +162,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingBottom: LIST_BOTTOM_PADDING,
   },
-  sectionHeader: {
+  sectionHeader: withAppFont({
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 16,
     color: Colors.subtext,
     marginBottom: 0,
     paddingHorizontal: Spacing.sm,
-  },
+  }),
   itemGap: {
     height: 12,
   },
@@ -192,19 +201,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyTitle: {
+  emptyTitle: withAppFont({
     fontSize: 22,
     fontWeight: '700',
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
-  },
-  emptySubtitle: {
+  }),
+  emptySubtitle: withAppFont({
     fontSize: 15,
     color: Colors.subtext,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: Spacing.xl,
-  },
+  }),
   startButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -222,9 +231,9 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: Colors.primary,
   },
-  startButtonText: {
+  startButtonText: withAppFont({
     fontSize: 17,
     fontWeight: '600',
     color: Colors.primary,
-  },
+  }),
 });

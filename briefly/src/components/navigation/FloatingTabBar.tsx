@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '@/theme';
+import { Colors, withAppFont } from '@/theme';
+import { useFloatingTabBarLayout } from './useFloatingTabBarLayout';
 
 const VISIBLE_ROUTES = new Set(['index', 'history']);
 
@@ -20,8 +20,7 @@ const TAB_CONFIG: Record<string, TabConfig> = {
 };
 
 export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
-  const insets = useSafeAreaInsets();
-  const bottom = Math.max(insets.bottom, 12) + 12;
+  const { bottomOffset, horizontalInset } = useFloatingTabBarLayout();
   const currentRoute = state.routes[state.index];
 
   if (currentRoute.name === 'settings') {
@@ -31,7 +30,10 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const visibleRoutes = state.routes.filter((r) => VISIBLE_ROUTES.has(r.name));
 
   return (
-    <View style={[styles.wrapper, { bottom }]} pointerEvents="box-none">
+    <View
+      style={[styles.wrapper, { bottom: bottomOffset, paddingLeft: horizontalInset }]}
+      pointerEvents="box-none"
+    >
       <View style={styles.pill}>
         {Platform.OS === 'ios' && (
           <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
@@ -85,8 +87,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    alignItems: 'center',
-    zIndex: 50,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    zIndex: 10,
+    elevation: 10,
   },
   pill: {
     flexDirection: 'row',
@@ -118,12 +123,12 @@ const styles = StyleSheet.create({
   tabActive: {
     backgroundColor: Colors.surfaceElevated,
   },
-  tabLabel: {
+  tabLabel: withAppFont({
     fontSize: 10,
     fontWeight: '500',
     color: Colors.subtext,
     marginTop: 2,
-  },
+  }),
   tabLabelActive: {
     color: Colors.primary,
   },

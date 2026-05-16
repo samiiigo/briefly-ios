@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SectionList, FlatList, ListRenderItem } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useShallow } from 'zustand/react/shallow';
 import { RecordingService } from '@/services/audio';
+import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useLibraryFolderPreferencesStore } from '@/context/useLibraryFolderPreferencesStore';
 import { getFolderBrowsePreferences, useFolderBrowsePreferencesStore } from '@/context/useFolderBrowsePreferencesStore';
@@ -75,14 +76,24 @@ export default function FolderRecordingsScreen() {
 
   const renderGridItem: ListRenderItem<Recording> = useCallback(({ item }) => <View style={styles.gridCell}>{renderCard(item, true)}</View>, [renderCard]);
 
+  const closeOpenSwipe = useCallback(() => {
+    useActiveSwipeableStore.getState().closeActive();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => closeOpenSwipe();
+    }, [closeOpenSwipe])
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerIconBtn}><Ionicons name="arrow-back" size={24} color="#FFFFFF" /></TouchableOpacity>
+        <TouchableOpacity onPress={() => { closeOpenSwipe(); router.back(); }} style={styles.headerIconBtn}><Ionicons name="arrow-back" size={24} color="#FFFFFF" /></TouchableOpacity>
         <Text style={styles.pageTitle} numberOfLines={1}>{folderName}</Text>
         <View style={styles.headerRight}><GlassCircleIconButton ionIcon="ellipsis-horizontal" iconSize={22} onPress={() => setViewSheetVisible(true)} accessibilityLabel="View options" /></View>
       </View>
-      {listEmpty ? <View style={styles.emptyWrap}><Text style={styles.emptyText}>No recordings match this view.</Text></View> : effectiveLayout === 'grid' ? <FlatList key={`grid-${folderKey}`} data={flatData} numColumns={2} keyExtractor={item => item.id} columnWrapperStyle={styles.gridRow} contentContainerStyle={styles.contentGrid} renderItem={renderGridItem} /> : <SectionList sections={sections} keyExtractor={item => item.id} contentContainerStyle={styles.content} stickySectionHeadersEnabled renderSectionHeader={({ section }) => section.title ? <View style={styles.sectionHeaderWrap}><Text style={styles.sectionHeader}>{section.title}</Text></View> : null} renderItem={({ item }) => <View>{renderCard(item, false)}</View>} />}
+      {listEmpty ? <View style={styles.emptyWrap}><Text style={styles.emptyText}>No recordings match this view.</Text></View> : effectiveLayout === 'grid' ? <FlatList key={`grid-${folderKey}`} data={flatData} numColumns={2} keyExtractor={item => item.id} columnWrapperStyle={styles.gridRow} contentContainerStyle={styles.contentGrid} renderItem={renderGridItem} onScrollBeginDrag={closeOpenSwipe} onMomentumScrollBegin={closeOpenSwipe} /> : <SectionList sections={sections} keyExtractor={item => item.id} contentContainerStyle={styles.content} stickySectionHeadersEnabled onScrollBeginDrag={closeOpenSwipe} onMomentumScrollBegin={closeOpenSwipe} renderSectionHeader={({ section }) => section.title ? <View style={styles.sectionHeaderWrap}><Text style={styles.sectionHeader}>{section.title}</Text></View> : null} renderItem={({ item }) => <View>{renderCard(item, false)}</View>} />}
       {!isRecentlyDeleted && (
         <RecordButton onPress={handleRecordIntoFolder} style={{ bottom: 90 }} />
       )}

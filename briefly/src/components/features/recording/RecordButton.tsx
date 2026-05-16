@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -8,9 +7,13 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { Colors, Spacing } from '@/theme';
+import { Colors } from '@/theme';
+import {
+  RECORD_BUTTON_SIZE,
+  useFloatingTabBarLayout,
+} from '@/components/navigation/useFloatingTabBarLayout';
 
-const SIZE = 56;
+const SIZE = RECORD_BUTTON_SIZE;
 const RING_SIZE = 24;
 
 interface RecordButtonProps {
@@ -19,7 +22,7 @@ interface RecordButtonProps {
 }
 
 export function RecordButton({ onPress, style }: RecordButtonProps) {
-  const insets = useSafeAreaInsets();
+  const { recordButtonBottom, horizontalInset } = useFloatingTabBarLayout();
   const pingScale = useSharedValue(1);
   const pingOpacity = useSharedValue(0.5);
 
@@ -43,7 +46,11 @@ export function RecordButton({ onPress, style }: RecordButtonProps) {
 
   return (
     <TouchableOpacity
-      style={[styles.fab, { bottom: 32 + insets.bottom }, style]}
+      style={[
+        styles.fab,
+        { bottom: recordButtonBottom, right: horizontalInset },
+        style,
+      ]}
       onPress={onPress}
       activeOpacity={0.9}
       accessibilityLabel="Create new recording"
@@ -61,8 +68,6 @@ export function RecordButton({ onPress, style }: RecordButtonProps) {
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
-    bottom: 32,
-    right: Spacing.lg,
     width: SIZE,
     height: SIZE,
     borderRadius: SIZE / 2,
@@ -75,8 +80,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
-    elevation: 8,
-    zIndex: 50,
+    zIndex: 10,
+    elevation: 10,
   },
   ringOuter: {
     width: RING_SIZE,

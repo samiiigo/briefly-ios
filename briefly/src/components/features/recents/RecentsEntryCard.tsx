@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '@/types';
 import { formatRecentsCardDate } from '@/utils';
-import { Colors, BorderRadius, Spacing } from '@/theme';
+import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
 
 interface Props {
   recording: Recording;
@@ -149,15 +149,15 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  title: {
+  title: withAppFont({
     fontSize: 18,
     fontWeight: '600',
     color: Colors.textPrimary,
     lineHeight: 22,
     marginBottom: 4,
-  },
-  subtitle: {
+  }),
+  subtitle: withAppFont({
     fontSize: 14,
     color: Colors.subtext,
-  },
+  }),
 });

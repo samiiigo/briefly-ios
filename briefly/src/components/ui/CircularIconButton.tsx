@@ -26,16 +26,16 @@ export function CircularIconButton({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
     >
-      <Ionicons name={icon} size={20} color={Colors.textPrimary} />
+      <Ionicons name={icon} size={22} color={Colors.textPrimary} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
