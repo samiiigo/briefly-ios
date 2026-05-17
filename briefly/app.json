@@ -36,9 +36,18 @@
     "extra": {
       "assemblyAiApiKey": "",
       "openRouterSharedApiKey": "",
+      "router": {},
       "eas": {
-        "projectId": "briefly-app"
+        "projectId": "a76ad650-f9a8-479c-ad81-a666f586a7dc"
       }
+    },
+    "owner": "samiiigo",
+    "android": {
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "package": "com.briefly.app"
     }
   }
 }

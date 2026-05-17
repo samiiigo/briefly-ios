@@ -3,15 +3,20 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
-    "start": "expo start",
-    "start:clean": "expo start -c",
+    "start": "expo start --dev-client",
+    "start:clean": "expo start --dev-client -c",
+    "dev:android": "expo run:android",
+    "dev:ios": "expo run:ios",
     "ios": "expo run:ios",
+    "build:dev:android": "eas build --profile development --platform android",
+    "build:dev:ios": "eas build --profile development --platform ios",
     "build:ios": "eas build --platform ios",
     "submit:ios": "eas submit --platform ios",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "test": "tsx --test src/**/*.test.ts",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "android": "expo run:android"
   },
   "dependencies": {
     "@bottom-tabs/react-navigation": "^1.2.0",
@@ -27,6 +32,7 @@
     "expo-audio": "~1.1.1",
     "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.13",
+    "expo-dev-client": "~6.0.21",
     "expo-device": "~8.0.10",
     "expo-file-system": "~19.0.21",
     "expo-haptics": "~15.0.8",
