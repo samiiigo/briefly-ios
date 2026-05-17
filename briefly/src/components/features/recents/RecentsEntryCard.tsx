@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '@/types';
 import { formatRecentsCardDate } from '@/utils';
+import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
 import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
 
 interface Props {
@@ -19,43 +20,7 @@ interface Props {
   onDelete?: () => void;
 }
 
-function getContentEmoji(recording: Recording): string {
-  const parts: string[] = [recording.title ?? ''];
-  if (recording.summary) parts.push(recording.summary);
-  if (recording.keyInsights) parts.push(...recording.keyInsights.map((k) => k.text));
-  const text = parts.join(' ').toLowerCase();
-
-  if (/\b(lecture|class|course|lesson|seminar|webinar|workshop|tutorial)\b/.test(text)) {
-    return '🎓';
-  }
-  if (/\b(podcast|episode|show|stream)\b/.test(text)) {
-    return '🎧';
-  }
-  if (/\b(brainstorm|idea|ideas|strategy|roadmap|vision|concept)\b/.test(text)) {
-    return '💡';
-  }
-  if (/\b(meeting|sync|standup|stand-up|retro|retrospective|planning|check-in|checkin)\b/.test(text)) {
-    return '📊';
-  }
-  if (/\b(1:1|one-on-one|one on one)\b/.test(text)) {
-    return '🤝';
-  }
-  if (/\b(call|zoom|teams|google meet|meet|hangouts|phone)\b/.test(text)) {
-    return '📞';
-  }
-  if (/\b(journal|diary|reflection|reflections|therapy|counseling|counselling|mood|feelings)\b/.test(text)) {
-    return '🧠';
-  }
-  if (/\b(sales|deal|pipeline|crm|client|customer|prospect|proposal|contract|invoice|quote)\b/.test(text)) {
-    return '💼';
-  }
-
-  return '📄';
-}
-
 export function RecentsEntryCard({ recording, onPress, onRename, onDelete }: Props) {
-  const iconEmoji = getContentEmoji(recording);
-
   const handleLongPress = () => {
     const buttons: { text: string; style?: 'destructive' | 'cancel'; onPress?: () => void }[] = [];
     if (onRename) {
@@ -101,9 +66,7 @@ export function RecentsEntryCard({ recording, onPress, onRename, onDelete }: Pro
       activeOpacity={0.85}
     >
       <View style={styles.leading}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarEmoji}>{iconEmoji}</Text>
-        </View>
+        <RecordingAvatar recording={recording} />
         <View style={styles.textBlock}>
           <Text style={styles.title} numberOfLines={1}>
             {recording.title}
@@ -132,18 +95,6 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     minWidth: 0,
     marginRight: Spacing.sm,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#C4C4C4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  avatarEmoji: {
-    fontSize: 22,
   },
   textBlock: {
     flex: 1,

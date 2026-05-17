@@ -3,17 +3,19 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   SectionList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
-import { RecordingService } from '@/services/audio';
 import { RecentsHeader } from '@/components/features/recents/RecentsHeader';
 import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
+import {
+  RECORD_BUTTON_SIZE,
+  useFloatingTabBarLayout,
+} from '@/components/navigation/useFloatingTabBarLayout';
 import { RecentsEntryCard } from '@/components/features/recents/RecentsEntryCard';
 import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
 import { Recording } from '@/types';
@@ -29,6 +31,7 @@ const LIST_BOTTOM_PADDING = 140;
 
 export default function HomeScreen() {
   const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { recordButtonBottom, horizontalInset } = useFloatingTabBarLayout();
   const router = useRouter();
   const recordings = useRecordingStore((s) => s.recordings);
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);
@@ -65,12 +68,6 @@ export default function HomeScreen() {
     loadRecordings();
   }, [loadRecordings]);
 
-  const handleStartRecording = useCallback(async () => {
-    const granted = await RecordingService.requestPermissions();
-    if (!granted) return;
-    router.push({ pathname: '/recording/new', params: { targetFolder: 'unlisted' } });
-  }, [router]);
-
   const visibleRecordings = useMemo(
     () =>
       recordings.filter(
@@ -105,12 +102,29 @@ export default function HomeScreen() {
           </View>
           <Text style={styles.emptyTitle}>No recordings yet</Text>
           <Text style={styles.emptySubtitle}>
-            Start your first recording to see your transcripts and summaries here.
+            Tap the record button to capture your first transcript and summary.
           </Text>
-          <TouchableOpacity style={styles.startButton} onPress={handleStartRecording}>
-            <View style={styles.startButtonDot} />
-            <Text style={styles.startButtonText}>Start Recording</Text>
-          </TouchableOpacity>
+        </View>
+
+        <View
+          style={[
+            styles.recordHint,
+            {
+              right: horizontalInset + RECORD_BUTTON_SIZE / 2 + 8,
+              bottom: recordButtonBottom + RECORD_BUTTON_SIZE + 12,
+            },
+          ]}
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <Text style={styles.recordHintText}>Start recording</Text>
+          <Ionicons
+            name="arrow-down"
+            size={28}
+            color={Colors.primary}
+            style={styles.recordHintArrow}
+          />
         </View>
 
         <TopBlurFade />
@@ -226,28 +240,19 @@ const styles = StyleSheet.create({
     color: Colors.subtext,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: Spacing.xl,
   }),
-  startButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: 16,
-    gap: Spacing.sm,
+  recordHint: {
+    position: 'absolute',
+    alignItems: 'flex-end',
+    gap: 4,
+    zIndex: 5,
   },
-  startButtonDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-  },
-  startButtonText: withAppFont({
-    fontSize: 17,
+  recordHintText: withAppFont({
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.primary,
   }),
+  recordHintArrow: {
+    transform: [{ rotate: '-45deg' }],
+  },
 });

@@ -14,35 +14,13 @@ import {
   AudioModule,
   setAudioModeAsync,
   requestRecordingPermissionsAsync,
-  IOSOutputFormat,
-  AudioQuality,
 } from 'expo-audio';
 import type { AudioRecorder, RecordingOptions } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
+import { assemblyAIRecordingOptions, WAV_HEADER_BYTES } from './recordingOptions';
 
-const SAMPLE_RATE = 16000;
 const POLL_INTERVAL_MS = 250;
-const WAV_HEADER_BYTES = 44;
-
-const PCM_OPTIONS = {
-  extension: '.wav',
-  sampleRate: SAMPLE_RATE,
-  numberOfChannels: 1,
-  bitRate: SAMPLE_RATE * 16,
-  ios: {
-    outputFormat: IOSOutputFormat.LINEARPCM,
-    audioQuality: AudioQuality.MAX,
-    linearPCMBitDepth: 16,
-    linearPCMIsBigEndian: false,
-    linearPCMIsFloat: false,
-  },
-  android: {
-    outputFormat: 'default' as const,
-    audioEncoder: 'default' as const,
-  },
-  web: {},
-};
 
 function base64ToArrayBuffer(b64: string): ArrayBuffer {
   const binaryString = atob(b64);
@@ -91,7 +69,7 @@ export class ExpoAudioStreamingCapture {
     const AudioRecorderCtor = (AudioModule as any)['AudioRecorder'] as new (
       options: Partial<RecordingOptions>
     ) => AudioRecorder;
-    const recorder = new AudioRecorderCtor(PCM_OPTIONS);
+    const recorder = new AudioRecorderCtor(assemblyAIRecordingOptions);
     await recorder.prepareToRecordAsync();
     recorder.record();
     this.recorder = recorder;

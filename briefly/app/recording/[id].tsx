@@ -19,15 +19,16 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { useExport } from '@/hooks/useExport';
 import { KeyInsights } from '@/components/features/recording/KeyInsights';
 import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
-import { ProcessingBadge } from '@/components/features/recording/ProcessingBadge';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
+import { AnchoredOverflowMenu } from '@/components/ui/AnchoredOverflowMenu';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useSettingsStore } from '@/context/useSettingsStore';
-import { transcriptionModeTitle } from '@/utils/transcriptionMode';
 import { formatDuration, formatDate, ensureUniqueTitle } from '@/utils';
+import { getNextSummarizationFallback } from '@/utils/summarizationFallback';
+import { hasMeaningfulTranscript } from '@/utils/recordingValidation';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 export default function TranscriptScreen() {
@@ -37,7 +38,7 @@ export default function TranscriptScreen() {
   const { id: recordingId } = useLocalSearchParams<{ id: string }>();
   const recording = useRecordingStore((s) => s.getRecordingById(recordingId!));
   const { updateRecording, recordings, restoreRecording } = useRecordingStore();
-  const { defaultTranscriptionMode } = useSettingsStore();
+  const { summarizationMode } = useSettingsStore();
   const { isPlaying, playbackPos, playbackDur, playbackRate, activeSegmentId, trackWidth, animatedProgress, cycleRate, togglePlayPause: handlePlayPause, seek: handleSeek, seekToRatio } = usePlayback({ filePath: recording?.filePath ?? '', transcript: recording?.transcript });
   const { isExportingPdf, openShareMenu } = useExport(recording);
 
@@ -54,17 +55,68 @@ export default function TranscriptScreen() {
     else { Alert.alert('Rename', 'Long-press the recording card on the home screen to rename it.'); }
   }, [recording, recordings, updateRecording]);
 
-  const handleRetry = useCallback(async () => {
+  const handleTranscriptionFallback = useCallback(async () => {
     if (!recording || !recordingId) return;
-    const hasTranscript = (recording.transcript?.length ?? 0) > 0;
-    await updateRecording(recording.id, hasTranscript ? { status: 'summarizing', errorMessage: undefined, summary: undefined, keyInsights: undefined } : { status: 'transcribing', errorMessage: undefined, transcript: undefined, summary: undefined, keyInsights: undefined });
-    router.replace({ pathname: '/recording/summarizing', params: { recordingId: recording.id } });
+    const { summarizationMode: activeSummarizationMode } = useSettingsStore.getState();
+    await updateRecording(recording.id, {
+      status: 'transcribing',
+      errorMessage: undefined,
+      transcript: undefined,
+      summary: undefined,
+      keyInsights: undefined,
+      processingMode: activeSummarizationMode,
+    });
+    router.replace({
+      pathname: '/recording/summarizing',
+      params: { recordingId: recording.id, forceAudioFallback: 'true' },
+    });
   }, [recording, recordingId, updateRecording, router]);
+
+  const handleSummarizationFallback = useCallback(
+    async (mode: typeof summarizationMode) => {
+      if (!recording || !recordingId) return;
+      await updateRecording(recording.id, {
+        status: 'summarizing',
+        errorMessage: undefined,
+        summary: undefined,
+        keyInsights: undefined,
+        processingMode: mode,
+      });
+      router.replace({
+        pathname: '/recording/summarizing',
+        params: { recordingId: recording.id, retrySummarizationMode: mode },
+      });
+    },
+    [recording, recordingId, updateRecording, router],
+  );
 
   const handleStartProcessing = useCallback(async () => {
     if (!recording) return;
     router.replace({ pathname: '/recording/summarizing', params: { recordingId: recording.id } });
   }, [recording, router]);
+
+  const handleRerunSummarization = useCallback(async () => {
+    if (!recording || !recordingId) return;
+    if (!hasMeaningfulTranscript(recording.transcript)) {
+      Alert.alert(
+        'No transcript',
+        'There is no transcript to summarize. Transcribe this recording first.',
+      );
+      return;
+    }
+    const mode = useSettingsStore.getState().summarizationMode;
+    await updateRecording(recording.id, {
+      status: 'summarizing',
+      errorMessage: undefined,
+      summary: undefined,
+      keyInsights: undefined,
+      processingMode: mode,
+    });
+    router.replace({
+      pathname: '/recording/summarizing',
+      params: { recordingId: recording.id, retrySummarizationMode: mode },
+    });
+  }, [recording, recordingId, updateRecording, router]);
 
   if (!recording) {
     return (
@@ -101,7 +153,14 @@ export default function TranscriptScreen() {
 
   const progressFillWidth = animatedProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
   const progressThumbLeft = animatedProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-  const modeLabel = transcriptionModeTitle(recording.transcriptionMode ?? defaultTranscriptionMode);
+  const lastSummarizationMode = recording.processingMode ?? summarizationMode;
+  const summarizationFallback =
+    recording.status === 'error' && hasMeaningfulTranscript(recording.transcript)
+      ? getNextSummarizationFallback(lastSummarizationMode, [lastSummarizationMode])
+      : null;
+  const showTranscriptionFallbackOnError =
+    recording.status === 'error' &&
+    (!hasMeaningfulTranscript(recording.transcript) || !summarizationFallback);
 
   return (
     <View style={sl.container}>
@@ -111,12 +170,36 @@ export default function TranscriptScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={st.dateLabel}>{formatDate(recording.createdAt)}</Text>
-        <View style={st.metaRow}><ProcessingBadge mode={recording.processingMode} size="sm" /><Text style={st.transcriptionMode}>{modeLabel}</Text></View>
         {(recording.status === 'saved' || recording.status === 'transcribing' || recording.status === 'summarizing') && (
           <View style={st.processingBanner}><View style={st.errorBannerTop}><Ionicons name="sparkles" size={16} color={Colors.primary} /><Text style={st.processingBannerTitle}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Summarization pending' : recording.status === 'saved' ? 'Ready to process' : 'Processing incomplete'}</Text></View><TouchableOpacity style={st.retryButton} onPress={handleStartProcessing}><Ionicons name="sparkles" size={15} color={Colors.textPrimary} /><Text style={st.retryButtonText}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Run Summarization' : 'Transcribe & Summarize'}</Text></TouchableOpacity></View>
         )}
         {recording.status === 'error' && (
-          <View style={st.errorBanner}><View style={st.errorBannerTop}><Ionicons name="warning" size={16} color={Colors.orange} /><Text style={st.errorBannerTitle}>Processing failed</Text></View>{!!recording.errorMessage && <Text style={st.errorBannerMessage} numberOfLines={3}>{recording.errorMessage}</Text>}<TouchableOpacity style={st.retryButton} onPress={handleRetry}><Ionicons name="refresh" size={15} color={Colors.textPrimary} /><Text style={st.retryButtonText}>{(recording.transcript?.length ?? 0) > 0 ? 'Retry Summary' : 'Retry All'}</Text></TouchableOpacity></View>
+          <View style={st.errorBanner}>
+            <View style={st.errorBannerTop}>
+              <Ionicons name="warning" size={16} color={Colors.orange} />
+              <Text style={st.errorBannerTitle}>Processing failed</Text>
+            </View>
+            {!!recording.errorMessage && (
+              <Text style={st.errorBannerMessage} numberOfLines={4}>
+                {recording.errorMessage}
+              </Text>
+            )}
+            {summarizationFallback ? (
+              <TouchableOpacity
+                style={st.retryButton}
+                onPress={() => handleSummarizationFallback(summarizationFallback.mode)}
+              >
+                <Ionicons name="sparkles" size={15} color={Colors.textPrimary} />
+                <Text style={st.retryButtonText}>{summarizationFallback.buttonLabel}</Text>
+              </TouchableOpacity>
+            ) : null}
+            {showTranscriptionFallbackOnError ? (
+              <TouchableOpacity style={st.retryButton} onPress={handleTranscriptionFallback}>
+                <Ionicons name="mic-outline" size={15} color={Colors.textPrimary} />
+                <Text style={st.retryButtonText}>Transcribe from recording</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
         )}
         {recording.summary && <View style={st.summaryCard}><Text style={st.summaryText}>{recording.summary}</Text></View>}
         {recording.keyInsights && recording.keyInsights.length > 0 && <KeyInsights insights={recording.keyInsights} />}
@@ -145,10 +228,23 @@ export default function TranscriptScreen() {
           showBack
           onBack={() => router.back()}
           trailing={
-            <CircularIconButton
-              icon="pencil-outline"
-              accessibilityLabel="Rename recording"
-              onPress={handleRename}
+            <AnchoredOverflowMenu
+              items={[
+                { label: 'Rename', onPress: handleRename },
+                {
+                  label: 'Rerun summarization',
+                  onPress: () => {
+                    void handleRerunSummarization();
+                  },
+                },
+              ]}
+              renderTrigger={(open) => (
+                <CircularIconButton
+                  icon="ellipsis-horizontal"
+                  accessibilityLabel="Recording options"
+                  onPress={open}
+                />
+              )}
             />
           }
         />
@@ -214,16 +310,6 @@ const st = StyleSheet.create({
     fontSize: 14,
     color: Colors.subtext,
     marginBottom: Spacing.md,
-  }),
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  transcriptionMode: withAppFont({
-    fontSize: 14,
-    color: Colors.subtext,
   }),
   summaryCard: {
     backgroundColor: Colors.card,

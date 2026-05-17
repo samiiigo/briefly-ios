@@ -19,8 +19,10 @@ const PROVIDER_KEY_FIELD: Record<
 };
 
 interface SettingsState {
-  defaultProcessingMode: ProcessingMode;
-  defaultTranscriptionMode: TranscriptionMode;
+  /** App-wide summarization mode (Settings is the only place to change this). */
+  summarizationMode: ProcessingMode;
+  /** App-wide transcription mode (Settings is the only place to change this). */
+  transcriptionMode: TranscriptionMode;
   cloudProvider: CloudProvider;
   cloudApiKey: string;
   openrouterApiKey: string;
@@ -34,8 +36,8 @@ interface SettingsState {
    */
   hasCompletedEnvSetup: boolean;
 
-  setDefaultProcessingMode: (mode: ProcessingMode) => void;
-  setDefaultTranscriptionMode: (mode: TranscriptionMode) => void;
+  setSummarizationMode: (mode: ProcessingMode) => void;
+  setTranscriptionMode: (mode: TranscriptionMode) => void;
   setCloudProvider: (provider: CloudProvider) => void;
   setCloudApiKey: (key: string) => void;
   setProviderApiKey: (provider: CloudProvider, key: string) => void;
@@ -43,17 +45,42 @@ interface SettingsState {
 
   /**
    * Called once on first launch after the environment has been probed.
-   * Sets the default transcription mode to the recommended value and marks
+   * Sets the transcription mode to the recommended value and marks
    * setup as complete. Subsequent calls are no-ops (idempotent).
    */
   applyEnvironmentDefaults: (recommendedMode: TranscriptionMode) => void;
 }
 
+type PersistedSettingsState = Partial<SettingsState> & {
+  defaultProcessingMode?: ProcessingMode;
+  defaultTranscriptionMode?: TranscriptionMode;
+};
+
+function migratePersistedSettings(
+  persisted: PersistedSettingsState | undefined,
+): PersistedSettingsState | undefined {
+  if (!persisted) return persisted;
+
+  const next: PersistedSettingsState = { ...persisted };
+
+  if (next.summarizationMode == null && next.defaultProcessingMode != null) {
+    next.summarizationMode = next.defaultProcessingMode;
+  }
+  delete next.defaultProcessingMode;
+
+  if (next.transcriptionMode == null && next.defaultTranscriptionMode != null) {
+    next.transcriptionMode = next.defaultTranscriptionMode;
+  }
+  delete next.defaultTranscriptionMode;
+
+  return next;
+}
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
-      defaultProcessingMode: 'cloud-shared-openrouter',
-      defaultTranscriptionMode: 'live-assemblyai',
+      summarizationMode: 'cloud-shared-openrouter',
+      transcriptionMode: 'live-assemblyai',
       cloudProvider: 'openrouter',
       cloudApiKey: '',
       openrouterApiKey: '',
@@ -61,8 +88,8 @@ export const useSettingsStore = create<SettingsState>()(
       geminiApiKey: '',
       hasCompletedEnvSetup: false,
 
-      setDefaultProcessingMode: (mode) => set({ defaultProcessingMode: mode }),
-      setDefaultTranscriptionMode: (mode) => set({ defaultTranscriptionMode: mode }),
+      setSummarizationMode: (mode) => set({ summarizationMode: mode }),
+      setTranscriptionMode: (mode) => set({ transcriptionMode: mode }),
       setCloudProvider: (provider) => set({ cloudProvider: provider }),
 
       /**
@@ -99,13 +126,16 @@ export const useSettingsStore = create<SettingsState>()(
       applyEnvironmentDefaults: (recommendedMode) => {
         if (get().hasCompletedEnvSetup) return;
         set({
-          defaultTranscriptionMode: recommendedMode,
+          transcriptionMode: recommendedMode,
           hasCompletedEnvSetup: true,
         });
       },
     }),
     {
       name: '@briefly/settings',
+      version: 1,
+      migrate: (persisted) =>
+        migratePersistedSettings(persisted as PersistedSettingsState | undefined),
       storage: createJSONStorage(() => AsyncStorage),
     },
   ),

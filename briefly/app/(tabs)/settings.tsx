@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import {
   folderListLayoutTitle,
   useFolderListLayoutStore,
 } from '@/context/useFolderListLayoutStore';
-import { FolderListViewOptionsSheet } from '@/components/features/library/FolderListViewOptionsSheet';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
@@ -27,9 +26,8 @@ import { Colors, Spacing } from '@/theme';
 export default function SettingsScreen() {
   const router = useRouter();
   const { scrollPaddingTop, topInset } = useTopChromeLayout();
-  const { defaultProcessingMode, defaultTranscriptionMode } = useSettingsStore();
+  const { summarizationMode, transcriptionMode } = useSettingsStore();
   const folderLayout = useFolderListLayoutStore((s) => s.layout);
-  const [layoutSheetVisible, setLayoutSheetVisible] = useState(false);
 
   return (
     <View style={sl.container}>
@@ -51,7 +49,7 @@ export default function SettingsScreen() {
             />
             <Text style={sl.settingsRowTitle}>Transcription mode</Text>
             <Text style={sl.settingsRowValue}>
-              {transcriptionModeTitle(defaultTranscriptionMode)}
+              {transcriptionModeTitle(transcriptionMode)}
             </Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
           </TouchableOpacity>
@@ -71,7 +69,7 @@ export default function SettingsScreen() {
             />
             <Text style={sl.settingsRowTitle}>Summarization mode</Text>
             <Text style={sl.settingsRowValue}>
-              {processingModeTitle(defaultProcessingMode)}
+              {processingModeTitle(summarizationMode)}
             </Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
           </TouchableOpacity>
@@ -137,7 +135,7 @@ export default function SettingsScreen() {
         <View style={sl.card}>
           <TouchableOpacity
             style={sl.settingsRow}
-            onPress={() => setLayoutSheetVisible(true)}
+            onPress={() => router.push('/folder-layout')}
           >
             <Ionicons
               name="grid-outline"
@@ -183,10 +181,6 @@ export default function SettingsScreen() {
         />
       </View>
 
-      <FolderListViewOptionsSheet
-        visible={layoutSheetVisible}
-        onClose={() => setLayoutSheetVisible(false)}
-      />
     </View>
   );
 }

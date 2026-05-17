@@ -69,7 +69,8 @@ type Section = {
   data: FolderTile[];
   showSeeAll?: boolean;
   seeAllFilter?: UserFolderListFilter;
-  variant?: 'default' | 'utility' | 'pinned-row';
+  variant?: 'default' | 'utility' | 'pinned-row' | 'empty-user-folders';
+  emptyMessage?: string;
   /** Tiles for {@link variant} `pinned-row` (vertical list uses empty `data`). */
   pinnedRowData?: FolderTile[];
   hideHeader?: boolean;
@@ -199,13 +200,28 @@ export function LibraryFolderBrowser({
       const pinned = userTiles.filter((t) => t.pinned);
       return pinned.length > 0
         ? [{ title: 'Pinned', data: pinned, hideHeader: true }]
-        : [];
+        : [
+            {
+              title: 'Pinned',
+              data: [],
+              hideHeader: true,
+              variant: 'empty-user-folders',
+              emptyMessage: 'No pinned folders',
+            },
+          ];
     }
 
     if (showBack && folderListFilter === 'all-user') {
       return allUserTilesByName.length > 0
         ? [{ title: 'Your folders', data: allUserTilesByName, hideHeader: true }]
-        : [];
+        : [
+            {
+              title: 'Your folders',
+              data: [],
+              hideHeader: true,
+              variant: 'empty-user-folders',
+            },
+          ];
     }
 
     const s: Section[] = [{ title: 'Built-in', data: builtInTiles, hideHeader: true }];
@@ -233,6 +249,12 @@ export function LibraryFolderBrowser({
           showSeeAll: userTiles.length > maxYourFolders,
           seeAllFilter: 'all-user',
         });
+      } else if (userTiles.length === 0) {
+        s.push({
+          title: 'Your folders',
+          data: [],
+          variant: 'empty-user-folders',
+        });
       }
 
       return appendUtilitySection(s);
@@ -240,6 +262,8 @@ export function LibraryFolderBrowser({
 
     if (userTiles.length > 0) {
       s.push({ title: 'Folders', data: userTiles });
+    } else {
+      s.push({ title: 'Folders', data: [], variant: 'empty-user-folders' });
     }
     return appendUtilitySection(s);
   }, [
@@ -579,6 +603,16 @@ export function LibraryFolderBrowser({
 
   const listKeyExtractor = useCallback((item: FolderTile) => item.id, []);
 
+  const renderNoFoldersPlaceholder = useCallback(
+    (message = 'No folders') => (
+      <View style={styles.emptyFoldersCard} accessibilityRole="text">
+        <Ionicons name="folder-open-outline" size={22} color={Colors.subtext} />
+        <Text style={styles.emptyFoldersText}>{message}</Text>
+      </View>
+    ),
+    []
+  );
+
   const renderSectionItem = useCallback(
     ({ item, section }: { item: FolderTile; section: Section }) => {
       if (section.variant === 'pinned-row') {
@@ -594,12 +628,15 @@ export function LibraryFolderBrowser({
 
   const renderSectionFooter = useCallback(
     ({ section }: { section: Section }) => {
+      if (section.variant === 'empty-user-folders') {
+        return renderNoFoldersPlaceholder(section.emptyMessage);
+      }
       if (section.variant !== 'pinned-row' || !section.pinnedRowData?.length) {
         return null;
       }
       return renderPinnedRow(section.pinnedRowData);
     },
-    [renderPinnedRow]
+    [renderNoFoldersPlaceholder, renderPinnedRow]
   );
 
   const renderSectionHeader = useCallback(
@@ -688,6 +725,8 @@ export function LibraryFolderBrowser({
               ) : null}
               {section.variant === 'pinned-row' && section.pinnedRowData ? (
                 renderPinnedRow(section.pinnedRowData)
+              ) : section.variant === 'empty-user-folders' ? (
+                renderNoFoldersPlaceholder(section.emptyMessage)
               ) : section.variant === 'utility' ? (
                 <View style={styles.utilityList}>
                   {section.data.map((f) => (
@@ -831,6 +870,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: Colors.primary,
+  }),
+  emptyFoldersCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.cardXL,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border,
+  },
+  emptyFoldersText: withAppFont({
+    fontSize: 15,
+    fontWeight: '500',
+    color: Colors.subtext,
+    textAlign: 'center',
   }),
   pinnedRow: {
     marginHorizontal: -Spacing.md,
