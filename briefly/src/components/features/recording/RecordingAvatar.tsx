@@ -12,9 +12,15 @@ import { Colors, Spacing } from '@/theme';
 interface Props {
   recording: Recording;
   size?: 'md' | 'compact';
+  /** When false, the parent row controls horizontal spacing (e.g. flex `gap`). */
+  trailingSpacing?: boolean;
 }
 
-export function RecordingAvatar({ recording, size = 'md' }: Props) {
+export function RecordingAvatar({
+  recording,
+  size = 'md',
+  trailingSpacing = true,
+}: Props) {
   const compact = size === 'compact';
   const processing = isRecordingProcessing(recording);
   const failed = recording.status === 'error';
@@ -23,7 +29,7 @@ export function RecordingAvatar({ recording, size = 'md' }: Props) {
     <View
       style={[
         styles.shell,
-        compact ? styles.shellCompact : styles.shellList,
+        compact ? styles.shellCompact : trailingSpacing && styles.shellList,
       ]}
     >
       {processing ? (

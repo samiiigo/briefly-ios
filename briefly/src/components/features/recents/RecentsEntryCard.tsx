@@ -66,7 +66,7 @@ export function RecentsEntryCard({ recording, onPress, onRename, onDelete }: Pro
       activeOpacity={0.85}
     >
       <View style={styles.leading}>
-        <RecordingAvatar recording={recording} />
+        <RecordingAvatar recording={recording} trailingSpacing={false} />
         <View style={styles.textBlock}>
           <Text style={styles.title} numberOfLines={1}>
             {recording.title}
