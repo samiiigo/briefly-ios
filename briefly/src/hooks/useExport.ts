@@ -22,7 +22,7 @@ export function useExport(recording: Recording | undefined) {
     if (!recording) return;
     try {
       setIsExportingPdf(true);
-      const html = buildRecordingExportPdfHtml(recording, { includeTranscript: true });
+      const html = buildRecordingExportPdfHtml(recording);
       const { uri } = await Print.printToFileAsync({ html, base64: false });
       const available = await Sharing.isAvailableAsync();
       if (available) {
@@ -43,7 +43,7 @@ export function useExport(recording: Recording | undefined) {
 
   const shareText = useCallback(async () => {
     if (!recording) return;
-    const message = buildRecordingExportPlainText(recording, { includeTranscript: true });
+    const message = buildRecordingExportPlainText(recording);
     try {
       await Share.share({ message, title: recording.title });
     } catch {}
