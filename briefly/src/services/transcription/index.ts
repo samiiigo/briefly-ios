@@ -23,7 +23,11 @@ import {
   AssemblyAITranscriptPayload,
 } from './assemblyAIClient';
 import { buildSentenceSegments, buildFallbackSegments } from './segmentBuilder';
+import { WAV_HEADER_BYTES } from '@/services/audio/recordingOptions';
 import { logger } from '@/utils/logger';
+
+/** ~0.25 s of 16 kHz mono PCM — below this, AssemblyAI often rejects the file. */
+const MIN_AUDIO_BYTES = WAV_HEADER_BYTES + 8000;
 
 interface AsyncTranscriptionClient {
   uploadAudio(audioUri: string, apiKey: string): Promise<string>;
@@ -88,6 +92,10 @@ async function transcribeWithAssemblyAI(
     throw new Error('Audio file not found.');
   }
   const fileSize = fileInfo.exists ? ((fileInfo as any).size ?? 0) : 0;
+  if (fileSize < MIN_AUDIO_BYTES) {
+    logger.error('TranscriptionService', 'Audio file too small to transcribe', { audioUri, fileSize });
+    throw new Error('Recording is too short or empty. Record for at least one second and try again.');
+  }
   logger.info('TranscriptionService', 'Async transcription started', { audioUri, fileSize });
 
   const uploadUrl = await dependencies.client.uploadAudio(audioUri, apiKey);

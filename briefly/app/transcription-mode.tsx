@@ -23,8 +23,8 @@ const TRANSCRIPTION_MODES: TranscriptionMode[] = [
 export default function TranscriptionModePickerScreen() {
   const router = useRouter();
   const { scrollPaddingTop, topInset } = useTopChromeLayout();
-  const { defaultTranscriptionMode, setDefaultTranscriptionMode } = useSettingsStore();
-  const selectedMode = normalizeTranscriptionMode(defaultTranscriptionMode);
+  const { transcriptionMode, setTranscriptionMode } = useSettingsStore();
+  const selectedMode = normalizeTranscriptionMode(transcriptionMode);
 
   return (
     <View style={sl.container}>
@@ -33,7 +33,7 @@ export default function TranscriptionModePickerScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={sl.sectionDescription}>
-          Choose how each recording is transcribed by default.
+          Choose how Briefly transcribes recordings. This applies to every recording.
         </Text>
         <View style={sl.card}>
           {TRANSCRIPTION_MODES.map((mode, index) => {
@@ -42,7 +42,7 @@ export default function TranscriptionModePickerScreen() {
               <React.Fragment key={mode}>
                 <TouchableOpacity
                   style={styles.optionRow}
-                  onPress={() => setDefaultTranscriptionMode(mode)}
+                  onPress={() => setTranscriptionMode(mode)}
                 >
                   <View style={[styles.radio, selected && styles.radioSelected]}>
                     {selected ? <View style={styles.radioDot} /> : null}

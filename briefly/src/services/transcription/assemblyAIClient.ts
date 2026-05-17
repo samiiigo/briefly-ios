@@ -16,6 +16,14 @@ const API_BASE_URL = 'https://api.assemblyai.com/v2';
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLL_ATTEMPTS = 180;
 
+function uploadContentType(audioUri: string): string {
+  const lower = audioUri.toLowerCase();
+  if (lower.endsWith('.wav')) return 'audio/wav';
+  if (lower.endsWith('.m4a') || lower.endsWith('.mp4')) return 'audio/mp4';
+  if (lower.endsWith('.mp3')) return 'audio/mpeg';
+  return 'application/octet-stream';
+}
+
 export interface AssemblyAITranscriptPayload {
   words?: { text: string; start?: number; end?: number }[];
   text?: string;
@@ -23,11 +31,12 @@ export interface AssemblyAITranscriptPayload {
 
 export async function uploadAudio(audioUri: string, apiKey: string): Promise<string> {
   logger.info('TranscriptionService', 'Uploading audio to AssemblyAI', { audioUri });
+  const contentType = uploadContentType(audioUri);
   const upload = await FileSystem.uploadAsync(`${API_BASE_URL}/upload`, audioUri, {
     uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
     headers: {
       Authorization: apiKey,
-      'Content-Type': 'application/octet-stream',
+      'Content-Type': contentType,
     },
     sessionType: FileSystem.FileSystemSessionType.BACKGROUND,
     httpMethod: 'POST',

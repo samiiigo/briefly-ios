@@ -12,12 +12,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
-import { ProcessingBadge } from '@/components/features/recording/ProcessingBadge';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
-import { RecordingFolder, TranscriptionMode } from '@/types';
+import { RecordingFolder } from '@/types';
 import {
   formatDuration,
   formatFileSize,
@@ -27,13 +26,16 @@ import {
 } from '@/utils';
 import {
   normalizeTranscriptionMode,
-  transcriptionModeDescription,
-  transcriptionModeTitle,
+  resolvePostRecordingPipeline,
 } from '@/utils/transcriptionMode';
-import { processingModeTitle } from '@/utils/processingMode';
 import { folderFlagsFor } from '@/utils/folders/recordingFolder';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 import { consumeTransitData } from '@/utils/navigationTransit';
+import {
+  isRecordingFileMissing,
+  isRecordingTooShort,
+  MIN_RECORDING_DURATION_SEC,
+} from '@/utils/recordingValidation';
 
 export default function SaveRecordingScreen() {
   const { scrollPaddingTop, topInset } = useTopChromeLayout();
@@ -42,7 +44,6 @@ export default function SaveRecordingScreen() {
     duration?: string;
     filePath?: string;
     fileSize?: string;
-    transcriptionMode?: string;
     targetFolder?: string;
     targetUserFolderId?: string;
     markImported?: string;
@@ -59,20 +60,42 @@ export default function SaveRecordingScreen() {
   const preTranscript = transitData.current.preTranscript;
 
   const { addRecording, recordings } = useRecordingStore();
-  const { defaultProcessingMode, defaultTranscriptionMode } = useSettingsStore();
   const existingTitles = recordings.map((r) => r.title);
   const [title, setTitle] = useState(() => ensureUniqueTitle(generateTitle(), existingTitles));
-  const [transcriptionMode, setTranscriptionMode] = useState<TranscriptionMode>(
-    normalizeTranscriptionMode(
-      (p.transcriptionMode as TranscriptionMode) ?? defaultTranscriptionMode
-    )
-  );
   const [saving, setSaving] = useState(false);
   const autoSaveTriggeredRef = useRef(false);
+  const skipTranscriptionOnSave = resolvePostRecordingPipeline(
+    useSettingsStore.getState().transcriptionMode,
+    preTranscript,
+  ).skipAsyncTranscription;
+
+  const assetCheck = { durationSec: duration, filePath, fileSizeBytes: fileSize };
+  const recordingInvalid =
+    isRecordingFileMissing(assetCheck) || isRecordingTooShort(assetCheck);
 
   const handleSave = useCallback(async () => {
     if (saving) return;
+
+    if (isRecordingFileMissing(assetCheck)) {
+      Alert.alert(
+        'Recording unavailable',
+        'No audio file was saved. Go back and record again.',
+        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }],
+      );
+      return;
+    }
+    if (isRecordingTooShort(assetCheck)) {
+      Alert.alert(
+        'Recording too short',
+        `Record for at least ${MIN_RECORDING_DURATION_SEC} second before saving.`,
+        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }],
+      );
+      return;
+    }
+
     setSaving(true);
+    try {
+    const { summarizationMode, transcriptionMode } = useSettingsStore.getState();
     const id = generateId();
     const baseTitle = title.trim() || generateTitle();
     const safeTitle = ensureUniqueTitle(baseTitle, existingTitles);
@@ -83,8 +106,8 @@ export default function SaveRecordingScreen() {
       duration,
       filePath,
       fileSize,
-      transcriptionMode,
-      processingMode: defaultProcessingMode,
+      transcriptionMode: normalizeTranscriptionMode(transcriptionMode),
+      processingMode: summarizationMode,
       folder: targetFolder,
       ...folderFlagsFor(targetFolder),
       ...(markImported ? { isImported: true } : {}),
@@ -94,12 +117,15 @@ export default function SaveRecordingScreen() {
     };
     await addRecording(recording);
     router.replace({ pathname: '/recording/summarizing', params: { recordingId: id } });
+    } catch {
+      Alert.alert('Could not save', 'Something went wrong while saving. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   }, [
     saving,
     duration,
     fileSize,
-    defaultProcessingMode,
-    transcriptionMode,
     targetFolder,
     targetUserFolderId,
     markImported,
@@ -153,45 +179,25 @@ export default function SaveRecordingScreen() {
             <Text style={styles.detailLabel}>File size</Text>
             <Text style={styles.detailValue}>{formatFileSize(fileSize)}</Text>
           </View>
-          <View style={sl.cardDivider} />
-          <TouchableOpacity
-            style={styles.processingRow}
-            onPress={() =>
-              Alert.alert('Transcription mode', transcriptionModeDescription(transcriptionMode), [
-                { text: 'Live (AssemblyAI)', onPress: () => setTranscriptionMode('live-assemblyai') },
-                { text: 'Post (AssemblyAI)', onPress: () => setTranscriptionMode('post-assemblyai') },
-                { text: 'Local', onPress: () => setTranscriptionMode('local-on-device') },
-                { text: 'Cancel', style: 'cancel' },
-              ])
-            }
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.detailLabel}>Transcription mode</Text>
-              <Text style={styles.processingSubtitle}>
-                {transcriptionModeTitle(transcriptionMode)}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
-          </TouchableOpacity>
-          <View style={sl.cardDivider} />
-          <View style={styles.processingRow}>
-            <View>
-              <Text style={styles.detailLabel}>Summarization mode</Text>
-              <Text style={styles.processingSubtitle}>
-                {processingModeTitle(defaultProcessingMode)}
-              </Text>
-            </View>
-            <TouchableOpacity onPress={() => router.push('/processing-mode')}>
-              <ProcessingBadge mode={defaultProcessingMode} />
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={handleSave}
+          disabled={saving || recordingInvalid}
+        >
           <Ionicons name="sparkles" size={18} color={Colors.textPrimary} />
-          <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save & Transcribe'}</Text>
+          <Text style={styles.saveButtonText}>
+            {saving
+              ? 'Saving...'
+              : recordingInvalid
+                ? 'Recording too short'
+                : skipTranscriptionOnSave
+                  ? 'Save & Summarize'
+                  : 'Save & Transcribe'}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleDiscard}>
           <Text style={styles.discardText}>Discard Recording</Text>
@@ -248,18 +254,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.subtext,
   }),
-  processingSubtitle: withAppFont({
-    fontSize: 14,
-    color: Colors.subtext,
-    marginTop: 2,
-  }),
-  processingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 14,
-  },
   actions: {
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,

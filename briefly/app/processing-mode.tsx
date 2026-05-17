@@ -34,15 +34,15 @@ export default function ProcessingModePickerScreen() {
   const router = useRouter();
   const { scrollPaddingTop, topInset } = useTopChromeLayout();
   const {
-    defaultProcessingMode,
-    setDefaultProcessingMode,
+    summarizationMode,
+    setSummarizationMode,
     cloudProvider,
     setCloudProvider,
     setProviderApiKey,
     getActiveApiKey,
   } = useSettingsStore();
   const isCloudUserKey =
-    defaultProcessingMode === 'cloud-user-key' || defaultProcessingMode === 'cloud';
+    summarizationMode === 'cloud-user-key' || summarizationMode === 'cloud';
   const [apiKeyInput, setApiKeyInput] = useState(getActiveApiKey());
   const isValidFormat = isValidApiKeyFormat(apiKeyInput, cloudProvider);
 
@@ -65,12 +65,12 @@ export default function ProcessingModePickerScreen() {
         </Text>
         <View style={sl.card}>
           {PROCESSING_MODES.map((mode, index) => {
-            const selected = defaultProcessingMode === mode;
+            const selected = summarizationMode === mode;
             return (
               <React.Fragment key={mode}>
                 <TouchableOpacity
                   style={styles.optionRow}
-                  onPress={() => setDefaultProcessingMode(mode)}
+                  onPress={() => setSummarizationMode(mode)}
                 >
                   <View style={[styles.radio, selected && styles.radioSelected]}>
                     {selected ? <View style={styles.radioDot} /> : null}

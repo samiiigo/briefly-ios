@@ -27,7 +27,7 @@ import { Colors, Spacing } from '@/theme';
 export default function SettingsScreen() {
   const router = useRouter();
   const { scrollPaddingTop, topInset } = useTopChromeLayout();
-  const { defaultProcessingMode, defaultTranscriptionMode } = useSettingsStore();
+  const { summarizationMode, transcriptionMode } = useSettingsStore();
   const folderLayout = useFolderListLayoutStore((s) => s.layout);
   const [layoutSheetVisible, setLayoutSheetVisible] = useState(false);
 
@@ -51,7 +51,7 @@ export default function SettingsScreen() {
             />
             <Text style={sl.settingsRowTitle}>Transcription mode</Text>
             <Text style={sl.settingsRowValue}>
-              {transcriptionModeTitle(defaultTranscriptionMode)}
+              {transcriptionModeTitle(transcriptionMode)}
             </Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
           </TouchableOpacity>
@@ -71,7 +71,7 @@ export default function SettingsScreen() {
             />
             <Text style={sl.settingsRowTitle}>Summarization mode</Text>
             <Text style={sl.settingsRowValue}>
-              {processingModeTitle(defaultProcessingMode)}
+              {processingModeTitle(summarizationMode)}
             </Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
           </TouchableOpacity>

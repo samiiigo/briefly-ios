@@ -6,11 +6,13 @@
  * intrinsically coupled to the recording lifecycle.
  */
 
-import { AudioModule, RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
+import { AudioModule, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
 import type { AudioRecorder, RecordingOptions } from 'expo-audio';
 import { getInfoAsync } from 'expo-file-system/legacy';
 import { AudioRecordingResult } from './types';
+import { assemblyAIRecordingOptions } from './recordingOptions';
 import { logger } from '@/utils/logger';
+import { ensureMicrophonePermission } from '@/utils/recordingPermissions';
 
 class RecordingServiceClass {
   private recorder: AudioRecorder | null = null;
@@ -36,6 +38,7 @@ class RecordingServiceClass {
     }
 
     logger.info('AUDIO', 'Starting local recording');
+    await ensureMicrophonePermission();
     await setAudioModeAsync({
       allowsRecording: true,
       playsInSilentMode: true,
@@ -44,7 +47,7 @@ class RecordingServiceClass {
     const AudioRecorderCtor = (AudioModule as any)['AudioRecorder'] as new (
       options: Partial<RecordingOptions>
     ) => AudioRecorder;
-    const recorder = new AudioRecorderCtor(RecordingPresets.HIGH_QUALITY);
+    const recorder = new AudioRecorderCtor(assemblyAIRecordingOptions);
     await recorder.prepareToRecordAsync();
     recorder.record();
 
@@ -79,21 +82,24 @@ class RecordingServiceClass {
       return { uri: '', duration: 0, fileSize: 0 };
     }
 
+    const recorder = this.recorder;
     let durationMillis = 0;
     try {
-      const status = this.recorder.getStatus();
-      durationMillis = status.durationMillis;
-      if (status.isRecording) {
-        this.recorder.pause();
-      }
+      durationMillis = recorder.getStatus().durationMillis;
     } catch (error: any) {
-      logger.error('AUDIO', 'Failed to flush recorder before stop', {
+      logger.warn('AUDIO', 'Failed to read recorder status before stop', {
         error: error?.message ?? String(error),
       });
     }
 
-    const uri = this.recorder.uri || '';
-    await this.recorder.stop();
+    const uri = recorder.uri || '';
+    try {
+      await recorder.stop();
+    } catch (error: any) {
+      logger.error('AUDIO', 'Failed to stop recorder', {
+        error: error?.message ?? String(error),
+      });
+    }
 
     let fileSize = 0;
     if (uri) {
