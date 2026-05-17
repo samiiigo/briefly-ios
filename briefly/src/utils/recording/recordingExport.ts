@@ -1,9 +1,9 @@
 import { Recording } from '@/types';
-import { formatDate, formatDuration } from './formatting';
+import { formatDate, formatDuration } from '../formatting/formatting';
 import {
   prepareSummaryMarkdownBlocks,
   SummaryMarkdownBlock,
-} from './parseSummaryMarkdown';
+} from '../summary/parseSummaryMarkdown';
 
 export interface RecordingExportOptions {
   includeTranscript?: boolean;

@@ -14,7 +14,7 @@ import {
   configureSummarizationProviderFactory,
   resetSummarizationProviderFactory,
 } from './summarizationProviderFactory';
-import { logger } from '@/utils/logger';
+import { logger } from '@/utils/logging/logger';
 
 // Re-export for external consumers
 export type { SummarizationResult, SummarizationProvider } from './summarizationProvider';

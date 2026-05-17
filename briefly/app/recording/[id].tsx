@@ -27,8 +27,8 @@ import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { ensureUniqueTitle } from '@/utils';
-import { getNextSummarizationFallback } from '@/utils/summarizationFallback';
-import { hasMeaningfulTranscript } from '@/utils/recordingValidation';
+import { getNextSummarizationFallback } from '@/utils/processing/summarizationFallback';
+import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
 import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 

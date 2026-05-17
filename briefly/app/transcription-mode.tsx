@@ -14,7 +14,7 @@ import {
   normalizeTranscriptionMode,
   transcriptionModeDescription,
   transcriptionModeTitle,
-} from '@/utils/transcriptionMode';
+} from '@/utils/processing/transcriptionMode';
 
 const TRANSCRIPTION_MODES: TranscriptionMode[] = [
   'live-assemblyai',

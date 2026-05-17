@@ -1,5 +1,5 @@
 import { Recording } from '@/types';
-import { formatGroupLabel } from './formatting';
+import { formatGroupLabel } from '../formatting/formatting';
 
 export function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);

@@ -13,7 +13,7 @@ import { Recording } from '@/types';
 import {
   buildRecordingExportPdfHtml,
   buildRecordingExportPlainText,
-} from '@/utils/recordingExport';
+} from '@/utils/recording/recordingExport';
 
 export function useExport(recording: Recording | undefined) {
   const [isExportingPdf, setIsExportingPdf] = useState(false);

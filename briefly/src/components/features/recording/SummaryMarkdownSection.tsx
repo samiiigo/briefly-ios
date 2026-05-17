@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors, withSerifFont } from '@/theme';
 import { SummaryMarkdownContent } from './SummaryMarkdownContent';
-import { prepareSummaryMarkdownBlocks } from '@/utils/parseSummaryMarkdown';
+import { prepareSummaryMarkdownBlocks } from '@/utils/summary/parseSummaryMarkdown';
 
 interface Props {
   markdown: string;

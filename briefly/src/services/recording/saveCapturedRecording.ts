@@ -2,7 +2,7 @@ import { RecordingFolder, TranscriptSegment } from '@/types';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { generateId, generateTitle, ensureUniqueTitle } from '@/utils';
-import { normalizeTranscriptionMode } from '@/utils/transcriptionMode';
+import { normalizeTranscriptionMode } from '@/utils/processing/transcriptionMode';
 import { folderFlagsFor } from '@/utils/folders/recordingFolder';
 import {
   initialStatusAfterSave,

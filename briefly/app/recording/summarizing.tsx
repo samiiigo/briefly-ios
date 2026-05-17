@@ -24,18 +24,18 @@ import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import {
   normalizeTranscriptionMode,
   resolvePostRecordingPipeline,
-} from '@/utils/transcriptionMode';
-import { ProcessingFailure, toProcessingFailure } from '@/utils/processingErrors';
-import { buildRecordingReadyFromSummarization } from '@/utils/recordingSummarization';
+} from '@/utils/processing/transcriptionMode';
+import { ProcessingFailure, toProcessingFailure } from '@/utils/processing/processingErrors';
+import { buildRecordingReadyFromSummarization } from '@/utils/recording/recordingSummarization';
 import {
   getNextSummarizationFallback,
   summarizationRetryProgressLabel,
-} from '@/utils/summarizationFallback';
+} from '@/utils/processing/summarizationFallback';
 import {
   hasMeaningfulTranscript,
   isRecordingFileMissing,
   isRecordingTooShort,
-} from '@/utils/recordingValidation';
+} from '@/utils/recording/recordingValidation';
 import { useAppInterruptGuard } from '@/hooks/useAppInterruptGuard';
 import { Colors, Spacing, BorderRadius, SliderAnimation, withAppFont } from '@/theme';
 

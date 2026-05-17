@@ -9,15 +9,15 @@ import {
 import {
   normalizeTranscriptionMode,
   resolvePostRecordingPipeline,
-} from '@/utils/transcriptionMode';
-import { toProcessingFailure } from '@/utils/processingErrors';
+} from '@/utils/processing/transcriptionMode';
+import { toProcessingFailure } from '@/utils/processing/processingErrors';
 import {
   hasMeaningfulTranscript,
   isRecordingFileMissing,
   isRecordingTooShort,
-} from '@/utils/recordingValidation';
-import { logger } from '@/utils/logger';
-import { buildRecordingReadyFromSummarization } from '@/utils/recordingSummarization';
+} from '@/utils/recording/recordingValidation';
+import { logger } from '@/utils/logging/logger';
+import { buildRecordingReadyFromSummarization } from '@/utils/recording/recordingSummarization';
 
 const PROCESSING_TIMEOUT_MS = 12 * 60 * 1000;
 

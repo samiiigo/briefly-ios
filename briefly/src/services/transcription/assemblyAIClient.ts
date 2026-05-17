@@ -10,7 +10,7 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import { AssemblyAIConfig } from '@/constants/api/assemblyAI';
-import { logger } from '@/utils/logger';
+import { logger } from '@/utils/logging/logger';
 
 const API_BASE_URL = 'https://api.assemblyai.com/v2';
 const POLL_INTERVAL_MS = 1500;

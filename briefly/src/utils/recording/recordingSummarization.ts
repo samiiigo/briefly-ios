@@ -1,5 +1,5 @@
 import { Recording } from '@/types';
-import { ensureUniqueTitle } from '@/utils/recording';
+import { ensureUniqueTitle } from './recording';
 
 export interface SummarizationRecordingFields {
   summary: string;

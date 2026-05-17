@@ -6,7 +6,7 @@
  */
 
 import { deleteAsync, copyAsync, documentDirectory } from 'expo-file-system/legacy';
-import { logger } from '@/utils/logger';
+import { logger } from '@/utils/logging/logger';
 
 class AudioFileServiceClass {
   async deleteFile(uri: string): Promise<void> {

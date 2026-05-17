@@ -12,6 +12,7 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -42,7 +43,13 @@ import { FolderUserSwipeableRow } from './FolderUserSwipeableRow';
 export const MAX_USER_FOLDERS_PREVIEW = MAX_PINNED_FOLDERS;
 
 const LIST_BOTTOM_PADDING = 140;
-const PINNED_CARD_WIDTH = 148;
+/** Matches {@link styles.folderCard} width in the two-column grid. */
+const FOLDER_GRID_CARD_WIDTH_RATIO = 0.485;
+
+function useFolderGridCardWidth(): number {
+  const { width: windowWidth } = useWindowDimensions();
+  return (windowWidth - 2 * Spacing.md) * FOLDER_GRID_CARD_WIDTH_RATIO;
+}
 
 function folderItemCountLabel(count: number, variant: 'grid' | 'list'): string {
   if (variant === 'grid') {
@@ -96,6 +103,7 @@ export function LibraryFolderBrowser({
   stackTitle,
   folderListFilter,
 }: LibraryFolderBrowserProps) {
+  const folderGridCardWidth = useFolderGridCardWidth();
   const { scrollPaddingTop, topInset } = useTopChromeLayout();
   const router = useRouter();
   const recordings = useRecordingStore((s) => s.recordings);
@@ -453,10 +461,11 @@ export function LibraryFolderBrowser({
 
   const renderPinnedFolderCard = useCallback(
     (f: FolderTile) => (
-      <View key={f.id} style={styles.pinnedCard}>
+      <View key={f.id} style={[styles.pinnedCard, { width: folderGridCardWidth }]}>
         <Pressable
           style={[
-            styles.pinnedCardInner,
+            styles.folderCardInner,
+            styles.folderCardUser,
             f.pinned && styles.folderCardPinned,
           ]}
           onPress={() => openFolder(f.id, f.name, f.folderType)}
@@ -493,7 +502,7 @@ export function LibraryFolderBrowser({
         </Pressable>
       </View>
     ),
-    [openFolder, handleUserFolderLongPress]
+    [folderGridCardWidth, openFolder, handleUserFolderLongPress]
   );
 
   const renderPinnedRow = useCallback(
@@ -895,18 +904,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   pinnedCard: {
-    width: PINNED_CARD_WIDTH,
     marginRight: 12,
-  },
-  pinnedCardInner: {
-    position: 'relative',
-    width: PINNED_CARD_WIDTH,
-    borderRadius: BorderRadius.cardXL,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    minHeight: 94,
-    justifyContent: 'space-between',
-    backgroundColor: Colors.card,
   },
   folderGrid: {
     flexDirection: 'row',

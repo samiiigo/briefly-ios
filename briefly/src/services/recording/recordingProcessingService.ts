@@ -4,18 +4,18 @@ import { TranscriptionService } from '@/services/transcription';
 import {
   normalizeTranscriptionMode,
   resolvePostRecordingPipeline,
-} from '@/utils/transcriptionMode';
+} from '@/utils/processing/transcriptionMode';
 import {
   ProcessingFailure,
   shouldSkipAudioFallback,
   toProcessingFailure,
   toUserFacingProcessingError,
-} from '@/utils/processingErrors';
+} from '@/utils/processing/processingErrors';
 import {
   hasMeaningfulTranscript,
   validateRecordingAsset,
-} from '@/utils/recordingValidation';
-import { logger } from '@/utils/logger';
+} from '@/utils/recording/recordingValidation';
+import { logger } from '@/utils/logging/logger';
 
 export type RecordingProcessingStage = 'transcribing' | 'summarizing';
 

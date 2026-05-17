@@ -5,7 +5,7 @@ import { Recording } from '@/types';
 import {
   getRecordingContentEmoji,
   isRecordingProcessing,
-} from '@/utils/recordingContentEmoji';
+} from '@/utils/recording/recordingContentEmoji';
 import { RecordingEmojiCircle } from '@/components/features/recording/RecordingEmojiCircle';
 import { Colors, Spacing } from '@/theme';
 

@@ -18,7 +18,7 @@ import {
   screenLayoutStyles as sl,
 } from '@/components/navigation/screenLayout';
 import { ProcessingMode } from '@/types';
-import { processingModeDescription, processingModeTitle } from '@/utils/processingMode';
+import { processingModeDescription, processingModeTitle } from '@/utils/processing/processingMode';
 import {
   getProviderTitle,
   getApiKeyPlaceholder,

@@ -11,7 +11,7 @@ import { PlaybackService } from '@/services/audio';
 import type { PlaybackControls } from '@/services/audio';
 import { TranscriptSegment } from '@/types';
 import { SliderAnimation } from '@/theme';
-import { logger } from '@/utils/logger';
+import { logger } from '@/utils/logging/logger';
 
 interface UsePlaybackOptions {
   filePath: string;

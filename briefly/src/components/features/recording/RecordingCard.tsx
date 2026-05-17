@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '@/types';
 import { formatDuration, formatDate } from '@/utils';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
-import { isRecordingProcessing } from '@/utils/recordingContentEmoji';
+import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 

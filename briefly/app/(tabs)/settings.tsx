@@ -19,8 +19,8 @@ import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
-import { transcriptionModeTitle } from '@/utils/transcriptionMode';
-import { processingModeTitle } from '@/utils/processingMode';
+import { transcriptionModeTitle } from '@/utils/processing/transcriptionMode';
+import { processingModeTitle } from '@/utils/processing/processingMode';
 import { Colors, Spacing } from '@/theme';
 
 export default function SettingsScreen() {

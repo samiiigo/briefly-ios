@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TextStyle } from 'react-native';
 import { Colors, withAppFont, withSerifFont } from '@/theme';
-import { SummaryMarkdownBlock } from '@/utils/parseSummaryMarkdown';
+import { SummaryMarkdownBlock } from '@/utils/summary/parseSummaryMarkdown';
 import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
 
 interface Props {

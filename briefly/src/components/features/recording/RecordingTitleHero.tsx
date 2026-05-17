@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Recording } from '@/types';
-import { getRecordingContentEmoji } from '@/utils/recordingContentEmoji';
+import { getRecordingContentEmoji } from '@/utils/recording/recordingContentEmoji';
 import { formatDate, formatDuration } from '@/utils';
 import { RecordingEmojiCircle } from '@/components/features/recording/RecordingEmojiCircle';
 import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';

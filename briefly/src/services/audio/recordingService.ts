@@ -12,8 +12,8 @@ import { getInfoAsync } from 'expo-file-system/legacy';
 import { AudioRecordingResult } from './types';
 import { assemblyAIRecordingOptions } from './recordingOptions';
 import { normalizeDbMetering } from './audioMetering';
-import { logger } from '@/utils/logger';
-import { ensureMicrophonePermission } from '@/utils/recordingPermissions';
+import { logger } from '@/utils/logging/logger';
+import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
 import { configureRecordingStoppedAudioSession } from './playbackSession';
 
 class RecordingServiceClass {

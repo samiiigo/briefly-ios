@@ -4,7 +4,7 @@
  */
 
 import { setAudioModeAsync, setIsAudioActiveAsync } from 'expo-audio';
-import { logger } from '@/utils/logger';
+import { logger } from '@/utils/logging/logger';
 
 const PLAYBACK_MODE = {
   allowsRecording: false,

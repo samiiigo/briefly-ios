@@ -1,6 +1,6 @@
 import { Recording } from '@/types';
-import { formatDate, formatDuration } from './formatting';
-import { prepareSummaryMarkdownBlocks } from './parseSummaryMarkdown';
+import { formatDate, formatDuration } from '../formatting/formatting';
+import { prepareSummaryMarkdownBlocks } from '../summary/parseSummaryMarkdown';
 import { blocksToMarkdown } from './recordingExport';
 
 export interface RecordingSummaryMarkdownOptions {

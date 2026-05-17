@@ -8,7 +8,7 @@
 
 import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
-import { logger } from '@/utils/logger';
+import { logger } from '@/utils/logging/logger';
 import { PlaybackControls, PlaybackStatusUpdate } from './contracts';
 import { configurePlaybackAudioSession } from './playbackSession';
 

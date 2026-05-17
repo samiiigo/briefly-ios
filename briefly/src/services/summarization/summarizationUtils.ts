@@ -7,8 +7,8 @@
  */
 
 import { TranscriptSegment, KeyInsight } from '@/types';
-import { logger } from '@/utils/logger';
-import { normalizeMainEmoji } from '@/utils/recordingContentEmoji';
+import { logger } from '@/utils/logging/logger';
+import { normalizeMainEmoji } from '@/utils/recording/recordingContentEmoji';
 import { SummarizationResult } from './summarizationProvider';
 
 export { SYSTEM_PROMPT } from './summarizationPrompt';

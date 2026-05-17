@@ -27,14 +27,14 @@ import {
   resolveRecordingTranscriptionPlan,
   requiresLiveOnDeviceCapture,
   showsLivePreviewDuringRecording,
-} from '@/utils/transcriptionMode';
+} from '@/utils/processing/transcriptionMode';
 import { formatTimestamp } from '@/utils';
 import {
   isRecordingTooShort,
   minRecordingDurationHint,
   STOP_EARLY_CONFIRM_THRESHOLD_SEC,
-} from '@/utils/recordingValidation';
-import { openAppSettings } from '@/utils/recordingPermissions';
+} from '@/utils/recording/recordingValidation';
+import { openAppSettings } from '@/utils/recording/recordingPermissions';
 import { useTimer } from '@/hooks/useTimer';
 import { useLiveTranscript } from '@/hooks/useLiveTranscript';
 import { useAppInterruptGuard } from '@/hooks/useAppInterruptGuard';

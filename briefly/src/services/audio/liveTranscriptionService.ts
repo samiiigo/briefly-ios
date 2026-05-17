@@ -21,13 +21,13 @@ import { getInfoAsync } from 'expo-file-system/legacy';
 import { normalizeDbMetering } from './audioMetering';
 import { AssemblyAIConfig, requireAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
 import { AudioRecordingResult } from './types';
-import { logger } from '@/utils/logger';
+import { logger } from '@/utils/logging/logger';
 import type { AssemblyAIConnectionState } from './assemblyAILiveTranscription';
 import { AssemblyAILiveTranscriptionClient } from './assemblyAILiveTranscription';
 import { AssemblyAIWebSocketService } from './assemblyAIWebSocketService';
 import { NativeAudioCapture } from './nativeAudioCapture';
 import { ExpoAudioStreamingCapture } from './expoAudioStreamingCapture';
-import { ensureMicrophonePermission } from '@/utils/recordingPermissions';
+import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
 
 export interface LiveTranscriptionCallbacks {
   onPartial: (text: string) => void;
