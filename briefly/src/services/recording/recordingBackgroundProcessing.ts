@@ -17,6 +17,7 @@ import {
   isRecordingTooShort,
 } from '@/utils/recordingValidation';
 import { logger } from '@/utils/logger';
+import { buildRecordingReadyFromSummarization } from '@/utils/recordingSummarization';
 
 const PROCESSING_TIMEOUT_MS = 12 * 60 * 1000;
 
@@ -71,10 +72,9 @@ async function completeJob(
   await updateRecording(recordingId, {
     status: 'ready',
     transcript: result.segments,
-    summary: result.summary,
-    keyInsights: result.keyInsights,
     processingMode: modeUsed,
     errorMessage: undefined,
+    ...buildRecordingReadyFromSummarization(result),
   });
 
   logger.info('RECORDING', 'Background processing completed', { recordingId });
@@ -138,6 +138,7 @@ async function runJob(
       transcript: undefined,
       summary: undefined,
       keyInsights: undefined,
+      mainEmoji: undefined,
     });
     return processRecordingFromSavedAudio(pMode, rec.filePath, callbacks, meta);
   }

@@ -61,10 +61,10 @@ describe('JSON summary parsing', () => {
     assert.equal(result.summary, markdown);
   });
 
-  it('parses structured title/overview/sections/actionItems schema', () => {
+  it('parses structured mainEmoji/overview/sections/actionItems schema', () => {
     const result = parseJsonSummary(
       JSON.stringify({
-        title: '📊 Q2 planning sync',
+        mainEmoji: '📊',
         overview: 'Team aligned on **Q2 goals** and launch timing.',
         sections: [
           {
@@ -83,6 +83,7 @@ describe('JSON summary parsing', () => {
     assert.match(result.summary, /- Ship beta by June/);
     assert.equal(result.keyInsights.length, 1);
     assert.equal(result.keyInsights[0].text, '**Alex**: Send timeline doc');
+    assert.equal(result.mainEmoji, '📊');
   });
 });
 

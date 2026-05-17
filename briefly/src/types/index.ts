@@ -67,6 +67,8 @@ export interface Recording {
   transcript?: TranscriptSegment[];
   summary?: string;
   keyInsights?: KeyInsight[];
+  /** AI-assigned emoji representing the recording theme. */
+  mainEmoji?: string;
   errorMessage?: string;
 }
 

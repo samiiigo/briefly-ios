@@ -11,6 +11,8 @@ import { TranscriptSegment, KeyInsight } from '@/types';
 export interface SummarizationResult {
   summary: string;
   keyInsights: KeyInsight[];
+  /** Single emoji representing the overall transcript theme. */
+  mainEmoji?: string;
 }
 
 export interface SummarizationProvider {

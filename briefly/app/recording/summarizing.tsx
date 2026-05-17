@@ -26,6 +26,7 @@ import {
   resolvePostRecordingPipeline,
 } from '@/utils/transcriptionMode';
 import { ProcessingFailure, toProcessingFailure } from '@/utils/processingErrors';
+import { buildRecordingReadyFromSummarization } from '@/utils/recordingSummarization';
 import {
   getNextSummarizationFallback,
   summarizationRetryProgressLabel,
@@ -202,6 +203,7 @@ export default function SummarizingScreen() {
           transcript: undefined,
           summary: undefined,
           keyInsights: undefined,
+          mainEmoji: undefined,
         });
         return processRecordingFromSavedAudio(pMode, rec.filePath, callbacks, meta);
       }
@@ -254,10 +256,9 @@ export default function SummarizingScreen() {
 
       await updateRecording(recordingId, {
         status: 'ready',
-        summary: result.summary,
-        keyInsights: result.keyInsights,
         processingMode: modeUsed,
         errorMessage: undefined,
+        ...buildRecordingReadyFromSummarization(result),
       });
 
       setStage('done');
@@ -288,10 +289,11 @@ export default function SummarizingScreen() {
         errorMessage: undefined,
         summary: undefined,
         keyInsights: undefined,
+        mainEmoji: undefined,
         processingMode: mode,
       });
 
-      const { summary, keyInsights } = await retrySummarization(rec.transcript, mode, {
+      const { summary, keyInsights, mainEmoji } = await retrySummarization(rec.transcript, mode, {
         onStage: (nextStage) => {
           if (isCancelled.current) return;
           setStage(nextStage);
@@ -300,7 +302,7 @@ export default function SummarizingScreen() {
       });
 
       await completeProcessing(
-        { segments: rec.transcript, summary, keyInsights, usedAudioFallback: false },
+        { segments: rec.transcript, summary, keyInsights, mainEmoji, usedAudioFallback: false },
         mode,
       );
     },

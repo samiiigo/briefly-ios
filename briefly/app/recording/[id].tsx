@@ -74,6 +74,7 @@ export default function TranscriptScreen() {
       transcript: undefined,
       summary: undefined,
       keyInsights: undefined,
+      mainEmoji: undefined,
       processingMode: activeSummarizationMode,
     });
     router.replace({
@@ -90,6 +91,7 @@ export default function TranscriptScreen() {
         errorMessage: undefined,
         summary: undefined,
         keyInsights: undefined,
+        mainEmoji: undefined,
         processingMode: mode,
       });
       router.replace({
@@ -120,6 +122,7 @@ export default function TranscriptScreen() {
       errorMessage: undefined,
       summary: undefined,
       keyInsights: undefined,
+      mainEmoji: undefined,
       processingMode: mode,
     });
     router.replace({

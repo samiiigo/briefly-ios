@@ -16,6 +16,8 @@ import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { RecordingService, LiveTranscriptionService } from '@/services/audio';
+import { saveCapturedRecording } from '@/services/recording/saveCapturedRecording';
+import { RecordingFolder } from '@/types';
 import { WaveformVisualizer } from '@/components/features/recording/WaveformVisualizer';
 import { Colors, Spacing, BorderRadius } from '@/theme';
 import { useRecordingStore } from '@/context/useRecordingStore';
@@ -36,8 +38,6 @@ import { openAppSettings } from '@/utils/recordingPermissions';
 import { useTimer } from '@/hooks/useTimer';
 import { useLiveTranscript } from '@/hooks/useLiveTranscript';
 import { useAppInterruptGuard } from '@/hooks/useAppInterruptGuard';
-import { setTransitData } from '@/utils/navigationTransit';
-
 function isPermissionError(message: string): boolean {
   return /microphone|permission|speech recognition/i.test(message);
 }
@@ -251,36 +251,8 @@ export default function NewRecordingScreen() {
     router.replace('/(tabs)');
   }, [cleanup, router, stopTimer, teardownCapture]);
 
-  const handleStop = async () => {
+  const executeStopAndSave = useCallback(async () => {
     if (isStopped.current || isStopping || startFailed) return;
-
-    const durationSec = elapsedRef.current || elapsed;
-    if (durationSec < STOP_EARLY_CONFIRM_THRESHOLD_SEC) {
-      const paused = await pauseIfRecording();
-      if (!paused) return;
-
-      Alert.alert(
-        'Stop recording?',
-        `Recordings under ${STOP_EARLY_CONFIRM_THRESHOLD_SEC} seconds won't be saved. Are you sure you want to stop?`,
-        [
-          {
-            text: 'Resume',
-            style: 'cancel',
-            onPress: () => {
-              void resumeRecording();
-            },
-          },
-          {
-            text: 'Stop',
-            style: 'destructive',
-            onPress: () => {
-              void discardActiveRecording();
-            },
-          },
-        ],
-      );
-      return;
-    }
 
     setIsStopping(true);
     isStopped.current = true;
@@ -339,19 +311,92 @@ export default function NewRecordingScreen() {
       return;
     }
 
-    const pre = liveSegments.current.length > 0 ? liveSegments.current : undefined;
-    setTransitData({ preTranscript: pre });
-    router.replace({
-      pathname: '/recording/save',
-      params: {
-        duration: String(stoppedDurationSec),
+    const preTranscript =
+      liveSegments.current.length > 0 ? liveSegments.current : undefined;
+
+    try {
+      await saveCapturedRecording({
+        duration: stoppedDurationSec,
         filePath,
-        fileSize: String(fileSize),
-        targetFolder: params.targetFolder,
+        fileSize,
+        targetFolder: (params.targetFolder as RecordingFolder) ?? 'unlisted',
         targetUserFolderId: params.targetUserFolderId,
-        markImported: params.markImported,
-      },
-    });
+        markImported: params.markImported === 'true',
+        preTranscript,
+      });
+      router.replace('/(tabs)');
+    } catch {
+      isStopped.current = false;
+      setIsStopping(false);
+      Alert.alert('Could not save', 'Something went wrong while saving. Please try again.');
+    }
+  }, [
+    cleanup,
+    elapsed,
+    flush,
+    isStopping,
+    params.markImported,
+    params.targetFolder,
+    params.targetUserFolderId,
+    router,
+    startFailed,
+    startTimer,
+    stopTimer,
+  ]);
+
+  const handleStop = async () => {
+    if (isStopped.current || isStopping || startFailed) return;
+
+    const durationSec = elapsedRef.current || elapsed;
+    if (durationSec < STOP_EARLY_CONFIRM_THRESHOLD_SEC) {
+      const paused = await pauseIfRecording();
+      if (!paused) return;
+
+      Alert.alert(
+        'Stop recording?',
+        `Recordings under ${STOP_EARLY_CONFIRM_THRESHOLD_SEC} seconds won't be saved. Are you sure you want to stop?`,
+        [
+          {
+            text: 'Resume',
+            style: 'cancel',
+            onPress: () => {
+              void resumeRecording();
+            },
+          },
+          {
+            text: 'Stop',
+            style: 'destructive',
+            onPress: () => {
+              void discardActiveRecording();
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    const paused = await pauseIfRecording();
+    if (!paused) return;
+
+    Alert.alert(
+      'Save recording?',
+      'Your recording will be saved and processing will start.',
+      [
+        {
+          text: 'Keep Recording',
+          style: 'cancel',
+          onPress: () => {
+            void resumeRecording();
+          },
+        },
+        {
+          text: 'Save',
+          onPress: () => {
+            void executeStopAndSave();
+          },
+        },
+      ],
+    );
   };
 
   const hrs = Math.floor(elapsed / 3600);
@@ -492,16 +537,7 @@ export default function NewRecordingScreen() {
           leading={
             <AnchoredOverflowMenu
               align="leading"
-              items={[
-                { label: 'Discard', onPress: handleDiscard },
-                {
-                  label: 'Save',
-                  onPress: () => {
-                    void handleStop();
-                  },
-                  disabled: !isStarted || startFailed || isStopping,
-                },
-              ]}
+              items={[{ label: 'Discard', onPress: handleDiscard }]}
               renderTrigger={(open) => (
                 <CircularIconButton
                   icon="arrow-back"

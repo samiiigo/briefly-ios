@@ -8,7 +8,10 @@
 
 import { TranscriptSegment, KeyInsight } from '@/types';
 import { logger } from '@/utils/logger';
+import { normalizeMainEmoji } from '@/utils/recordingContentEmoji';
 import { SummarizationResult } from './summarizationProvider';
+
+export { SYSTEM_PROMPT } from './summarizationPrompt';
 
 /** Timeout for cloud summarization API calls (ms). */
 export const SUMMARIZATION_TIMEOUT_MS = 30_000;
@@ -21,26 +24,6 @@ export function segmentsToText(segments: TranscriptSegment[]): string {
   return segments.map((s) => s.text).join(' ').trim();
 }
 
-export const SYSTEM_PROMPT = `You are an expert meeting and lecture summarizer. Given a transcript, extract the key information and output a highly structured JSON object. 
-
-Your JSON object must strictly follow this schema:
-- "title": A short, catchy title summarizing the entire transcript (include 1 relevant emoji at the start).
-- "overview": A concise 2-3 sentence paragraph explaining the main topic and overall outcome.
-- "sections": An array of objects representing the core topics discussed. Each object must contain:
-  - "heading": A short subsection title (include 1 relevant emoji).
-  - "points": An array of 2-4 string elements detailing the key insights, arguments, or decisions made in this section.
-- "actionItems": An array of objects capturing next steps. Each object must contain:
-  - "owner": The person responsible (use "Unassigned" if not specified).
-  - "task": A clear, short description of the required action.
-
-Content & Formatting Rules:
-- Use **bold** text within "overview", "points", and "task" strings to highlight names, dates, metrics, and critical decisions.
-- Keep emojis tasteful and sparse (limit to titles and headings).
-- Do not use markdown bullet dashes (e.g., "- ") inside the strings; the JSON array structure naturally handles the lists.
-- Do not include markdown code fences (like \`\`\`json) around the output.
-
-Respond ONLY with valid JSON. Do not include any introductory text, extra explanations, or trailing remarks.`;
-
 interface StructuredSection {
   heading?: string;
   points?: string[];
@@ -52,7 +35,7 @@ interface StructuredActionItem {
 }
 
 interface StructuredSummaryJson {
-  title?: string;
+  mainEmoji?: string;
   overview?: string;
   sections?: StructuredSection[];
   actionItems?: StructuredActionItem[];
@@ -60,6 +43,7 @@ interface StructuredSummaryJson {
 
 function isStructuredSummaryJson(parsed: Record<string, unknown>): boolean {
   return (
+    typeof parsed.mainEmoji === 'string' ||
     typeof parsed.overview === 'string' ||
     Array.isArray(parsed.sections) ||
     Array.isArray(parsed.actionItems)
@@ -69,7 +53,8 @@ function isStructuredSummaryJson(parsed: Record<string, unknown>): boolean {
 /** Maps the LLM structured schema to stored summary markdown + key insights. */
 export function structuredSummaryToResult(
   parsed: StructuredSummaryJson
-): { summary: string; keyInsights: KeyInsight[] } {
+): { summary: string; keyInsights: KeyInsight[]; mainEmoji?: string } {
+  const mainEmoji = normalizeMainEmoji(parsed.mainEmoji);
   const lines: string[] = [];
 
   const overview = parsed.overview?.trim();
@@ -108,16 +93,11 @@ export function structuredSummaryToResult(
   }
 
   let summary = lines.join('\n').trim();
-  if (!summary) {
-    const title = parsed.title?.trim();
-    if (title) {
-      summary = `## Overview\n\n${title}`;
-    } else if (keyInsights.length > 0) {
-      summary = '## Overview\n\n_Key points and action items are listed below._';
-    }
+  if (!summary && keyInsights.length > 0) {
+    summary = '## Overview\n\n_Key points and action items are listed below._';
   }
 
-  return { summary, keyInsights };
+  return { summary, keyInsights, mainEmoji };
 }
 
 /**
@@ -157,7 +137,7 @@ export function extractiveSummarize(
 export function parseJsonSummary(
   raw: string,
   fallbackText: string
-): { summary: string; keyInsights: KeyInsight[] } {
+): SummarizationResult {
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   let parsed: any = {};
   try {
@@ -172,6 +152,7 @@ export function parseJsonSummary(
       hasOverview: !!parsed.overview,
       sectionCount: Array.isArray(parsed.sections) ? parsed.sections.length : 0,
       actionItemCount: Array.isArray(parsed.actionItems) ? parsed.actionItems.length : 0,
+      mainEmoji: structured.mainEmoji,
     });
     return normalizeSummarizationResult(structured, fallbackText);
   }
@@ -187,6 +168,7 @@ export function parseJsonSummary(
         id: generateId(),
         text: t,
       })),
+      mainEmoji: normalizeMainEmoji(parsed.mainEmoji),
     },
     fallbackText
   );
@@ -210,6 +192,7 @@ export function normalizeSummarizationResult(
     return {
       summary: normalizedSummary,
       keyInsights: normalizedInsights,
+      mainEmoji: result.mainEmoji,
     };
   }
 

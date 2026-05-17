@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyInsight } from '@/types';
+import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
 import { Colors } from '@/theme';
 
 interface Props {
@@ -14,14 +15,14 @@ export function KeyInsights({ insights }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="sparkles" size={18} color={Colors.insightAccent} />
+        <Ionicons name="sparkles" size={20} color={Colors.insightAccent} />
         <Text style={styles.headerText}>Key insights</Text>
       </View>
       <View style={styles.list}>
         {insights.map((insight) => (
           <View key={insight.id} style={styles.item}>
             <Text style={styles.bullet}>•</Text>
-            <Text style={styles.text}>{insight.text}</Text>
+            <EmojiAwareText text={insight.text} style={styles.text} strongStyle={styles.textStrong} />
           </View>
         ))}
       </View>
@@ -47,9 +48,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerText: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
-    lineHeight: 22,
+    lineHeight: 24,
     color: Colors.textPrimary,
   },
   list: {
@@ -60,17 +61,21 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   bullet: {
-    width: 19,
-    marginTop: 6,
+    width: 20,
+    marginTop: 7,
     marginRight: 12,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 14,
+    lineHeight: 18,
     color: Colors.insightAccent,
   },
   text: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 19,
+    fontSize: 17,
+    lineHeight: 25,
     color: Colors.summaryBody,
+  },
+  textStrong: {
+    fontWeight: '700',
+    color: Colors.textPrimary,
   },
 });

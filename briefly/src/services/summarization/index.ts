@@ -23,7 +23,7 @@ export const SummarizationService = {
   async summarize(
     segments: TranscriptSegment[],
     mode: ProcessingMode
-  ): Promise<{ summary: string; keyInsights: KeyInsight[] }> {
+  ): Promise<{ summary: string; keyInsights: KeyInsight[]; mainEmoji?: string }> {
     logger.info('SUMMARY', 'Summarization requested', { mode, segmentCount: segments.length });
     const provider = createSummarizationProvider(mode);
     return provider.summarize(segments);
