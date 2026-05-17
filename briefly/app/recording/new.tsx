@@ -77,6 +77,11 @@ export default function NewRecordingScreen() {
   const showLivePreviewPanel = showsLivePreviewDuringRecording(plan);
   const showLiveStream = showLivePreviewPanel && (!isLocalLive || liveStreamVisible);
 
+  const getMetering = useCallback(() => {
+    if (startedWithLiveRef.current) return LiveTranscriptionService.getMetering();
+    return RecordingService.getMetering();
+  }, []);
+
   const teardownCapture = useCallback(async () => {
     try {
       if (startedWithLiveRef.current) {
@@ -389,7 +394,11 @@ export default function NewRecordingScreen() {
           </View>
         </View>
         <View style={s.wfC}>
-          <WaveformVisualizer isActive={isStarted && !isPaused && !startFailed} barCount={24} />
+          <WaveformVisualizer
+            isActive={isStarted && !isPaused && !startFailed}
+            barCount={24}
+            getMetering={getMetering}
+          />
         </View>
 
         {showLivePreviewPanel ? (

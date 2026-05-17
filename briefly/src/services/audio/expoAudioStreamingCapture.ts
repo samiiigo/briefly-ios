@@ -19,6 +19,7 @@ import type { AudioRecorder, RecordingOptions } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import { assemblyAIRecordingOptions, WAV_HEADER_BYTES } from './recordingOptions';
+import { normalizeDbMetering, pcmBufferToLevel, smoothMeteringLevel } from './audioMetering';
 
 const POLL_INTERVAL_MS = 250;
 
@@ -44,6 +45,7 @@ export class ExpoAudioStreamingCapture {
   private onCaptureError: ((msg: string) => void) | null = null;
   private startTime = 0;
   private isPaused = false;
+  private meteringLevel = 0;
 
   async start(
     onChunk: (data: ArrayBuffer) => void,
@@ -64,6 +66,7 @@ export class ExpoAudioStreamingCapture {
     this.onCaptureError = onError;
     this.sentBytes = 0;
     this.isPaused = false;
+    this.meteringLevel = 0;
     this.startTime = Date.now();
 
     const AudioRecorderCtor = (AudioModule as any)['AudioRecorder'] as new (
@@ -77,8 +80,22 @@ export class ExpoAudioStreamingCapture {
     this.startPolling();
   }
 
+  getMetering(): number {
+    if (!this.recorder || this.isPaused) return 0;
+    try {
+      const status = this.recorder.getStatus();
+      if (status.isRecording && status.metering !== undefined) {
+        return normalizeDbMetering(status.metering);
+      }
+    } catch {
+      // fall through to PCM-derived level
+    }
+    return this.meteringLevel;
+  }
+
   pause(): void {
     this.isPaused = true;
+    this.meteringLevel = 0;
     this.recorder?.pause();
     this.stopPolling();
   }
@@ -140,6 +157,8 @@ export class ExpoAudioStreamingCapture {
 
       const buffer = base64ToArrayBuffer(b64);
       if (buffer.byteLength > 0) {
+        const instant = pcmBufferToLevel(buffer);
+        this.meteringLevel = smoothMeteringLevel(this.meteringLevel, instant);
         this.onChunk?.(buffer);
         this.sentBytes = totalBytes;
       }

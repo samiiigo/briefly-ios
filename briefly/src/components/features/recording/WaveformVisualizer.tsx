@@ -9,8 +9,8 @@ const MIN_SCALE = 0.05;
 interface Props {
   isActive: boolean;
   barCount?: number;
-  /** Optional custom metering function. Falls back to RecordingService.getMetering(). */
-  getMetering?: () => Promise<number>;
+  /** Optional metering source. Falls back to RecordingService.getMetering(). */
+  getMetering?: () => number | Promise<number>;
 }
 
 export function WaveformVisualizer({ isActive, barCount = 20, getMetering }: Props) {
@@ -38,12 +38,10 @@ export function WaveformVisualizer({ isActive, barCount = 20, getMetering }: Pro
     const poll = async () => {
       if (cancelled) return;
 
-      const level = getMetering ? await getMetering() : await RecordingService.getMetering();
+      const raw = getMetering ? await getMetering() : RecordingService.getMetering();
       if (cancelled) return;
 
-      // When metering returns 0 (unsupported platform or near-silence),
-      // use a subtle simulated value so bars visibly animate during recording.
-      const displayLevel = level > 0.01 ? level : 0.05 + Math.random() * 0.25;
+      const displayLevel = Math.max(MIN_SCALE, raw);
 
       // Shift buffer left, push new sample on the right
       buffer.current.shift();

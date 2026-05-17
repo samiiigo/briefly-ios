@@ -18,5 +18,5 @@ export interface PlaybackControls {
 }
 
 export interface MeteringSource {
-  getMetering(): Promise<number>;
+  getMetering(): number;
 }

@@ -17,6 +17,7 @@ export const assemblyAIRecordingOptions: RecordingOptions = {
   sampleRate: ASSEMBLY_AI_SAMPLE_RATE,
   numberOfChannels: 1,
   bitRate: ASSEMBLY_AI_SAMPLE_RATE * 16,
+  isMeteringEnabled: true,
   ios: {
     outputFormat: IOSOutputFormat.LINEARPCM,
     audioQuality: AudioQuality.MAX,
