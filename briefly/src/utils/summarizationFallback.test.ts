@@ -6,7 +6,7 @@ describe('getNextSummarizationFallback', () => {
   it('offers default cloud after custom API key fails', () => {
     const next = getNextSummarizationFallback('cloud-user-key', ['cloud-user-key']);
     assert.equal(next?.mode, 'cloud-shared-openrouter');
-    assert.equal(next?.buttonLabel, 'Try built-in summarization');
+    assert.equal(next?.buttonLabel, 'Try cloud summarization');
   });
 
   it('offers on-device after default cloud fails', () => {
@@ -15,7 +15,7 @@ describe('getNextSummarizationFallback', () => {
       'cloud-shared-openrouter',
     ]);
     assert.equal(next?.mode, 'on-device');
-    assert.equal(next?.buttonLabel, 'Try Apple Intelligence');
+    assert.equal(next?.buttonLabel, 'Try local summarization');
   });
 
   it('offers on-device when default cloud was the first attempt', () => {

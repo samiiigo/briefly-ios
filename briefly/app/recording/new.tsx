@@ -121,7 +121,7 @@ export default function NewRecordingScreen() {
       try {
         if (requiresLiveOnDeviceCapture(plan) && !plan.useLiveCapture) {
           throw new Error(
-            'Private transcription is not available on this device. Choose another mode in Settings.',
+            'On-device transcription is not available on this device. Choose another mode in Settings.',
           );
         }
         startedWithLiveRef.current = useLive;

@@ -22,14 +22,14 @@ export function getNextSummarizationFallback(
   if (isUserKeySummarizationMode(lastFailedMode) && !tried.has('cloud-shared-openrouter')) {
     return {
       mode: 'cloud-shared-openrouter',
-      buttonLabel: 'Try built-in summarization',
+      buttonLabel: 'Try cloud summarization',
     };
   }
 
   if (lastFailedMode !== 'on-device' && !tried.has('on-device')) {
     return {
       mode: 'on-device',
-      buttonLabel: 'Try Apple Intelligence',
+      buttonLabel: 'Try local summarization',
     };
   }
 
@@ -37,7 +37,7 @@ export function getNextSummarizationFallback(
 }
 
 export function summarizationRetryProgressLabel(mode: ProcessingMode): string {
-  if (mode === 'cloud-shared-openrouter') return 'Trying built-in summarization…';
-  if (mode === 'on-device') return 'Trying Apple Intelligence…';
+  if (mode === 'cloud-shared-openrouter') return 'Trying cloud summarization…';
+  if (mode === 'on-device') return 'Trying local summarization…';
   return 'Retrying summary…';
 }

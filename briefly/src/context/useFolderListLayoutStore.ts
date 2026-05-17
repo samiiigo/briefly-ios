@@ -6,6 +6,12 @@ export function folderListLayoutTitle(layout: FolderListLayoutMode): string {
   return layout === 'grid' ? 'Grid' : 'List';
 }
 
+export function folderListLayoutDescription(layout: FolderListLayoutMode): string {
+  return layout === 'grid'
+    ? 'Two columns of folder tiles.'
+    : 'One folder per row with more detail.';
+}
+
 interface State {
   layout: FolderListLayoutMode;
   setLayout: (layout: FolderListLayoutMode) => void;

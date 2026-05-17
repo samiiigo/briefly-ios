@@ -142,7 +142,7 @@ export const TranscriptionService = {
     if (normalizedMode === 'local-on-device') {
       logger.warn('TranscriptionService', 'Local mode cannot be used for async transcription');
       throw new Error(
-        'Private transcription does not upload audio. Transcripts must be captured live while recording. If none was captured, switch to Private mode and record again.'
+        'On-device transcription does not upload audio. Transcripts must be captured live while recording. If none was captured, switch to On Device mode and record again.'
       );
     }
 

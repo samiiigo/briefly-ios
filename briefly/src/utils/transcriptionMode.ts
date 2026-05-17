@@ -24,7 +24,7 @@ export function transcriptionModeTitle(mode: TranscriptionMode | string): string
   const normalized = normalizeTranscriptionMode(mode);
   if (normalized === 'live-assemblyai') return 'Live';
   if (normalized === 'post-assemblyai') return 'After recording';
-  return 'Private';
+  return 'On Device';
 }
 
 export function transcriptionModeDescription(mode: TranscriptionMode | string): string {
