@@ -11,6 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '@/types';
 import { formatDuration, formatDate } from '@/utils';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
+import { isRecordingProcessing } from '@/utils/recordingContentEmoji';
+import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 interface Props {
@@ -24,40 +26,6 @@ interface Props {
   compact?: boolean;
 }
 
-function getContentEmoji(recording: Recording): string {
-  const parts: string[] = [recording.title ?? ''];
-  if (recording.summary) parts.push(recording.summary);
-  if (recording.keyInsights) parts.push(...recording.keyInsights.map((k) => k.text));
-  const text = parts.join(' ').toLowerCase();
-
-  if (/\b(lecture|class|course|lesson|seminar|webinar|workshop|tutorial)\b/.test(text)) {
-    return '🎓';
-  }
-  if (/\b(podcast|episode|show|stream)\b/.test(text)) {
-    return '🎧';
-  }
-  if (/\b(brainstorm|idea|ideas|strategy|roadmap|vision|concept)\b/.test(text)) {
-    return '💡';
-  }
-  if (/\b(meeting|sync|standup|stand-up|retro|retrospective|planning|check-in|checkin)\b/.test(text)) {
-    return '📊';
-  }
-  if (/\b(1:1|one-on-one|one on one)\b/.test(text)) {
-    return '🤝';
-  }
-  if (/\b(call|zoom|teams|google meet|meet|hangouts|phone)\b/.test(text)) {
-    return '📞';
-  }
-  if (/\b(journal|diary|reflection|reflections|therapy|counseling|counselling|mood|feelings)\b/.test(text)) {
-    return '🧠';
-  }
-  if (/\b(sales|deal|pipeline|crm|client|customer|prospect|proposal|contract|invoice|quote)\b/.test(text)) {
-    return '💼';
-  }
-
-  return '📄';
-}
-
 export function RecordingCard({
   recording,
   onPress,
@@ -67,10 +35,10 @@ export function RecordingCard({
   compact,
 }: Props) {
   const isFailed = recording.status === 'error';
+  const isProcessing = isRecordingProcessing(recording);
   const isFavorite = !!recording.isFavorite;
   const folder = resolveRecordingFolder(recording);
   const isRecentlyDeleted = folder === 'recently-deleted';
-  const iconEmoji = getContentEmoji(recording);
 
   const promptRename = () => {
     if (!onRename) return;
@@ -162,16 +130,14 @@ export function RecordingCard({
         onLongPress={handleLongPress}
         activeOpacity={0.7}
       >
-        <View style={styles.iconContainerCompact}>
-          <Text style={styles.iconEmojiCompact}>{iconEmoji}</Text>
-        </View>
+        <RecordingAvatar recording={recording} size="compact" />
 
         <View style={styles.contentCompactInner}>
           <View style={styles.titleRowCompact}>
             <Text style={styles.titleCompact} numberOfLines={2}>
               {recording.title}
             </Text>
-            {(isFailed || (isFavorite && !isRecentlyDeleted)) && (
+            {(isFailed || isProcessing || (isFavorite && !isRecentlyDeleted)) && (
               <View style={styles.compactTitleIcons}>{topRightIcons}</View>
             )}
           </View>
@@ -191,16 +157,14 @@ export function RecordingCard({
       onLongPress={handleLongPress}
       activeOpacity={0.7}
     >
-      <View style={styles.iconContainer}>
-        <Text style={styles.iconEmoji}>{iconEmoji}</Text>
-      </View>
+      <RecordingAvatar recording={recording} />
 
       <View style={styles.content}>
         <View style={styles.titleRow}>
           <Text style={styles.title} numberOfLines={2}>
             {recording.title}
           </Text>
-          {(isFailed || (isFavorite && !isRecentlyDeleted)) && topRightIcons}
+          {(isFailed || isProcessing || (isFavorite && !isRecentlyDeleted)) && topRightIcons}
         </View>
         <Text style={styles.date}>{dateText}</Text>
         <View style={styles.durationRow}>
@@ -252,32 +216,6 @@ const styles = StyleSheet.create({
   },
   favoriteIcon: {
     backgroundColor: 'rgba(255,159,10,0.16)',
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#C4C4C4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-    flexShrink: 0,
-  },
-  iconContainerCompact: {
-    width: 48,
-    height: 48,
-    marginBottom: 10,
-    alignSelf: 'center',
-    borderRadius: 24,
-    backgroundColor: '#C4C4C4',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconEmoji: {
-    fontSize: 22,
-  },
-  iconEmojiCompact: {
-    fontSize: 22,
   },
   content: {
     flex: 1,

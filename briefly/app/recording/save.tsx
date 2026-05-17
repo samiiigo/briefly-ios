@@ -36,6 +36,10 @@ import {
   isRecordingTooShort,
   minRecordingDurationHint,
 } from '@/utils/recordingValidation';
+import {
+  initialStatusAfterSave,
+  startRecordingBackgroundProcessing,
+} from '@/services/recording/recordingBackgroundProcessing';
 
 export default function SaveRecordingScreen() {
   const { scrollPaddingTop, topInset } = useTopChromeLayout();
@@ -110,11 +114,12 @@ export default function SaveRecordingScreen() {
       ...folderFlagsFor(targetFolder),
       ...(markImported ? { isImported: true } : {}),
       userFolderId: targetUserFolderId,
-      status: 'saved' as const,
+      status: initialStatusAfterSave(transcriptionMode, preTranscript),
       transcript: preTranscript,
     };
     await addRecording(recording);
-    router.replace({ pathname: '/recording/summarizing', params: { recordingId: id } });
+    startRecordingBackgroundProcessing(id);
+    router.replace('/(tabs)');
     } catch {
       Alert.alert('Could not save', 'Something went wrong while saving. Please try again.');
     } finally {
