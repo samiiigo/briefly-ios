@@ -15,7 +15,7 @@ export function KeyInsights({ insights }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="sparkles" size={20} color={Colors.insightAccent} />
+        <Ionicons name="sparkles" size={18} color={Colors.insightAccent} />
         <Text style={styles.headerText}>Key insights</Text>
       </View>
       <View style={styles.list}>
@@ -48,9 +48,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerText: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
-    lineHeight: 24,
+    lineHeight: 20,
     color: Colors.textPrimary,
   },
   list: {
@@ -62,16 +62,16 @@ const styles = StyleSheet.create({
   },
   bullet: {
     width: 20,
-    marginTop: 7,
+    marginTop: 5,
     marginRight: 12,
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 16,
     color: Colors.insightAccent,
   },
   text: {
     flex: 1,
-    fontSize: 17,
-    lineHeight: 25,
+    fontSize: 15,
+    lineHeight: 22,
     color: Colors.summaryBody,
   },
   textStrong: {

@@ -13,6 +13,8 @@ export interface SummarizationResult {
   keyInsights: KeyInsight[];
   /** Single emoji representing the overall transcript theme. */
   mainEmoji?: string;
+  /** AI-generated display title (may include a leading emoji). */
+  title?: string;
 }
 
 export interface SummarizationProvider {

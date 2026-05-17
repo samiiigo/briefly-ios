@@ -27,6 +27,7 @@ export interface RecordingProcessingResult {
   summary: string;
   keyInsights: Awaited<ReturnType<typeof SummarizationService.summarize>>['keyInsights'];
   mainEmoji?: string;
+  title?: string;
   usedAudioFallback: boolean;
 }
 
@@ -150,7 +151,7 @@ export async function obtainTranscriptWithAutoFallback(
 async function summarizeTranscript(
   segments: TranscriptSegment[],
   summarizationMode: ProcessingMode,
-): Promise<Pick<RecordingProcessingResult, 'summary' | 'keyInsights' | 'mainEmoji'>> {
+): Promise<Pick<RecordingProcessingResult, 'summary' | 'keyInsights' | 'mainEmoji' | 'title'>> {
   assertTranscriptHasContent(segments);
   try {
     return await SummarizationService.summarize(segments, summarizationMode);
@@ -170,7 +171,7 @@ export async function retrySummarization(
   segments: TranscriptSegment[],
   summarizationMode: ProcessingMode,
   callbacks: Pick<RecordingProcessingCallbacks, 'onStage'>,
-): Promise<Pick<RecordingProcessingResult, 'summary' | 'keyInsights' | 'mainEmoji'>> {
+): Promise<Pick<RecordingProcessingResult, 'summary' | 'keyInsights' | 'mainEmoji' | 'title'>> {
   callbacks.onStage('summarizing');
   return summarizeTranscript(segments, summarizationMode);
 }
@@ -194,11 +195,11 @@ export async function processRecordingFromSavedAudio(
     const segments = await transcribeSavedAudioFile(filePath, meta);
     await callbacks.onTranscriptReady?.(segments);
     callbacks.onStage('summarizing');
-    const { summary, keyInsights, mainEmoji } = await summarizeTranscript(
+    const { summary, keyInsights, mainEmoji, title } = await summarizeTranscript(
       segments,
       summarizationMode,
     );
-    return { segments, summary, keyInsights, mainEmoji, usedAudioFallback: true };
+    return { segments, summary, keyInsights, mainEmoji, title, usedAudioFallback: true };
   } catch (err) {
     throw toProcessingFailure(err, 'transcription');
   }
@@ -240,12 +241,12 @@ export async function processRecordingToReady(
     }
 
     callbacks.onStage('summarizing');
-    const { summary, keyInsights, mainEmoji } = await summarizeTranscript(
+    const { summary, keyInsights, mainEmoji, title } = await summarizeTranscript(
       segments,
       summarizationMode,
     );
 
-    return { segments, summary, keyInsights, mainEmoji, usedAudioFallback };
+    return { segments, summary, keyInsights, mainEmoji, title, usedAudioFallback };
   } catch (err) {
     if (err instanceof ProcessingFailure) throw err;
     throw toProcessingFailure(err, 'transcription');

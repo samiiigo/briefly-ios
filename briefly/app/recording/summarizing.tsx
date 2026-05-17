@@ -253,12 +253,16 @@ export default function SummarizingScreen() {
       }).start();
 
       const modeUsed = processingModeUsed ?? useSettingsStore.getState().summarizationMode;
+      const { recordings } = useRecordingStore.getState();
+      const existingTitles = recordings
+        .filter((r) => r.id !== recordingId)
+        .map((r) => r.title);
 
       await updateRecording(recordingId, {
         status: 'ready',
         processingMode: modeUsed,
         errorMessage: undefined,
-        ...buildRecordingReadyFromSummarization(result),
+        ...buildRecordingReadyFromSummarization(result, { existingTitles }),
       });
 
       setStage('done');
@@ -293,7 +297,7 @@ export default function SummarizingScreen() {
         processingMode: mode,
       });
 
-      const { summary, keyInsights, mainEmoji } = await retrySummarization(rec.transcript, mode, {
+      const { summary, keyInsights, mainEmoji, title } = await retrySummarization(rec.transcript, mode, {
         onStage: (nextStage) => {
           if (isCancelled.current) return;
           setStage(nextStage);
@@ -302,7 +306,14 @@ export default function SummarizingScreen() {
       });
 
       await completeProcessing(
-        { segments: rec.transcript, summary, keyInsights, mainEmoji, usedAudioFallback: false },
+        {
+          segments: rec.transcript,
+          summary,
+          keyInsights,
+          mainEmoji,
+          title,
+          usedAudioFallback: false,
+        },
         mode,
       );
     },

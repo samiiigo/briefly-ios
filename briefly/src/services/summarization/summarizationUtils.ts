@@ -36,25 +36,74 @@ interface StructuredActionItem {
 
 interface StructuredSummaryJson {
   mainEmoji?: string;
+  title?: string;
   overview?: string;
+  keyInsights?: string[];
   sections?: StructuredSection[];
+  /** @deprecated Legacy schema; prefer top-level keyInsights. */
   actionItems?: StructuredActionItem[];
 }
 
+export function sanitizeSummarizationTitle(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 function isStructuredSummaryJson(parsed: Record<string, unknown>): boolean {
-  return (
+  if (
     typeof parsed.mainEmoji === 'string' ||
+    typeof parsed.title === 'string' ||
     typeof parsed.overview === 'string' ||
     Array.isArray(parsed.sections) ||
     Array.isArray(parsed.actionItems)
-  );
+  ) {
+    return true;
+  }
+
+  // Top-level keyInsights belong to the structured schema only when paired with overview/sections.
+  if (Array.isArray(parsed.keyInsights)) {
+    return typeof parsed.overview === 'string' || Array.isArray(parsed.sections);
+  }
+
+  return false;
+}
+
+function structuredKeyInsights(parsed: StructuredSummaryJson): KeyInsight[] {
+  const fromTopLevel = (parsed.keyInsights ?? [])
+    .map((text) => (typeof text === 'string' ? text.trim() : ''))
+    .filter((text): text is string => text.length > 0)
+    .slice(0, 6)
+    .map((text) => ({ id: generateId(), text }));
+
+  if (fromTopLevel.length > 0) return fromTopLevel;
+
+  const fromActions = (parsed.actionItems ?? [])
+    .map((item) => {
+      const task = item.task?.trim();
+      if (!task) return null;
+      const owner = item.owner?.trim() || 'Unassigned';
+      return { id: generateId(), text: `**${owner}**: ${task}` };
+    })
+    .filter((item): item is KeyInsight => item !== null);
+
+  if (fromActions.length > 0) return fromActions;
+
+  const sectionPoints = (parsed.sections ?? [])
+    .flatMap((section) =>
+      (section.points ?? []).map((p) => (typeof p === 'string' ? p.trim() : '')).filter((p): p is string => !!p),
+    )
+    .slice(0, 6);
+
+  return sectionPoints.map((text) => ({ id: generateId(), text }));
 }
 
 /** Maps the LLM structured schema to stored summary markdown + key insights. */
 export function structuredSummaryToResult(
   parsed: StructuredSummaryJson
-): { summary: string; keyInsights: KeyInsight[]; mainEmoji?: string } {
+): { summary: string; keyInsights: KeyInsight[]; mainEmoji?: string; title?: string } {
   const mainEmoji = normalizeMainEmoji(parsed.mainEmoji);
+  const title = sanitizeSummarizationTitle(parsed.title);
   const lines: string[] = [];
 
   const overview = parsed.overview?.trim();
@@ -75,29 +124,14 @@ export function structuredSummaryToResult(
     if (points.length > 0) lines.push('');
   }
 
-  const actionInsights = (parsed.actionItems ?? [])
-    .map((item) => {
-      const task = item.task?.trim();
-      if (!task) return null;
-      const owner = item.owner?.trim() || 'Unassigned';
-      return { id: generateId(), text: `**${owner}**: ${task}` };
-    })
-    .filter((item): item is KeyInsight => item !== null);
-
-  let keyInsights = actionInsights;
-  if (keyInsights.length === 0) {
-    const sectionPoints = (parsed.sections ?? [])
-      .flatMap((section) => (section.points ?? []).map((p) => p?.trim()).filter((p): p is string => !!p))
-      .slice(0, 6);
-    keyInsights = sectionPoints.map((text) => ({ id: generateId(), text }));
-  }
+  const keyInsights = structuredKeyInsights(parsed);
 
   let summary = lines.join('\n').trim();
   if (!summary && keyInsights.length > 0) {
     summary = '## Overview\n\n_Key points and action items are listed below._';
   }
 
-  return { summary, keyInsights, mainEmoji };
+  return { summary, keyInsights, mainEmoji, title };
 }
 
 /**
@@ -150,8 +184,9 @@ export function parseJsonSummary(
     const structured = structuredSummaryToResult(parsed as StructuredSummaryJson);
     logger.info('SUMMARY', 'Structured JSON summary parsed successfully', {
       hasOverview: !!parsed.overview,
+      hasTitle: !!structured.title,
       sectionCount: Array.isArray(parsed.sections) ? parsed.sections.length : 0,
-      actionItemCount: Array.isArray(parsed.actionItems) ? parsed.actionItems.length : 0,
+      keyInsightCount: structured.keyInsights.length,
       mainEmoji: structured.mainEmoji,
     });
     return normalizeSummarizationResult(structured, fallbackText);
@@ -169,6 +204,7 @@ export function parseJsonSummary(
         text: t,
       })),
       mainEmoji: normalizeMainEmoji(parsed.mainEmoji),
+      title: sanitizeSummarizationTitle(parsed.title),
     },
     fallbackText
   );
@@ -193,6 +229,7 @@ export function normalizeSummarizationResult(
       summary: normalizedSummary,
       keyInsights: normalizedInsights,
       mainEmoji: result.mainEmoji,
+      title: sanitizeSummarizationTitle(result.title),
     };
   }
 

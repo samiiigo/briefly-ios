@@ -61,18 +61,19 @@ describe('JSON summary parsing', () => {
     assert.equal(result.summary, markdown);
   });
 
-  it('parses structured mainEmoji/overview/sections/actionItems schema', () => {
+  it('parses structured mainEmoji/title/overview/keyInsights/sections schema', () => {
     const result = parseJsonSummary(
       JSON.stringify({
         mainEmoji: '📊',
+        title: '📊 Q2 planning sync',
         overview: 'Team aligned on **Q2 goals** and launch timing.',
+        keyInsights: ['Ship beta by June', 'Focus on retention metrics'],
         sections: [
           {
             heading: '🎯 Goals',
-            points: ['Ship beta by June', 'Focus on retention'],
+            points: ['Prioritize onboarding', 'Defer mobile polish'],
           },
         ],
-        actionItems: [{ owner: 'Alex', task: 'Send timeline doc' }],
       }),
       'fallback text'
     );
@@ -80,22 +81,46 @@ describe('JSON summary parsing', () => {
     assert.match(result.summary, /## Overview/);
     assert.match(result.summary, /Team aligned on \*\*Q2 goals\*\*/);
     assert.match(result.summary, /### 🎯 Goals/);
-    assert.match(result.summary, /- Ship beta by June/);
+    assert.match(result.summary, /- Prioritize onboarding/);
+    assert.equal(result.keyInsights.length, 2);
+    assert.equal(result.keyInsights[0].text, 'Ship beta by June');
+    assert.equal(result.mainEmoji, '📊');
+    assert.equal(result.title, '📊 Q2 planning sync');
+  });
+
+  it('parses legacy actionItems as key insights fallback', () => {
+    const result = parseJsonSummary(
+      JSON.stringify({
+        overview: 'Quick sync.',
+        actionItems: [{ owner: 'Alex', task: 'Send timeline doc' }],
+      }),
+      'fallback text'
+    );
+
     assert.equal(result.keyInsights.length, 1);
     assert.equal(result.keyInsights[0].text, '**Alex**: Send timeline doc');
-    assert.equal(result.mainEmoji, '📊');
   });
 });
 
 describe('structuredSummaryToResult', () => {
-  it('uses section points as key insights when there are no action items', () => {
+  it('uses section points as key insights when keyInsights are empty', () => {
     const result = structuredSummaryToResult({
       overview: 'Quick standup.',
       sections: [{ heading: 'Updates', points: ['Backend deploy done'] }],
-      actionItems: [],
+      keyInsights: [],
     });
 
     assert.equal(result.keyInsights.length, 1);
     assert.equal(result.keyInsights[0].text, 'Backend deploy done');
+  });
+
+  it('returns a sanitized title when present', () => {
+    const result = structuredSummaryToResult({
+      title: '  🎓 Lecture recap  ',
+      overview: 'Covered chapter 4.',
+      keyInsights: ['Exam moved to Friday'],
+    });
+
+    assert.equal(result.title, '🎓 Lecture recap');
   });
 });

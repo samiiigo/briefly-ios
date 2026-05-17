@@ -66,15 +66,18 @@ async function completeJob(
   result: RecordingProcessingResult,
   processingModeUsed?: ProcessingMode,
 ) {
-  const { updateRecording } = useRecordingStore.getState();
+  const { updateRecording, recordings } = useRecordingStore.getState();
   const modeUsed = processingModeUsed ?? useSettingsStore.getState().summarizationMode;
+  const existingTitles = recordings
+    .filter((r) => r.id !== recordingId)
+    .map((r) => r.title);
 
   await updateRecording(recordingId, {
     status: 'ready',
     transcript: result.segments,
     processingMode: modeUsed,
     errorMessage: undefined,
-    ...buildRecordingReadyFromSummarization(result),
+    ...buildRecordingReadyFromSummarization(result, { existingTitles }),
   });
 
   logger.info('RECORDING', 'Background processing completed', { recordingId });

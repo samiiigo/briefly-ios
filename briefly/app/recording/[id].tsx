@@ -8,7 +8,6 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useRecordingStore } from '@/context/useRecordingStore';
@@ -21,7 +20,9 @@ import { SummaryMarkdownSection } from '@/components/features/recording/SummaryM
 import { RecordingDetailHeader } from '@/components/features/recording/RecordingDetailChrome';
 import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
+import { PlaybackBarBlurFade } from '@/components/navigation/PlaybackBarBlurFade';
 import { TopBlurFade } from '@/components/navigation/TopBlurFade';
+import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useSettingsStore } from '@/context/useSettingsStore';
@@ -33,7 +34,7 @@ import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 export default function TranscriptScreen() {
   const { scrollPaddingTop, topInset } = useTopChromeLayout();
-  const insets = useSafeAreaInsets();
+  const { paddingBottom: playbackBottom } = usePlaybackBarLayout();
   const router = useRouter();
   const { id: recordingId } = useLocalSearchParams<{ id: string }>();
   const recording = useRecordingStore((s) => s.getRecordingById(recordingId!));
@@ -263,9 +264,10 @@ export default function TranscriptScreen() {
       <RecordingPlaybackBar
         recording={recording}
         playback={playback}
-        paddingBottom={Math.max(insets.bottom, 12) + Spacing.sm}
+        paddingBottom={playbackBottom}
       />
 
+      <PlaybackBarBlurFade />
       <TopBlurFade />
       <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
         <RecordingDetailHeader
