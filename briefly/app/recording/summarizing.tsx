@@ -24,10 +24,7 @@ import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import {
   normalizeTranscriptionMode,
   resolvePostRecordingPipeline,
-  transcriptionModeTitle,
 } from '@/utils/transcriptionMode';
-import { processingModeTitle } from '@/utils/processingMode';
-import { isDebugMode } from '@/utils/debugMode';
 import { ProcessingFailure, toProcessingFailure } from '@/utils/processingErrors';
 import {
   getNextSummarizationFallback,
@@ -167,7 +164,7 @@ export default function SummarizingScreen() {
       }
       if (!options.audioFallbackOnly && isRecordingTooShort(asset)) {
         throw new Error(
-          'Recording is too short or empty. Record for at least one second and try again.',
+          'Recording is too short. Record for at least 10 seconds and try again.',
         );
       }
 
@@ -538,15 +535,6 @@ export default function SummarizingScreen() {
             <Animated.View style={[styles.progressBar, { width: progressWidth }]} />
           </View>
         ) : null}
-        {isDebugMode && recording ? (
-          <View style={styles.modeBadge}>
-            <Ionicons name="mic-outline" size={12} color={Colors.primary} />
-            <Text style={styles.modeBadgeText}>
-              {transcriptionModeTitle(settingsTranscriptionMode)} ·{' '}
-              {processingModeTitle(summarizationMode)}
-            </Text>
-          </View>
-        ) : null}
       </View>
 
       <View style={styles.actions}>
@@ -666,22 +654,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: 2,
   },
-  modeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.card,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
-  },
-  modeBadgeText: withAppFont({
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.subtext,
-  }),
   actions: {
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,

@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
+import { CircularIconButton } from '@/components/ui/CircularIconButton';
+import { AnchoredOverflowMenu } from '@/components/ui/AnchoredOverflowMenu';
 import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
@@ -23,13 +25,12 @@ import {
   resolveRecordingTranscriptionPlan,
   requiresLiveOnDeviceCapture,
   showsLivePreviewDuringRecording,
-  transcriptionModeBadge,
 } from '@/utils/transcriptionMode';
-import { isDebugMode } from '@/utils/debugMode';
 import { formatTimestamp } from '@/utils';
 import {
   isRecordingTooShort,
-  MIN_RECORDING_DURATION_SEC,
+  minRecordingDurationHint,
+  STOP_EARLY_CONFIRM_THRESHOLD_SEC,
 } from '@/utils/recordingValidation';
 import { openAppSettings } from '@/utils/recordingPermissions';
 import { useTimer } from '@/hooks/useTimer';
@@ -120,7 +121,7 @@ export default function NewRecordingScreen() {
       try {
         if (requiresLiveOnDeviceCapture(plan) && !plan.useLiveCapture) {
           throw new Error(
-            'On-device transcription is not available on this device. Choose another mode in Settings.',
+            'Private transcription is not available on this device. Choose another mode in Settings.',
           );
         }
         startedWithLiveRef.current = useLive;
@@ -194,8 +195,89 @@ export default function NewRecordingScreen() {
 
   handlePauseRef.current = handlePause;
 
+  const handleDiscard = useCallback(() => {
+    Alert.alert('Discard recording', 'This recording will be permanently deleted.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            if (!isStopped.current && isStarted && !startFailed) {
+              isStopped.current = true;
+              stopTimer();
+              cleanup();
+              await teardownCapture();
+            }
+            router.replace('/(tabs)');
+          })();
+        },
+      },
+    ]);
+  }, [cleanup, isStarted, router, startFailed, stopTimer, teardownCapture]);
+
+  const pauseIfRecording = useCallback(async (): Promise<boolean> => {
+    if (!isStarted || isPaused || startFailed) return true;
+    try {
+      if (startedWithLiveRef.current) await LiveTranscriptionService.pause();
+      else await RecordingService.pause();
+      stopTimer();
+      setIsPaused(true);
+      isPausedRef.current = true;
+      return true;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not pause recording.';
+      Alert.alert('Error', message);
+      return false;
+    }
+  }, [isPaused, isStarted, startFailed, stopTimer]);
+
+  const discardActiveRecording = useCallback(async () => {
+    if (isStopped.current) {
+      router.replace('/(tabs)');
+      return;
+    }
+    setIsStopping(true);
+    isStopped.current = true;
+    stopTimer();
+    cleanup();
+    await teardownCapture();
+    router.replace('/(tabs)');
+  }, [cleanup, router, stopTimer, teardownCapture]);
+
   const handleStop = async () => {
     if (isStopped.current || isStopping || startFailed) return;
+
+    const durationSec = elapsedRef.current || elapsed;
+    if (durationSec < STOP_EARLY_CONFIRM_THRESHOLD_SEC) {
+      const paused = await pauseIfRecording();
+      if (!paused) return;
+
+      Alert.alert(
+        'Stop recording?',
+        `Recordings under ${STOP_EARLY_CONFIRM_THRESHOLD_SEC} seconds won't be saved. Are you sure you want to stop?`,
+        [
+          {
+            text: 'Resume',
+            style: 'cancel',
+            onPress: () => {
+              if (isPausedRef.current && isStarted && !isStopped.current) {
+                void handlePause();
+              }
+            },
+          },
+          {
+            text: 'Stop',
+            style: 'destructive',
+            onPress: () => {
+              void discardActiveRecording();
+            },
+          },
+        ],
+      );
+      return;
+    }
+
     setIsStopping(true);
     isStopped.current = true;
     stopTimer();
@@ -221,23 +303,22 @@ export default function NewRecordingScreen() {
     }
 
     flush();
-    const durationSec = result?.duration || elapsed;
+    const stoppedDurationSec = result?.duration || elapsed;
     const filePath = result?.uri ?? '';
     const fileSize = result?.fileSize ?? 0;
 
     if (
       isRecordingTooShort({
-        durationSec,
+        durationSec: stoppedDurationSec,
         filePath,
         fileSizeBytes: fileSize,
       })
     ) {
       setIsStopping(false);
-      Alert.alert(
-        'Recording too short',
-        `Record for at least ${MIN_RECORDING_DURATION_SEC} second before stopping.`,
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }],
-      );
+      isStopped.current = false;
+      Alert.alert('Recording too short', minRecordingDurationHint('stop'), [
+        { text: 'OK', onPress: () => router.replace('/(tabs)') },
+      ]);
       return;
     }
 
@@ -259,7 +340,7 @@ export default function NewRecordingScreen() {
     router.replace({
       pathname: '/recording/save',
       params: {
-        duration: String(durationSec),
+        duration: String(stoppedDurationSec),
         filePath,
         fileSize: String(fileSize),
         targetFolder: params.targetFolder,
@@ -273,13 +354,7 @@ export default function NewRecordingScreen() {
   const min = Math.floor((elapsed % 3600) / 60);
   const sec = elapsed % 60;
   const hasAnyText = finalText.length > 0 || partialText.length > 0;
-  const placeholder = useLive
-    ? isDebugMode && plan.settingsMode === 'live-assemblyai'
-      ? 'Listening with AssemblyAI...'
-      : isDebugMode && plan.settingsMode === 'local-on-device'
-        ? 'Listening on-device...'
-        : 'Listening...'
-    : 'Transcription after you stop.';
+  const placeholder = useLive ? 'Listening...' : 'Transcription after you stop.';
 
   return (
     <View style={sl.container}>
@@ -323,11 +398,6 @@ export default function NewRecordingScreen() {
             <View style={s.lpH}>
               <Ionicons name="document-text" size={14} color={Colors.primary} />
               <Text style={s.lpLbl}>Live transcript</Text>
-              {isDebugMode ? (
-                <View style={s.pill}>
-                  <Text style={s.pillTxt}>{transcriptionModeBadge(plan.settingsMode)}</Text>
-                </View>
-              ) : null}
               {isLocalLive ? (
                 <TouchableOpacity
                   style={s.streamToggle}
@@ -409,7 +479,32 @@ export default function NewRecordingScreen() {
 
       <TopBlurFade />
       <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader title="New Recording" centerTitle />
+        <StackScreenHeader
+          title="New Recording"
+          leading={
+            <AnchoredOverflowMenu
+              align="leading"
+              items={[
+                { label: 'Discard', onPress: handleDiscard },
+                {
+                  label: 'Save',
+                  onPress: () => {
+                    void handleStop();
+                  },
+                  disabled: !isStarted || startFailed || isStopping,
+                },
+              ]}
+              renderTrigger={(open) => (
+                <CircularIconButton
+                  icon="arrow-back"
+                  accessibilityLabel="Recording options"
+                  onPress={open}
+                  style={{ marginRight: Spacing.sm }}
+                />
+              )}
+            />
+          }
+        />
       </View>
     </View>
   );
@@ -487,13 +582,6 @@ const s = StyleSheet.create({
   lpCCollapsed: { flex: 0 },
   lpH: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm },
   lpLbl: { fontSize: 13, fontWeight: '600', color: Colors.primary, flex: 1 },
-  pill: {
-    backgroundColor: 'rgba(52,199,89,0.15)',
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  pillTxt: { fontSize: 10, fontWeight: '700', color: Colors.green, letterSpacing: 0.5 },
   streamToggle: { padding: 4, marginLeft: 4 },
   lpScroll: { flex: 1 },
   lpHiddenHint: {

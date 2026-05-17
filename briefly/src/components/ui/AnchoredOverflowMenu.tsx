@@ -23,10 +23,16 @@ const ANCHOR_GAP = 6;
 interface AnchoredOverflowMenuProps {
   items: AnchoredMenuItem[];
   renderTrigger: (open: () => void) => React.ReactNode;
+  /** Menu horizontal alignment relative to the trigger. */
+  align?: 'leading' | 'trailing';
 }
 
-/** Context menu anchored below the trigger, trailing-aligned. */
-export function AnchoredOverflowMenu({ items, renderTrigger }: AnchoredOverflowMenuProps) {
+/** Context menu anchored below the trigger. */
+export function AnchoredOverflowMenu({
+  items,
+  renderTrigger,
+  align = 'trailing',
+}: AnchoredOverflowMenuProps) {
   const anchorRef = useRef<View>(null);
   const [visible, setVisible] = useState(false);
   const [anchor, setAnchor] = useState<LayoutRectangle | null>(null);
@@ -45,9 +51,14 @@ export function AnchoredOverflowMenu({ items, renderTrigger }: AnchoredOverflowM
 
   const screenWidth = Dimensions.get('window').width;
   const menuTop = anchor ? anchor.y + anchor.height + ANCHOR_GAP : 0;
-  const menuRight = anchor
-    ? Math.max(Spacing.screenHorizontal, screenWidth - anchor.x - anchor.width)
-    : Spacing.screenHorizontal;
+  const menuPosition = !anchor
+    ? null
+    : align === 'leading'
+      ? { top: menuTop, left: Math.max(Spacing.screenHorizontal, anchor.x) }
+      : {
+          top: menuTop,
+          right: Math.max(Spacing.screenHorizontal, screenWidth - anchor.x - anchor.width),
+        };
 
   return (
     <>
@@ -58,10 +69,7 @@ export function AnchoredOverflowMenu({ items, renderTrigger }: AnchoredOverflowM
         <View style={styles.overlay}>
           <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Dismiss menu" />
           {anchor ? (
-            <View
-              style={[styles.menu, { top: menuTop, right: menuRight }]}
-              accessibilityViewIsModal
-            >
+            <View style={[styles.menu, menuPosition]} accessibilityViewIsModal>
               {items.map((item, index) => (
                 <Pressable
                   key={item.label}

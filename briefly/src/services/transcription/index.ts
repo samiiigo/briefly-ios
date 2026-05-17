@@ -94,7 +94,7 @@ async function transcribeWithAssemblyAI(
   const fileSize = fileInfo.exists ? ((fileInfo as any).size ?? 0) : 0;
   if (fileSize < MIN_AUDIO_BYTES) {
     logger.error('TranscriptionService', 'Audio file too small to transcribe', { audioUri, fileSize });
-    throw new Error('Recording is too short or empty. Record for at least one second and try again.');
+    throw new Error('Recording is too short. Record for at least 10 seconds and try again.');
   }
   logger.info('TranscriptionService', 'Async transcription started', { audioUri, fileSize });
 
@@ -142,7 +142,7 @@ export const TranscriptionService = {
     if (normalizedMode === 'local-on-device') {
       logger.warn('TranscriptionService', 'Local mode cannot be used for async transcription');
       throw new Error(
-        'Local (on-device) mode does not upload audio. In this build, local transcripts must be captured live during recording. If no local transcript was captured, retry in Live Local mode with native transcription enabled.'
+        'Private transcription does not upload audio. Transcripts must be captured live while recording. If none was captured, switch to Private mode and record again.'
       );
     }
 

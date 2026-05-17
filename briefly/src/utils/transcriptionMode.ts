@@ -22,27 +22,20 @@ export function normalizeTranscriptionMode(mode: string | undefined | null): Tra
 
 export function transcriptionModeTitle(mode: TranscriptionMode | string): string {
   const normalized = normalizeTranscriptionMode(mode);
-  if (normalized === 'live-assemblyai') return 'Live (AssemblyAI)';
-  if (normalized === 'post-assemblyai') return 'Post-recording (AssemblyAI)';
-  return 'Local (on-device)';
+  if (normalized === 'live-assemblyai') return 'Live';
+  if (normalized === 'post-assemblyai') return 'After recording';
+  return 'Private';
 }
 
 export function transcriptionModeDescription(mode: TranscriptionMode | string): string {
   const normalized = normalizeTranscriptionMode(mode);
   if (normalized === 'live-assemblyai') {
-    return 'Streams microphone audio to AssemblyAI for real-time transcript updates while recording.';
+    return 'Updates the transcript in real time while you record.';
   }
   if (normalized === 'post-assemblyai') {
-    return 'Records first, then transcribes with AssemblyAI after you stop recording.';
+    return 'Transcribes the full recording after you stop.';
   }
-  return 'Uses native on-device speech recognition so audio stays on your device.';
-}
-
-export function transcriptionModeBadge(mode: TranscriptionMode | string): string {
-  const normalized = normalizeTranscriptionMode(mode);
-  if (normalized === 'live-assemblyai') return 'LIVE';
-  if (normalized === 'post-assemblyai') return 'POST';
-  return 'LOCAL';
+  return 'Transcribes on your device. Audio does not leave your phone.';
 }
 
 /**

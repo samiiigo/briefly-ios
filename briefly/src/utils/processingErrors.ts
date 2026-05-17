@@ -84,7 +84,7 @@ export function toUserFacingProcessingError(
     return new Error(
       message.includes('short') || message.includes('empty')
         ? message
-        : 'Recording is too short or empty. Record for at least one second and try again.',
+        : 'Recording is too short. Record for at least 10 seconds and try again.',
     );
   }
   if (isNetworkRelatedError(error)) {

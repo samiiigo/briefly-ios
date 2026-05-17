@@ -15,6 +15,8 @@ interface Props {
   /** Leading control when `showBack` is true (defaults to arrow-back). */
   leadingIcon?: 'arrow-back' | 'close';
   trailing?: React.ReactNode;
+  /** Custom leading control (replaces the default back button). */
+  leading?: React.ReactNode;
   /** Center the title when there is no leading or trailing chrome. */
   centerTitle?: boolean;
 }
@@ -26,23 +28,25 @@ export function StackScreenHeader({
   onBack,
   leadingIcon = 'arrow-back',
   trailing,
+  leading,
   centerTitle,
 }: Props) {
-  const hasLeading = Boolean(showBack && onBack);
+  const hasLeading = Boolean(leading ?? (showBack && onBack));
   const hasTrailing = Boolean(trailing);
   const shouldCenterTitle = centerTitle && !hasLeading && !hasTrailing;
 
   return (
     <View style={[styles.header, shouldCenterTitle && styles.headerCentered]}>
       <View style={[styles.titleRow, shouldCenterTitle && styles.titleRowCentered]}>
-        {hasLeading ? (
-          <CircularIconButton
-            icon={leadingIcon}
-            accessibilityLabel={leadingIcon === 'close' ? 'Close' : 'Back'}
-            onPress={onBack}
-            style={styles.backButton}
-          />
-        ) : null}
+        {leading ??
+          (showBack && onBack ? (
+            <CircularIconButton
+              icon={leadingIcon}
+              accessibilityLabel={leadingIcon === 'close' ? 'Close' : 'Back'}
+              onPress={onBack}
+              style={styles.backButton}
+            />
+          ) : null)}
         <Text
           style={[styles.title, shouldCenterTitle && styles.titleCentered]}
           numberOfLines={1}

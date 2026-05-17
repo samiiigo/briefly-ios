@@ -17,7 +17,11 @@ describe('recordingValidation', () => {
   it('detects short recordings', () => {
     assert.equal(isRecordingTooShort({ durationSec: 0.2, filePath: 'a.wav', fileSizeBytes: 100 }), true);
     assert.equal(
-      isRecordingTooShort({ durationSec: 5, filePath: 'a.wav', fileSizeBytes: 50_000 }),
+      isRecordingTooShort({ durationSec: 9, filePath: 'a.wav', fileSizeBytes: 50_000 }),
+      true,
+    );
+    assert.equal(
+      isRecordingTooShort({ durationSec: 10, filePath: 'a.wav', fileSizeBytes: 50_000 }),
       false,
     );
   });

@@ -34,7 +34,7 @@ import { consumeTransitData } from '@/utils/navigationTransit';
 import {
   isRecordingFileMissing,
   isRecordingTooShort,
-  MIN_RECORDING_DURATION_SEC,
+  minRecordingDurationHint,
 } from '@/utils/recordingValidation';
 
 export default function SaveRecordingScreen() {
@@ -85,11 +85,9 @@ export default function SaveRecordingScreen() {
       return;
     }
     if (isRecordingTooShort(assetCheck)) {
-      Alert.alert(
-        'Recording too short',
-        `Record for at least ${MIN_RECORDING_DURATION_SEC} second before saving.`,
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }],
-      );
+      Alert.alert('Recording too short', minRecordingDurationHint('save'), [
+        { text: 'OK', onPress: () => router.replace('/(tabs)') },
+      ]);
       return;
     }
 

@@ -19,7 +19,6 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { useExport } from '@/hooks/useExport';
 import { KeyInsights } from '@/components/features/recording/KeyInsights';
 import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
-import { ProcessingBadge } from '@/components/features/recording/ProcessingBadge';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { AnchoredOverflowMenu } from '@/components/ui/AnchoredOverflowMenu';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
@@ -27,9 +26,6 @@ import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useSettingsStore } from '@/context/useSettingsStore';
-import { transcriptionModeTitle } from '@/utils/transcriptionMode';
-import { processingModeTitle } from '@/utils/processingMode';
-import { isDebugMode } from '@/utils/debugMode';
 import { formatDuration, formatDate, ensureUniqueTitle } from '@/utils';
 import { getNextSummarizationFallback } from '@/utils/summarizationFallback';
 import { hasMeaningfulTranscript } from '@/utils/recordingValidation';
@@ -42,7 +38,7 @@ export default function TranscriptScreen() {
   const { id: recordingId } = useLocalSearchParams<{ id: string }>();
   const recording = useRecordingStore((s) => s.getRecordingById(recordingId!));
   const { updateRecording, recordings, restoreRecording } = useRecordingStore();
-  const { transcriptionMode: settingsTranscriptionMode, summarizationMode } = useSettingsStore();
+  const { summarizationMode } = useSettingsStore();
   const { isPlaying, playbackPos, playbackDur, playbackRate, activeSegmentId, trackWidth, animatedProgress, cycleRate, togglePlayPause: handlePlayPause, seek: handleSeek, seekToRatio } = usePlayback({ filePath: recording?.filePath ?? '', transcript: recording?.transcript });
   const { isExportingPdf, openShareMenu } = useExport(recording);
 
@@ -157,7 +153,6 @@ export default function TranscriptScreen() {
 
   const progressFillWidth = animatedProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
   const progressThumbLeft = animatedProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-  const debugModeLabel = `${transcriptionModeTitle(settingsTranscriptionMode)} · ${processingModeTitle(summarizationMode)}`;
   const lastSummarizationMode = recording.processingMode ?? summarizationMode;
   const summarizationFallback =
     recording.status === 'error' && hasMeaningfulTranscript(recording.transcript)
@@ -175,12 +170,6 @@ export default function TranscriptScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={st.dateLabel}>{formatDate(recording.createdAt)}</Text>
-        {isDebugMode ? (
-          <View style={st.metaRow}>
-            <ProcessingBadge mode={summarizationMode} size="sm" showLabel />
-            <Text style={st.transcriptionMode}>{debugModeLabel}</Text>
-          </View>
-        ) : null}
         {(recording.status === 'saved' || recording.status === 'transcribing' || recording.status === 'summarizing') && (
           <View style={st.processingBanner}><View style={st.errorBannerTop}><Ionicons name="sparkles" size={16} color={Colors.primary} /><Text style={st.processingBannerTitle}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Summarization pending' : recording.status === 'saved' ? 'Ready to process' : 'Processing incomplete'}</Text></View><TouchableOpacity style={st.retryButton} onPress={handleStartProcessing}><Ionicons name="sparkles" size={15} color={Colors.textPrimary} /><Text style={st.retryButtonText}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Run Summarization' : 'Transcribe & Summarize'}</Text></TouchableOpacity></View>
         )}
@@ -321,16 +310,6 @@ const st = StyleSheet.create({
     fontSize: 14,
     color: Colors.subtext,
     marginBottom: Spacing.md,
-  }),
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  transcriptionMode: withAppFont({
-    fontSize: 14,
-    color: Colors.subtext,
   }),
   summaryCard: {
     backgroundColor: Colors.card,
