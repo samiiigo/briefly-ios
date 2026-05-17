@@ -18,15 +18,20 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { usePlayback } from '@/hooks/usePlayback';
 import { useExport } from '@/hooks/useExport';
 import { KeyInsights } from '@/components/features/recording/KeyInsights';
-import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
-import { CircularIconButton } from '@/components/ui/CircularIconButton';
-import { AnchoredOverflowMenu } from '@/components/ui/AnchoredOverflowMenu';
+import { RecordingTitleHero } from '@/components/features/recording/RecordingTitleHero';
+import { SummaryBulletSection } from '@/components/features/recording/SummaryBulletSection';
+import { RecordingDetailHeader } from '@/components/features/recording/RecordingDetailChrome';
+import {
+  RecordingFloatingPlayer,
+  FLOATING_PLAYER_ESTIMATED_HEIGHT,
+} from '@/components/features/recording/RecordingFloatingPlayer';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useSettingsStore } from '@/context/useSettingsStore';
-import { formatDuration, formatDate, ensureUniqueTitle } from '@/utils';
+import { ensureUniqueTitle } from '@/utils';
+import { parseSummaryBullets } from '@/utils/summaryBullets';
 import { getNextSummarizationFallback } from '@/utils/summarizationFallback';
 import { hasMeaningfulTranscript } from '@/utils/recordingValidation';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
@@ -39,8 +44,8 @@ export default function TranscriptScreen() {
   const recording = useRecordingStore((s) => s.getRecordingById(recordingId!));
   const { updateRecording, recordings, restoreRecording } = useRecordingStore();
   const { summarizationMode } = useSettingsStore();
-  const { isPlaying, playbackPos, playbackDur, playbackRate, activeSegmentId, trackWidth, animatedProgress, cycleRate, togglePlayPause: handlePlayPause, seek: handleSeek, seekToRatio } = usePlayback({ filePath: recording?.filePath ?? '', transcript: recording?.transcript });
-  const { isExportingPdf, openShareMenu } = useExport(recording);
+  const { isPlaying, playbackPos, playbackDur, playbackRate, trackWidth, animatedProgress, cycleRate, togglePlayPause: handlePlayPause, seek: handleSeek, seekToRatio } = usePlayback({ filePath: recording?.filePath ?? '', transcript: recording?.transcript });
+  const { openShareMenu } = useExport(recording);
 
   const handleProgressTap = useCallback(async (e: GestureResponderEvent) => {
     if (!playbackDur || trackWidth.current === 0) return;
@@ -118,6 +123,11 @@ export default function TranscriptScreen() {
     });
   }, [recording, recordingId, updateRecording, router]);
 
+  const handleToggleFavorite = useCallback(() => {
+    if (!recording) return;
+    updateRecording(recording.id, { isFavorite: !recording.isFavorite });
+  }, [recording, updateRecording]);
+
   if (!recording) {
     return (
       <View style={sl.container}>
@@ -161,15 +171,49 @@ export default function TranscriptScreen() {
   const showTranscriptionFallbackOnError =
     recording.status === 'error' &&
     (!hasMeaningfulTranscript(recording.transcript) || !summarizationFallback);
+  const summaryBullets = recording.summary ? parseSummaryBullets(recording.summary) : [];
+
+  const hasTranscript = hasMeaningfulTranscript(recording.transcript);
+
+  const overflowMenuItems = [
+    {
+      label: recording.isFavorite ? 'Remove from favorites' : 'Add to favorites',
+      onPress: handleToggleFavorite,
+    },
+    { label: 'Share', onPress: openShareMenu },
+    {
+      label: 'View transcript',
+      onPress: () =>
+        router.push({
+          pathname: '/recording/transcript',
+          params: { recordingId: recording.id },
+        }),
+      disabled: !hasTranscript,
+    },
+    { label: 'Rename', onPress: handleRename },
+    {
+      label: 'Rerun summarization',
+      onPress: () => {
+        void handleRerunSummarization();
+      },
+    },
+  ];
 
   return (
     <View style={sl.container}>
       <ScrollView
         style={st.scroll}
-        contentContainerStyle={[st.scrollContent, { paddingTop: scrollPaddingTop }]}
+        contentContainerStyle={[
+          st.scrollContent,
+          {
+            paddingTop: scrollPaddingTop,
+            paddingBottom:
+              FLOATING_PLAYER_ESTIMATED_HEIGHT + Math.max(insets.bottom, 12) + Spacing.lg,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={st.dateLabel}>{formatDate(recording.createdAt)}</Text>
+        <RecordingTitleHero recording={recording} />
         {(recording.status === 'saved' || recording.status === 'transcribing' || recording.status === 'summarizing') && (
           <View style={st.processingBanner}><View style={st.errorBannerTop}><Ionicons name="sparkles" size={16} color={Colors.primary} /><Text style={st.processingBannerTitle}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Summarization pending' : recording.status === 'saved' ? 'Ready to process' : 'Processing incomplete'}</Text></View><TouchableOpacity style={st.retryButton} onPress={handleStartProcessing}><Ionicons name="sparkles" size={15} color={Colors.textPrimary} /><Text style={st.retryButtonText}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Run Summarization' : 'Transcribe & Summarize'}</Text></TouchableOpacity></View>
         )}
@@ -201,52 +245,35 @@ export default function TranscriptScreen() {
             ) : null}
           </View>
         )}
-        {recording.summary && <View style={st.summaryCard}><Text style={st.summaryText}>{recording.summary}</Text></View>}
-        {recording.keyInsights && recording.keyInsights.length > 0 && <KeyInsights insights={recording.keyInsights} />}
-        {recording.transcript && recording.transcript.length > 0 ? (
-          <View style={st.transcriptContainer}>{recording.transcript.map((seg) => <TranscriptSegmentView key={seg.id} segment={seg} isActive={seg.id === activeSegmentId} />)}</View>
-        ) : (
-          <View style={st.noTranscript}><Text style={st.noTranscriptText}>{recording.status === 'transcribing' || recording.status === 'summarizing' ? 'Processing…' : recording.status === 'saved' ? 'Tap above to start.' : 'No transcript available.'}</Text></View>
+        {recording.keyInsights && recording.keyInsights.length > 0 && (
+          <KeyInsights insights={recording.keyInsights} />
         )}
+        {summaryBullets.length > 0 && <SummaryBulletSection bullets={summaryBullets} />}
       </ScrollView>
-      <View style={[st.playbackBar, { paddingBottom: Math.max(insets.bottom, 12) + Spacing.sm }]}>
-        <TouchableOpacity activeOpacity={1} onPress={handleProgressTap} onLayout={(e: LayoutChangeEvent) => { trackWidth.current = e.nativeEvent.layout.width; }} style={st.progressTrack}><Animated.View style={[st.progressFill, { width: progressFillWidth }]} /><Animated.View style={[st.progressThumb, { left: progressThumbLeft }]} /></TouchableOpacity>
-        <View style={st.timeRow}><Text style={st.timeText}>{formatDuration(playbackPos)}</Text><Text style={st.timeText}>{formatDuration(playbackDur || recording.duration)}</Text></View>
-        <View style={st.playControls}>
-          <TouchableOpacity onPress={() => handleSeek('back')}><Ionicons name="play-back" size={28} color={Colors.textPrimary} /></TouchableOpacity>
-          <TouchableOpacity style={st.playButton} onPress={handlePlayPause}><Ionicons name={isPlaying ? 'pause' : 'play'} size={26} color={Colors.textPrimary} /></TouchableOpacity>
-          <TouchableOpacity onPress={() => handleSeek('forward')}><Ionicons name="play-forward" size={28} color={Colors.textPrimary} /></TouchableOpacity>
-          <TouchableOpacity style={st.rateButton} onPress={cycleRate}><Text style={st.rateText}>{playbackRate}x</Text></TouchableOpacity>
-          <TouchableOpacity onPress={openShareMenu}><Ionicons name={isExportingPdf ? 'hourglass-outline' : 'share-outline'} size={24} color={Colors.textPrimary} /></TouchableOpacity>
-        </View>
-      </View>
+      <RecordingFloatingPlayer
+        bottomInset={insets.bottom}
+        playbackPos={playbackPos}
+        playbackDur={playbackDur}
+        durationFallback={recording.duration}
+        playbackRate={playbackRate}
+        isPlaying={isPlaying}
+        progressFillWidth={progressFillWidth}
+        progressThumbLeft={progressThumbLeft}
+        onProgressTap={handleProgressTap}
+        onProgressLayout={(e: LayoutChangeEvent) => {
+          trackWidth.current = e.nativeEvent.layout.width;
+        }}
+        onPlayPause={handlePlayPause}
+        onSeekBack={() => handleSeek('back')}
+        onSeekForward={() => handleSeek('forward')}
+        onCycleRate={cycleRate}
+      />
 
       <TopBlurFade />
       <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader
-          title={recording.title}
-          showBack
+        <RecordingDetailHeader
           onBack={() => router.back()}
-          trailing={
-            <AnchoredOverflowMenu
-              items={[
-                { label: 'Rename', onPress: handleRename },
-                {
-                  label: 'Rerun summarization',
-                  onPress: () => {
-                    void handleRerunSummarization();
-                  },
-                },
-              ]}
-              renderTrigger={(open) => (
-                <CircularIconButton
-                  icon="ellipsis-horizontal"
-                  accessibilityLabel="Recording options"
-                  onPress={open}
-                />
-              )}
-            />
-          }
+          menuItems={overflowMenuItems}
         />
       </View>
     </View>
@@ -298,36 +325,7 @@ const st = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: Spacing.md,
-    paddingBottom: 160,
   },
-  title: withAppFont({
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
-  }),
-  dateLabel: withAppFont({
-    fontSize: 14,
-    color: Colors.subtext,
-    marginBottom: Spacing.md,
-  }),
-  summaryCard: {
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.cardXL,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  summaryText: withAppFont({
-    fontSize: 15,
-    color: Colors.textPrimary,
-    lineHeight: 22,
-  }),
-  transcriptContainer: { marginTop: Spacing.sm },
-  noTranscript: { padding: Spacing.xl, alignItems: 'center' },
-  noTranscriptText: withAppFont({
-    color: Colors.subtext,
-    fontSize: 15,
-  }),
   processingBanner: {
     backgroundColor: 'rgba(10,132,255,0.1)',
     borderWidth: StyleSheet.hairlineWidth,
@@ -378,24 +376,4 @@ const st = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textPrimary,
   }),
-  playbackBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.card,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-  },
-  progressTrack: { height: 3, backgroundColor: Colors.border, borderRadius: 2, marginBottom: 6, position: 'relative' },
-  progressFill: { height: 3, backgroundColor: Colors.primary, borderRadius: 2 },
-  progressThumb: { position: 'absolute', width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.primary, top: -4.5, marginLeft: -6 },
-  timeRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm },
-  timeText: { fontSize: 12, color: Colors.textSecondary },
-  playControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xl },
-  playButton: { width: 52, height: 52, borderRadius: 26, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
-  rateButton: { backgroundColor: Colors.surfaceElevated, paddingHorizontal: 10, paddingVertical: 5, borderRadius: BorderRadius.sm },
-  rateText: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
 });
