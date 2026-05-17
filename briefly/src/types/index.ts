@@ -15,7 +15,7 @@ export type RecordingFolder = 'unlisted' | 'archived' | 'recently-deleted';
 export interface UserFolder {
   id: string;
   name: string;
-  /** When true, folder is listed first (with other pinned folders) in Library. */
+  /** When true, folder appears in the Library Pinned section (max 6). */
   pinned?: boolean;
   /** Set when pinned; most recently pinned sorts first among pinned folders. */
   pinnedAt?: number;
@@ -70,43 +70,3 @@ export interface Recording {
   errorMessage?: string;
 }
 
-export type RootStackParamList = {
-  Main: undefined;
-  Recording:
-    | {
-        transcriptionModeOverride?: TranscriptionMode;
-        targetFolder?: RecordingFolder;
-        targetUserFolderId?: string;
-        /** When true, new recording is tagged for the Imports library folder. */
-        markImported?: boolean;
-      }
-    | undefined;
-  SaveRecording: {
-    duration: number;
-    filePath: string;
-    fileSize: number;
-    preTranscript?: TranscriptSegment[];
-    transcriptionMode?: TranscriptionMode;
-    targetFolder?: RecordingFolder;
-    targetUserFolderId?: string;
-    markImported?: boolean;
-    autoProcessOnOpen?: boolean;
-  };
-  Summarizing: { recordingId: string };
-  Transcript: { recordingId: string };
-  /** Full folder browser (all user folders). */
-  FolderList: undefined;
-  FolderRecordings: {
-    folderId: string;
-    folderName: string;
-    folderType: 'built-in' | 'user';
-  };
-  TranscriptionModePicker: undefined;
-  ProcessingModePicker: undefined;
-};
-
-export type MainTabParamList = {
-  Home: undefined;
-  Library: undefined;
-  Settings: undefined;
-};

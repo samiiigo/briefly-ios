@@ -1,4 +1,4 @@
-import { TranscriptionMode } from '../types';
+import { TranscriptionMode } from '@/types';
 
 export function normalizeTranscriptionMode(mode: string | undefined | null): TranscriptionMode {
   if (mode === 'live-assemblyai' || mode === 'post-assemblyai' || mode === 'local-on-device') {

@@ -1,10 +1,10 @@
 /**
- * Utils barrel — re-exports from focused modules (SRP).
+ * Lib barrel — re-exports from focused modules (SRP).
  *
  * Each module has a single reason to change:
  *   formatting.ts  — display formatting (dates, durations, file sizes)
  *   recording.ts   — recording entity helpers (IDs, titles, grouping)
- *   providerDetection.ts — cloud provider key detection and metadata
+ *   providers/providerDetection.ts — cloud provider key detection and metadata
  */
 
 export {
@@ -12,6 +12,8 @@ export {
   formatTimestamp,
   formatDate,
   formatGroupLabel,
+  formatRecentsCardDate,
+  formatRecentsGroupLabel,
   formatFileSize,
 } from './formatting';
 
@@ -26,6 +28,6 @@ export {
   detectProvider,
   providerEndpoint,
   providerLabel,
-} from './providerDetection';
+} from './providers/providerDetection';
 
-export type { DetectedCloudProvider as CloudProvider } from './providerDetection';
+export type { DetectedCloudProvider as CloudProvider } from './providers/providerDetection';

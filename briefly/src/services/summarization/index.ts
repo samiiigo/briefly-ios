@@ -8,16 +8,16 @@
  * SummarizationProvider interface (DIP).
  */
 
-import { TranscriptSegment, KeyInsight, ProcessingMode } from '../../types';
+import { TranscriptSegment, KeyInsight, ProcessingMode } from '@/types';
 import {
   createSummarizationProvider,
   configureSummarizationProviderFactory,
   resetSummarizationProviderFactory,
-} from './SummarizationProviderFactory';
-import { logger } from '../../utils/logger';
+} from './summarizationProviderFactory';
+import { logger } from '@/utils/logger';
 
 // Re-export for external consumers
-export type { SummarizationResult, SummarizationProvider } from './SummarizationProvider';
+export type { SummarizationResult, SummarizationProvider } from './summarizationProvider';
 
 export const SummarizationService = {
   async summarize(

@@ -1,7 +1,7 @@
-import { TranscriptionMode } from '../types';
-import { NativeAudioCapture } from '../services/audio/NativeAudioCapture';
-import { ExpoAudioStreamingCapture } from '../services/audio/ExpoAudioStreamingCapture';
-import { getAssemblyAISharedApiKey } from '../config/assemblyAI';
+import { TranscriptionMode } from '@/types';
+import { NativeAudioCapture } from '@/services/audio/nativeAudioCapture';
+import { ExpoAudioStreamingCapture } from '@/services/audio/expoAudioStreamingCapture';
+import { getAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
 
 export interface EnvironmentCapabilities {
   hasNativeModule: boolean;

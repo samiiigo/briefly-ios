@@ -105,6 +105,43 @@ export function formatGroupLabel(timestamp: number): string {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
+/** Subtitle on recents entry cards, e.g. "April 10, 26 . 8:00". */
+export function formatRecentsCardDate(timestamp: number): string {
+  const ts = toTimestampMs(timestamp);
+  const date = new Date(ts);
+  const monthDay = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  const year = String(date.getFullYear()).slice(-2);
+  const time = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: false,
+  });
+  return `${monthDay}, ${year} . ${time}`;
+}
+
+/**
+ * Section titles for the recents feed: Today → Yesterday → Past 30 days → month name.
+ */
+export function formatRecentsGroupLabel(timestamp: number): string {
+  const ts = toTimestampMs(timestamp);
+  const date = new Date(ts);
+  const now = new Date();
+
+  const todayStart = startOfDay(now);
+  const dateStart = startOfDay(date);
+  const diffMs = todayStart.getTime() - dateStart.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays >= 2 && diffDays <= 30) return 'Past 30 days';
+
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString('en-US', { month: 'long' });
+  }
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;

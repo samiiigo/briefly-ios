@@ -1,4 +1,4 @@
-import { Recording, UserFolder } from '../../types';
+import { Recording, UserFolder } from '@/types';
 
 export interface RecordingRepository {
   loadAll(): Promise<Recording[]>;

@@ -1,4 +1,4 @@
-import { ProcessingMode } from '../types';
+import { ProcessingMode } from '@/types';
 
 export function processingModeTitle(mode: ProcessingMode): string {
   if (mode === 'on-device') return 'On-device (Apple Intelligence)';

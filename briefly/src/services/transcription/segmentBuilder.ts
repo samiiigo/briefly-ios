@@ -5,8 +5,8 @@
  * sentence-level TranscriptSegment objects.
  */
 
-import { TranscriptSegment } from '../../types';
-import { splitCompleteSentences } from '../../utils/sentenceSplitter';
+import { TranscriptSegment } from '@/types';
+import { splitCompleteSentences } from '@/utils/sentenceSplitter';
 
 function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);

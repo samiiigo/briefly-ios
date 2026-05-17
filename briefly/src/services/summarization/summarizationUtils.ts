@@ -6,9 +6,9 @@
  * and the extractive fallback are independent concerns.
  */
 
-import { TranscriptSegment, KeyInsight } from '../../types';
-import { logger } from '../../utils/logger';
-import { SummarizationResult } from './SummarizationProvider';
+import { TranscriptSegment, KeyInsight } from '@/types';
+import { logger } from '@/utils/logger';
+import { SummarizationResult } from './summarizationProvider';
 
 /** Timeout for cloud summarization API calls (ms). */
 export const SUMMARIZATION_TIMEOUT_MS = 30_000;

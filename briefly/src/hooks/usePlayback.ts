@@ -7,10 +7,10 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Animated } from 'react-native';
-import { PlaybackService } from '../services/audio';
-import type { PlaybackControls } from '../services/audio';
-import { TranscriptSegment } from '../types';
-import { SliderAnimation } from '../utils/theme';
+import { PlaybackService } from '@/services/audio';
+import type { PlaybackControls } from '@/services/audio';
+import { TranscriptSegment } from '@/types';
+import { SliderAnimation } from '@/theme';
 
 interface UsePlaybackOptions {
   filePath: string;

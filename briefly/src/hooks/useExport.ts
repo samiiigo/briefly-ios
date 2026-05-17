@@ -9,8 +9,8 @@ import { useState, useCallback } from 'react';
 import { Alert, Share } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { Recording } from '../types';
-import { formatDuration, formatDate } from '../utils';
+import { Recording } from '@/types';
+import { formatDuration, formatDate } from '@/utils';
 
 function escapeHtml(text: string) {
   return text
