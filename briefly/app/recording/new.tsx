@@ -171,26 +171,37 @@ export default function NewRecordingScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handlePause = async () => {
-    if (!isStarted || startFailed) return;
+  const resumeRecording = useCallback(async () => {
+    if (!isStarted || startFailed || isStopped.current || !isPausedRef.current) return;
     try {
-      if (isPaused) {
-        if (startedWithLiveRef.current) await LiveTranscriptionService.resume();
-        else await RecordingService.resume();
-        startTimer();
-        setIsPaused(false);
-        isPausedRef.current = false;
-      } else {
-        if (startedWithLiveRef.current) await LiveTranscriptionService.pause();
-        else await RecordingService.pause();
-        stopTimer();
-        setIsPaused(true);
-        isPausedRef.current = true;
-      }
+      if (startedWithLiveRef.current) await LiveTranscriptionService.resume();
+      else await RecordingService.resume();
+      startTimer();
+      setIsPaused(false);
+      isPausedRef.current = false;
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Could not pause or resume.';
+      const message = err instanceof Error ? err.message : 'Could not resume recording.';
       Alert.alert('Error', message);
     }
+  }, [isStarted, startFailed, startTimer]);
+
+  const pauseRecording = useCallback(async () => {
+    if (!isStarted || startFailed || isStopped.current || isPausedRef.current) return;
+    try {
+      if (startedWithLiveRef.current) await LiveTranscriptionService.pause();
+      else await RecordingService.pause();
+      stopTimer();
+      setIsPaused(true);
+      isPausedRef.current = true;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not pause recording.';
+      Alert.alert('Error', message);
+    }
+  }, [isStarted, startFailed, stopTimer]);
+
+  const handlePause = async () => {
+    if (isPausedRef.current) await resumeRecording();
+    else await pauseRecording();
   };
 
   handlePauseRef.current = handlePause;
@@ -217,20 +228,10 @@ export default function NewRecordingScreen() {
   }, [cleanup, isStarted, router, startFailed, stopTimer, teardownCapture]);
 
   const pauseIfRecording = useCallback(async (): Promise<boolean> => {
-    if (!isStarted || isPaused || startFailed) return true;
-    try {
-      if (startedWithLiveRef.current) await LiveTranscriptionService.pause();
-      else await RecordingService.pause();
-      stopTimer();
-      setIsPaused(true);
-      isPausedRef.current = true;
-      return true;
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Could not pause recording.';
-      Alert.alert('Error', message);
-      return false;
-    }
-  }, [isPaused, isStarted, startFailed, stopTimer]);
+    if (!isStarted || startFailed || isPausedRef.current) return true;
+    await pauseRecording();
+    return isPausedRef.current;
+  }, [isStarted, pauseRecording, startFailed]);
 
   const discardActiveRecording = useCallback(async () => {
     if (isStopped.current) {
@@ -261,9 +262,7 @@ export default function NewRecordingScreen() {
             text: 'Resume',
             style: 'cancel',
             onPress: () => {
-              if (isPausedRef.current && isStarted && !isStopped.current) {
-                void handlePause();
-              }
+              void resumeRecording();
             },
           },
           {
