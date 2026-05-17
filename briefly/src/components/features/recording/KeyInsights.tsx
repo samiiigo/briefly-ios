@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { KeyInsight } from '@/types';
-import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
-import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import { Colors } from '@/theme';
 
 interface Props {
   insights: KeyInsight[];
@@ -12,12 +12,15 @@ export function KeyInsights({ insights }: Props) {
   if (!insights.length) return null;
 
   return (
-    <View style={styles.section}>
-      <Text style={sl.listSectionHeader}>Key insights</Text>
-      <View style={styles.card}>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Ionicons name="sparkles" size={18} color={Colors.insightAccent} />
+        <Text style={styles.headerText}>Key insights</Text>
+      </View>
+      <View style={styles.list}>
         {insights.map((insight) => (
           <View key={insight.id} style={styles.item}>
-            <View style={styles.bullet} />
+            <Text style={styles.bullet}>•</Text>
             <Text style={styles.text}>{insight.text}</Text>
           </View>
         ))}
@@ -27,31 +30,47 @@ export function KeyInsights({ insights }: Props) {
 }
 
 const styles = StyleSheet.create({
-  section: {
-    marginBottom: 8,
+  container: {
+    backgroundColor: Colors.insightCard,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: Colors.background,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    marginBottom: 16,
   },
-  card: {
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.cardXL,
-    padding: Spacing.md,
-    gap: 6,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  headerText: {
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 22,
+    color: Colors.textPrimary,
+  },
+  list: {
+    gap: 12,
   },
   item: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: Spacing.sm,
   },
   bullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primary,
-    marginTop: 8,
+    width: 19,
+    marginTop: 6,
+    marginRight: 12,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Colors.insightAccent,
   },
-  text: withAppFont({
+  text: {
     flex: 1,
-    fontSize: 15,
-    color: Colors.subtext,
-    lineHeight: 22,
-  }),
+    fontSize: 14,
+    lineHeight: 19,
+    color: Colors.summaryBody,
+  },
 });

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,24 +7,19 @@ import {
   ScrollView,
   Alert,
   Platform,
-  GestureResponderEvent,
-  LayoutChangeEvent,
-  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useRecordingStore } from '@/context/useRecordingStore';
+import { useUserFolderStore } from '@/context/useUserFolderStore';
 import { usePlayback } from '@/hooks/usePlayback';
 import { useExport } from '@/hooks/useExport';
 import { KeyInsights } from '@/components/features/recording/KeyInsights';
 import { RecordingTitleHero } from '@/components/features/recording/RecordingTitleHero';
 import { SummaryBulletSection } from '@/components/features/recording/SummaryBulletSection';
 import { RecordingDetailHeader } from '@/components/features/recording/RecordingDetailChrome';
-import {
-  RecordingFloatingPlayer,
-  FLOATING_PLAYER_ESTIMATED_HEIGHT,
-} from '@/components/features/recording/RecordingFloatingPlayer';
+import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
@@ -34,6 +29,7 @@ import { ensureUniqueTitle } from '@/utils';
 import { parseSummaryBullets } from '@/utils/summaryBullets';
 import { getNextSummarizationFallback } from '@/utils/summarizationFallback';
 import { hasMeaningfulTranscript } from '@/utils/recordingValidation';
+import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 export default function TranscriptScreen() {
@@ -43,14 +39,24 @@ export default function TranscriptScreen() {
   const { id: recordingId } = useLocalSearchParams<{ id: string }>();
   const recording = useRecordingStore((s) => s.getRecordingById(recordingId!));
   const { updateRecording, recordings, restoreRecording } = useRecordingStore();
+  const folders = useUserFolderStore((s) => s.folders);
+  const loadFolders = useUserFolderStore((s) => s.loadFolders);
   const { summarizationMode } = useSettingsStore();
-  const { isPlaying, playbackPos, playbackDur, playbackRate, trackWidth, animatedProgress, cycleRate, togglePlayPause: handlePlayPause, seek: handleSeek, seekToRatio } = usePlayback({ filePath: recording?.filePath ?? '', transcript: recording?.transcript });
-  const { openShareMenu } = useExport(recording);
 
-  const handleProgressTap = useCallback(async (e: GestureResponderEvent) => {
-    if (!playbackDur || trackWidth.current === 0) return;
-    await seekToRatio(e.nativeEvent.locationX / trackWidth.current);
-  }, [playbackDur, seekToRatio, trackWidth]);
+  useEffect(() => {
+    void loadFolders();
+  }, [loadFolders]);
+
+  const folderLabel = useMemo(
+    () => (recording ? getRecordingFolderDisplayName(recording, folders) : ''),
+    [recording, folders],
+  );
+
+  const playback = usePlayback({
+    filePath: recording?.filePath ?? '',
+    transcript: recording?.transcript,
+  });
+  const { isExportingPdf, openShareMenu } = useExport(recording);
 
   const handleRename = useCallback(() => {
     if (!recording) return;
@@ -128,6 +134,25 @@ export default function TranscriptScreen() {
     updateRecording(recording.id, { isFavorite: !recording.isFavorite });
   }, [recording, updateRecording]);
 
+  const handleViewTranscript = useCallback(() => {
+    if (!recording) return;
+    const hasTranscript = (recording.transcript?.length ?? 0) > 0;
+    if (!hasTranscript) {
+      if (recording.status === 'transcribing' || recording.status === 'summarizing') {
+        Alert.alert('Processing', 'The transcript is not ready yet.');
+      } else if (recording.status === 'saved') {
+        Alert.alert('No transcript', 'Transcribe this recording first.');
+      } else {
+        Alert.alert('No transcript', 'No transcript is available for this recording.');
+      }
+      return;
+    }
+    router.push({
+      pathname: '/recording/transcript',
+      params: { recordingId: recording.id },
+    });
+  }, [recording, router]);
+
   if (!recording) {
     return (
       <View style={sl.container}>
@@ -161,8 +186,6 @@ export default function TranscriptScreen() {
     );
   }
 
-  const progressFillWidth = animatedProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-  const progressThumbLeft = animatedProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
   const lastSummarizationMode = recording.processingMode ?? summarizationMode;
   const summarizationFallback =
     recording.status === 'error' && hasMeaningfulTranscript(recording.transcript)
@@ -173,24 +196,13 @@ export default function TranscriptScreen() {
     (!hasMeaningfulTranscript(recording.transcript) || !summarizationFallback);
   const summaryBullets = recording.summary ? parseSummaryBullets(recording.summary) : [];
 
-  const hasTranscript = hasMeaningfulTranscript(recording.transcript);
-
   const overflowMenuItems = [
+    { label: 'Rename', onPress: handleRename },
     {
-      label: recording.isFavorite ? 'Remove from favorites' : 'Add to favorites',
+      label: recording.isFavorite ? 'Unfavorite' : 'Favorite',
       onPress: handleToggleFavorite,
     },
-    { label: 'Share', onPress: openShareMenu },
-    {
-      label: 'View transcript',
-      onPress: () =>
-        router.push({
-          pathname: '/recording/transcript',
-          params: { recordingId: recording.id },
-        }),
-      disabled: !hasTranscript,
-    },
-    { label: 'Rename', onPress: handleRename },
+    { label: 'View transcript', onPress: handleViewTranscript },
     {
       label: 'Rerun summarization',
       onPress: () => {
@@ -203,14 +215,7 @@ export default function TranscriptScreen() {
     <View style={sl.container}>
       <ScrollView
         style={st.scroll}
-        contentContainerStyle={[
-          st.scrollContent,
-          {
-            paddingTop: scrollPaddingTop,
-            paddingBottom:
-              FLOATING_PLAYER_ESTIMATED_HEIGHT + Math.max(insets.bottom, 12) + Spacing.lg,
-          },
-        ]}
+        contentContainerStyle={[st.scrollContent, { paddingTop: scrollPaddingTop }]}
         showsVerticalScrollIndicator={false}
       >
         <RecordingTitleHero recording={recording} />
@@ -250,29 +255,19 @@ export default function TranscriptScreen() {
         )}
         {summaryBullets.length > 0 && <SummaryBulletSection bullets={summaryBullets} />}
       </ScrollView>
-      <RecordingFloatingPlayer
-        bottomInset={insets.bottom}
-        playbackPos={playbackPos}
-        playbackDur={playbackDur}
-        durationFallback={recording.duration}
-        playbackRate={playbackRate}
-        isPlaying={isPlaying}
-        progressFillWidth={progressFillWidth}
-        progressThumbLeft={progressThumbLeft}
-        onProgressTap={handleProgressTap}
-        onProgressLayout={(e: LayoutChangeEvent) => {
-          trackWidth.current = e.nativeEvent.layout.width;
-        }}
-        onPlayPause={handlePlayPause}
-        onSeekBack={() => handleSeek('back')}
-        onSeekForward={() => handleSeek('forward')}
-        onCycleRate={cycleRate}
+      <RecordingPlaybackBar
+        recording={recording}
+        playback={playback}
+        paddingBottom={Math.max(insets.bottom, 12) + Spacing.sm}
       />
 
       <TopBlurFade />
       <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
         <RecordingDetailHeader
           onBack={() => router.back()}
+          folderLabel={folderLabel}
+          onShare={openShareMenu}
+          shareDisabled={isExportingPdf}
           menuItems={overflowMenuItems}
         />
       </View>
@@ -324,7 +319,8 @@ const st = StyleSheet.create({
   }),
   scroll: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
+    paddingBottom: 200,
   },
   processingBanner: {
     backgroundColor: 'rgba(10,132,255,0.1)',
