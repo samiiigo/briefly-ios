@@ -11,6 +11,7 @@ import { PlaybackService } from '@/services/audio';
 import type { PlaybackControls } from '@/services/audio';
 import { TranscriptSegment } from '@/types';
 import { SliderAnimation } from '@/theme';
+import { logger } from '@/utils/logger';
 
 interface UsePlaybackOptions {
   filePath: string;
@@ -30,6 +31,11 @@ export function usePlayback({
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
   const trackWidth = useRef(0);
   const animatedProgress = useRef(new Animated.Value(0)).current;
+  const filePathRef = useRef(filePath);
+
+  useEffect(() => {
+    filePathRef.current = filePath;
+  }, [filePath]);
 
   const progress = playbackDur > 0 ? playbackPos / playbackDur : 0;
   useEffect(() => {
@@ -41,6 +47,38 @@ export function usePlayback({
     }).start();
   }, [progress, animatedProgress]);
 
+  useEffect(() => {
+    return () => {
+      void playbackService.stop();
+    };
+  }, [playbackService]);
+
+  const handleStatusUpdate = useCallback(
+    (status: {
+      position: number;
+      duration: number;
+      playing: boolean;
+      didJustFinish: boolean;
+    }) => {
+      setPlaybackPos(status.position);
+      if (status.duration > 0) {
+        setPlaybackDur(status.duration);
+      }
+      if (status.playing) {
+        setIsPlaying(true);
+      } else if (status.didJustFinish) {
+        setIsPlaying(false);
+      }
+      if (transcript) {
+        const active = transcript.find(
+          (s) => status.position >= s.startTime && status.position < s.endTime,
+        );
+        setActiveSegmentId(active?.id ?? null);
+      }
+    },
+    [transcript],
+  );
+
   const cycleRate = useCallback(async () => {
     const rates = [1.0, 1.5, 2.0];
     const next = rates[(rates.indexOf(playbackRate) + 1) % rates.length];
@@ -49,26 +87,34 @@ export function usePlayback({
   }, [playbackRate, playbackService]);
 
   const togglePlayPause = useCallback(async () => {
-    if (isPlaying) {
-      await playbackService.pause();
-      setIsPlaying(false);
-    } else {
+    const uri = filePathRef.current?.trim();
+    if (!uri) {
+      logger.warn('AUDIO', 'Playback skipped: missing file path');
+      return;
+    }
+
+    try {
+      if (isPlaying) {
+        await playbackService.pause();
+        setIsPlaying(false);
+        return;
+      }
+
       if (playbackPos === 0 || playbackPos >= playbackDur - 0.5) {
-        await playbackService.play(filePath, (pos, dur, playing) => {
-          setPlaybackPos(pos);
-          setPlaybackDur(dur);
-          setIsPlaying(playing);
-          if (transcript) {
-            const active = transcript.find((s) => pos >= s.startTime && pos < s.endTime);
-            setActiveSegmentId(active?.id ?? null);
-          }
-        });
+        setIsPlaying(true);
+        await playbackService.play(uri, handleStatusUpdate);
       } else {
         await playbackService.resume();
+        setIsPlaying(true);
       }
-      setIsPlaying(true);
+    } catch (error) {
+      setIsPlaying(false);
+      logger.error('AUDIO', 'Playback failed', {
+        uri,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-  }, [isPlaying, playbackPos, playbackDur, filePath, transcript, playbackService]);
+  }, [isPlaying, playbackPos, playbackDur, handleStatusUpdate, playbackService]);
 
   const seek = useCallback(
     async (direction: 'back' | 'forward') => {
@@ -77,7 +123,7 @@ export function usePlayback({
       await playbackService.seekTo(newPos);
       setPlaybackPos(newPos);
     },
-    [playbackPos, playbackDur, playbackService]
+    [playbackPos, playbackDur, playbackService],
   );
 
   const seekToRatio = useCallback(
@@ -88,7 +134,7 @@ export function usePlayback({
       await playbackService.seekTo(newPos);
       setPlaybackPos(newPos);
     },
-    [playbackDur, playbackService]
+    [playbackDur, playbackService],
   );
 
   return {

@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '@/types';
 import {
   getRecordingContentEmoji,
   isRecordingProcessing,
 } from '@/utils/recordingContentEmoji';
+import { RecordingEmojiCircle } from '@/components/features/recording/RecordingEmojiCircle';
 import { Colors, Spacing } from '@/theme';
 
 interface Props {
@@ -21,48 +22,56 @@ export function RecordingAvatar({ recording, size = 'md' }: Props) {
   return (
     <View
       style={[
-        styles.container,
-        compact ? styles.containerCompact : styles.containerList,
+        styles.shell,
+        compact ? styles.shellCompact : styles.shellList,
       ]}
     >
       {processing ? (
-        <ActivityIndicator size="small" color={Colors.textPrimary} />
+        <View style={[styles.stateCircle, compact && styles.stateCircleCompact]}>
+          <ActivityIndicator size="small" color={Colors.textPrimary} />
+        </View>
       ) : failed ? (
-        <Ionicons
-          name="close-circle"
-          size={compact ? 26 : 28}
-          color={Colors.red}
-        />
+        <View style={[styles.stateCircle, compact && styles.stateCircleCompact]}>
+          <Ionicons
+            name="close-circle"
+            size={compact ? 26 : 28}
+            color={Colors.red}
+          />
+        </View>
       ) : (
-        <Text style={[styles.emoji, compact && styles.emojiCompact]}>
-          {getRecordingContentEmoji(recording)}
-        </Text>
+        <RecordingEmojiCircle
+          emoji={getRecordingContentEmoji(recording)}
+          size="md"
+        />
       )}
     </View>
   );
 }
 
+const CIRCLE_DIM = 48;
+
 const styles = StyleSheet.create({
-  container: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#C4C4C4',
-    alignItems: 'center',
-    justifyContent: 'center',
+  shell: {
     flexShrink: 0,
   },
-  containerCompact: {
+  shellCompact: {
     alignSelf: 'center',
     marginBottom: 10,
   },
-  containerList: {
+  shellList: {
     marginRight: Spacing.md,
   },
-  emoji: {
-    fontSize: 22,
+  stateCircle: {
+    width: CIRCLE_DIM,
+    height: CIRCLE_DIM,
+    borderRadius: CIRCLE_DIM / 2,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.emojiCircleBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  emojiCompact: {
-    fontSize: 22,
+  stateCircleCompact: {
+    alignSelf: 'center',
   },
 });

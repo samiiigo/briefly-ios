@@ -13,6 +13,7 @@ import { AudioRecordingResult } from './types';
 import { assemblyAIRecordingOptions } from './recordingOptions';
 import { logger } from '@/utils/logger';
 import { ensureMicrophonePermission } from '@/utils/recordingPermissions';
+import { configureRecordingStoppedAudioSession } from './playbackSession';
 
 class RecordingServiceClass {
   private recorder: AudioRecorder | null = null;
@@ -117,7 +118,7 @@ class RecordingServiceClass {
     this.recorder = null;
     this._recordingPaused = false;
 
-    await setAudioModeAsync({ allowsRecording: false });
+    await configureRecordingStoppedAudioSession();
 
     logger.info('AUDIO', 'Local recording stopped', { uri, durationSec: duration, fileSize });
     return { uri, duration, fileSize };

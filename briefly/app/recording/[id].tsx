@@ -320,7 +320,7 @@ const st = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: Spacing.screenHorizontal,
-    paddingBottom: 200,
+    paddingBottom: 140,
   },
   processingBanner: {
     backgroundColor: 'rgba(10,132,255,0.1)',

@@ -1,7 +1,14 @@
+export interface PlaybackStatusUpdate {
+  position: number;
+  duration: number;
+  playing: boolean;
+  didJustFinish: boolean;
+}
+
 export interface PlaybackControls {
   play(
     uri: string,
-    onPlaybackStatusUpdate?: (position: number, duration: number, isPlaying: boolean) => void
+    onPlaybackStatusUpdate?: (status: PlaybackStatusUpdate) => void
   ): Promise<void>;
   pause(): Promise<void>;
   resume(): Promise<void>;
