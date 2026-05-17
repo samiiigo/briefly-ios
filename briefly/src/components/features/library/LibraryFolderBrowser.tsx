@@ -31,16 +31,10 @@ import {
   type BuiltInFolderDef,
 } from '@/constants/builtInFolders';
 import {
-  MAX_PINNED_FOLDERS,
   MAX_YOUR_FOLDERS_PREVIEW,
   type UserFolderListFilter,
 } from '@/constants/userFolders';
 import { FolderUserSwipeableRow } from './FolderUserSwipeableRow';
-
-
-
-/** @deprecated Use {@link MAX_PINNED_FOLDERS} */
-export const MAX_USER_FOLDERS_PREVIEW = MAX_PINNED_FOLDERS;
 
 const LIST_BOTTOM_PADDING = 140;
 /** Matches {@link styles.folderCard} width in the two-column grid. */

@@ -28,8 +28,7 @@ import { useUserFolderStore } from '@/context/useUserFolderStore';
 import { folderFlagsFor } from '@/utils/folders/recordingFolder';
 import { RecordingFolder } from '@/types';
 import { BUILTIN_MOVE_ORDER, BUILT_IN_FOLDERS } from '@/constants/builtInFolders';
-import { SWIPE_ACTION_GAP } from './SwipeableAnimatedAction';
-import { SwipeableAnimatedAction } from './SwipeableAnimatedAction';
+import { SWIPE_ACTION_GAP , SwipeableAnimatedAction } from './SwipeableAnimatedAction';
 import { SwipeableMotionCard } from './SwipeableMotionCard';
 import {
   RECORDING_SWIPE_FRICTION,
