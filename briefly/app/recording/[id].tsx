@@ -17,7 +17,7 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { useExport } from '@/hooks/useExport';
 import { KeyInsights } from '@/components/features/recording/KeyInsights';
 import { RecordingTitleHero } from '@/components/features/recording/RecordingTitleHero';
-import { SummaryBulletSection } from '@/components/features/recording/SummaryBulletSection';
+import { SummaryMarkdownSection } from '@/components/features/recording/SummaryMarkdownSection';
 import { RecordingDetailHeader } from '@/components/features/recording/RecordingDetailChrome';
 import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
@@ -26,7 +26,6 @@ import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { ensureUniqueTitle } from '@/utils';
-import { parseSummaryBullets } from '@/utils/summaryBullets';
 import { getNextSummarizationFallback } from '@/utils/summarizationFallback';
 import { hasMeaningfulTranscript } from '@/utils/recordingValidation';
 import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
@@ -194,8 +193,6 @@ export default function TranscriptScreen() {
   const showTranscriptionFallbackOnError =
     recording.status === 'error' &&
     (!hasMeaningfulTranscript(recording.transcript) || !summarizationFallback);
-  const summaryBullets = recording.summary ? parseSummaryBullets(recording.summary) : [];
-
   const overflowMenuItems = [
     { label: 'Rename', onPress: handleRename },
     {
@@ -253,7 +250,7 @@ export default function TranscriptScreen() {
         {recording.keyInsights && recording.keyInsights.length > 0 && (
           <KeyInsights insights={recording.keyInsights} />
         )}
-        {summaryBullets.length > 0 && <SummaryBulletSection bullets={summaryBullets} />}
+        {recording.summary ? <SummaryMarkdownSection markdown={recording.summary} /> : null}
       </ScrollView>
       <RecordingPlaybackBar
         recording={recording}

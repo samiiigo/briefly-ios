@@ -34,3 +34,14 @@ export function appFont(
 ): TextStyle {
   return withAppFont({ fontSize, fontWeight, color });
 }
+
+/** Serif headings on summary screens (Georgia on iOS, system serif elsewhere). */
+export function withSerifFont(style: TextStyle): TextStyle {
+  const fontFamily = Platform.select({
+    ios: 'Georgia',
+    android: 'serif',
+    default: undefined,
+  });
+  if (!fontFamily) return style;
+  return { ...style, fontFamily };
+}

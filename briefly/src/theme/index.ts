@@ -1,7 +1,14 @@
 import { Easing, Platform } from 'react-native';
 import { appFont, withAppFont } from './fonts';
 
-export { Fonts, fontFamilyForSize, withAppFont, appFont, SF_DISPLAY_MIN_SIZE } from './fonts';
+export {
+  Fonts,
+  fontFamilyForSize,
+  withAppFont,
+  withSerifFont,
+  appFont,
+  SF_DISPLAY_MIN_SIZE,
+} from './fonts';
 export { installAppFonts } from './installAppFonts';
 
 export const Colors = {

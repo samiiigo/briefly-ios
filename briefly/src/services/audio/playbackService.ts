@@ -63,11 +63,6 @@ class PlaybackServiceClass implements PlaybackControls {
           didJustFinish: status.didJustFinish,
         });
 
-        if (status.error) {
-          fail(new Error(status.error));
-          return;
-        }
-
         if (!started && status.isLoaded) {
           started = true;
           try {

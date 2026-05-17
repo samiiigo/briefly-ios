@@ -22,10 +22,14 @@ export function segmentsToText(segments: TranscriptSegment[]): string {
 }
 
 export const SYSTEM_PROMPT = `You are a concise meeting/lecture summarizer. Given a transcript, output a JSON object with:
-- "summary": a 2-4 sentence paragraph summarizing the main topic and outcome
-- "keyInsights": an array of 3-6 short bullet strings capturing decisions, action items, or important points
+- "summary": a Markdown string for the app summary screen. Structure it clearly:
+  - Start with "## Summary" then 2-4 sentences on the main topic and outcome
+  - Optionally add "## Key points" with "- " bullets for the most important takeaways
+  - Use **bold** for names, dates, decisions, and action owners
+  - Use plain Markdown only (no code fences around the summary)
+- "keyInsights": an array of 3-6 short bullet strings capturing decisions, action items, or important points (plain text, no Markdown)
 
-Respond ONLY with valid JSON. No markdown fences, no extra explanation.`;
+Respond ONLY with valid JSON. No markdown fences around the JSON, no extra explanation.`;
 
 /**
  * Simple extractive summarization — no model needed.
@@ -39,7 +43,11 @@ export function extractiveSummarize(
     .map((s) => s.trim())
     .filter((s) => s.length > 20);
 
-  const summary = sentences.slice(0, 3).join('. ') + (sentences.length > 3 ? '.' : '');
+  const overview =
+    sentences.slice(0, 3).join('. ') + (sentences.length > 3 ? '.' : '');
+  const summary = overview
+    ? `## Summary\n\n${overview}`
+    : `## Summary\n\n${text.slice(0, 200)}`;
 
   const insights = sentences
     .filter((s) => /\b(decide|action|will|should|must|key|important|summary|conclude)\b/i.test(s))
@@ -50,7 +58,7 @@ export function extractiveSummarize(
     insights.push({ id: generateId(), text: sentences[0] });
   }
 
-  return { summary: summary || text.slice(0, 200), keyInsights: insights };
+  return { summary, keyInsights: insights };
 }
 
 /**

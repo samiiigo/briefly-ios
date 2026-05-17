@@ -46,4 +46,14 @@ describe('JSON summary parsing', () => {
       ['Point A', 'Point B']
     );
   });
+
+  it('preserves markdown in the summary field', () => {
+    const markdown = '## Summary\n\nDiscussed **Q2 goals**.\n\n## Key points\n\n- Ship beta';
+    const result = parseJsonSummary(
+      JSON.stringify({ summary: markdown, keyInsights: ['Action item'] }),
+      'fallback text'
+    );
+
+    assert.equal(result.summary, markdown);
+  });
 });
