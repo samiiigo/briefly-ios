@@ -12,6 +12,7 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -30,19 +31,19 @@ import {
   type BuiltInFolderDef,
 } from '@/constants/builtInFolders';
 import {
-  MAX_PINNED_FOLDERS,
   MAX_YOUR_FOLDERS_PREVIEW,
   type UserFolderListFilter,
 } from '@/constants/userFolders';
 import { FolderUserSwipeableRow } from './FolderUserSwipeableRow';
 
-
-
-/** @deprecated Use {@link MAX_PINNED_FOLDERS} */
-export const MAX_USER_FOLDERS_PREVIEW = MAX_PINNED_FOLDERS;
-
 const LIST_BOTTOM_PADDING = 140;
-const PINNED_CARD_WIDTH = 148;
+/** Matches {@link styles.folderCard} width in the two-column grid. */
+const FOLDER_GRID_CARD_WIDTH_RATIO = 0.485;
+
+function useFolderGridCardWidth(): number {
+  const { width: windowWidth } = useWindowDimensions();
+  return (windowWidth - 2 * Spacing.md) * FOLDER_GRID_CARD_WIDTH_RATIO;
+}
 
 function folderItemCountLabel(count: number, variant: 'grid' | 'list'): string {
   if (variant === 'grid') {
@@ -74,12 +75,14 @@ type Section = {
   /** Tiles for {@link variant} `pinned-row` (vertical list uses empty `data`). */
   pinnedRowData?: FolderTile[];
   hideHeader?: boolean;
+  /** Your folders: no pin badge, border, or list pin icon (pin state unchanged for actions). */
+  plainUserFolders?: boolean;
 };
 
 export interface LibraryFolderBrowserProps {
   /** When set (Library tab), only pinned folders are shown, up to this limit; "See all" opens all folders. */
   maxPinnedFolders?: number;
-  /** Unpinned user folders previewed under Your folders (defaults to {@link MAX_YOUR_FOLDERS_PREVIEW}). */
+  /** User folders previewed under Your folders, alphabetical (defaults to {@link MAX_YOUR_FOLDERS_PREVIEW}). */
   maxYourFolders?: number;
   /** When true, back control and {@link stackTitle} for the full-folder stack screen. */
   showBack?: boolean;
@@ -96,6 +99,7 @@ export function LibraryFolderBrowser({
   stackTitle,
   folderListFilter,
 }: LibraryFolderBrowserProps) {
+  const folderGridCardWidth = useFolderGridCardWidth();
   const { scrollPaddingTop, topInset } = useTopChromeLayout();
   const router = useRouter();
   const recordings = useRecordingStore((s) => s.recordings);
@@ -213,7 +217,14 @@ export function LibraryFolderBrowser({
 
     if (showBack && folderListFilter === 'all-user') {
       return allUserTilesByName.length > 0
-        ? [{ title: 'Your folders', data: allUserTilesByName, hideHeader: true }]
+        ? [
+            {
+              title: 'Your folders',
+              data: allUserTilesByName,
+              hideHeader: true,
+              plainUserFolders: true,
+            },
+          ]
         : [
             {
               title: 'Your folders',
@@ -228,8 +239,7 @@ export function LibraryFolderBrowser({
 
     if (maxPinnedFolders != null) {
       const pinnedTiles = userTiles.filter((t) => t.pinned);
-      const unpinnedTiles = userTiles.filter((t) => !t.pinned);
-      const previewYourFolders = unpinnedTiles.slice(0, maxYourFolders);
+      const previewYourFolders = allUserTilesByName.slice(0, maxYourFolders);
 
       if (pinnedTiles.length > 0) {
         s.push({
@@ -242,14 +252,15 @@ export function LibraryFolderBrowser({
         });
       }
 
-      if (unpinnedTiles.length > 0) {
+      if (userTiles.length > 0) {
         s.push({
           title: 'Your folders',
           data: previewYourFolders,
           showSeeAll: userTiles.length > maxYourFolders,
           seeAllFilter: 'all-user',
+          plainUserFolders: true,
         });
-      } else if (userTiles.length === 0) {
+      } else {
         s.push({
           title: 'Your folders',
           data: [],
@@ -382,19 +393,21 @@ export function LibraryFolderBrowser({
   );
 
   const renderGridFolderCard = useCallback(
-    (f: FolderTile) => {
+    (f: FolderTile, showPinnedChrome = true) => {
+      const showPinVisuals =
+        showPinnedChrome && f.folderType === 'user' && !!f.pinned;
       const cardInner = (
         <View
           style={[
             styles.folderCardInner,
             f.folderType === 'user' && styles.folderCardUser,
-            f.folderType === 'user' && f.pinned && styles.folderCardPinned,
+            showPinVisuals && styles.folderCardPinned,
           ]}
         >
           <Text style={styles.folderCountBadge}>
             {folderItemCountLabel(f.count, 'grid')}
           </Text>
-          {f.folderType === 'user' && f.pinned ? (
+          {showPinVisuals ? (
             <View style={styles.gridPinBadge} accessibilityLabel="Pinned folder">
               <Ionicons name="pin" size={14} color="#FFD60A" />
             </View>
@@ -453,10 +466,11 @@ export function LibraryFolderBrowser({
 
   const renderPinnedFolderCard = useCallback(
     (f: FolderTile) => (
-      <View key={f.id} style={styles.pinnedCard}>
+      <View key={f.id} style={[styles.pinnedCard, { width: folderGridCardWidth }]}>
         <Pressable
           style={[
-            styles.pinnedCardInner,
+            styles.folderCardInner,
+            styles.folderCardUser,
             f.pinned && styles.folderCardPinned,
           ]}
           onPress={() => openFolder(f.id, f.name, f.folderType)}
@@ -493,7 +507,7 @@ export function LibraryFolderBrowser({
         </Pressable>
       </View>
     ),
-    [openFolder, handleUserFolderLongPress]
+    [folderGridCardWidth, openFolder, handleUserFolderLongPress]
   );
 
   const renderPinnedRow = useCallback(
@@ -536,12 +550,14 @@ export function LibraryFolderBrowser({
   );
 
   const renderListItem = useCallback(
-    ({ item: f }: { item: FolderTile }) => {
+    ({ item: f, showPinnedChrome = true }: { item: FolderTile; showPinnedChrome?: boolean }) => {
+      const showPinVisuals =
+        showPinnedChrome && f.folderType === 'user' && !!f.pinned;
       const rowContent = (
         <View
           style={[
             styles.folderRow,
-            f.folderType === 'user' && f.pinned && styles.folderRowPinned,
+            showPinVisuals && styles.folderRowPinned,
           ]}
         >
           <Text style={[styles.folderCountBadge, styles.folderCountBadgeList]}>
@@ -559,7 +575,7 @@ export function LibraryFolderBrowser({
               <Text style={styles.listFolderName} numberOfLines={1}>
                 {f.name}
               </Text>
-              {f.folderType === 'user' && f.pinned ? (
+              {showPinVisuals ? (
                 <Ionicons
                   name="pin"
                   size={14}
@@ -621,7 +637,10 @@ export function LibraryFolderBrowser({
       if (section.variant === 'utility') {
         return renderUtilityRow(item);
       }
-      return renderListItem({ item });
+      return renderListItem({
+        item,
+        showPinnedChrome: !section.plainUserFolders,
+      });
     },
     [renderListItem, renderUtilityRow]
   );
@@ -737,7 +756,9 @@ export function LibraryFolderBrowser({
                 </View>
               ) : (
                 <View style={styles.folderGrid}>
-                  {section.data.map((f) => renderGridFolderCard(f))}
+                  {section.data.map((f) =>
+                    renderGridFolderCard(f, !section.plainUserFolders)
+                  )}
                 </View>
               )}
             </View>
@@ -895,18 +916,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   pinnedCard: {
-    width: PINNED_CARD_WIDTH,
     marginRight: 12,
-  },
-  pinnedCardInner: {
-    position: 'relative',
-    width: PINNED_CARD_WIDTH,
-    borderRadius: BorderRadius.cardXL,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    minHeight: 94,
-    justifyContent: 'space-between',
-    backgroundColor: Colors.card,
   },
   folderGrid: {
     flexDirection: 'row',

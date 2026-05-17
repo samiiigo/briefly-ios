@@ -4,18 +4,18 @@ import { TranscriptionService } from '@/services/transcription';
 import {
   normalizeTranscriptionMode,
   resolvePostRecordingPipeline,
-} from '@/utils/transcriptionMode';
+} from '@/utils/processing/transcriptionMode';
 import {
   ProcessingFailure,
   shouldSkipAudioFallback,
   toProcessingFailure,
   toUserFacingProcessingError,
-} from '@/utils/processingErrors';
+} from '@/utils/processing/processingErrors';
 import {
   hasMeaningfulTranscript,
   validateRecordingAsset,
-} from '@/utils/recordingValidation';
-import { logger } from '@/utils/logger';
+} from '@/utils/recording/recordingValidation';
+import { logger } from '@/utils/logging/logger';
 
 export type RecordingProcessingStage = 'transcribing' | 'summarizing';
 
@@ -26,6 +26,8 @@ export interface RecordingProcessingResult {
   segments: TranscriptSegment[];
   summary: string;
   keyInsights: Awaited<ReturnType<typeof SummarizationService.summarize>>['keyInsights'];
+  mainEmoji?: string;
+  title?: string;
   usedAudioFallback: boolean;
 }
 
@@ -149,7 +151,7 @@ export async function obtainTranscriptWithAutoFallback(
 async function summarizeTranscript(
   segments: TranscriptSegment[],
   summarizationMode: ProcessingMode,
-): Promise<Pick<RecordingProcessingResult, 'summary' | 'keyInsights'>> {
+): Promise<Pick<RecordingProcessingResult, 'summary' | 'keyInsights' | 'mainEmoji' | 'title'>> {
   assertTranscriptHasContent(segments);
   try {
     return await SummarizationService.summarize(segments, summarizationMode);
@@ -169,7 +171,7 @@ export async function retrySummarization(
   segments: TranscriptSegment[],
   summarizationMode: ProcessingMode,
   callbacks: Pick<RecordingProcessingCallbacks, 'onStage'>,
-): Promise<Pick<RecordingProcessingResult, 'summary' | 'keyInsights'>> {
+): Promise<Pick<RecordingProcessingResult, 'summary' | 'keyInsights' | 'mainEmoji' | 'title'>> {
   callbacks.onStage('summarizing');
   return summarizeTranscript(segments, summarizationMode);
 }
@@ -193,8 +195,11 @@ export async function processRecordingFromSavedAudio(
     const segments = await transcribeSavedAudioFile(filePath, meta);
     await callbacks.onTranscriptReady?.(segments);
     callbacks.onStage('summarizing');
-    const { summary, keyInsights } = await summarizeTranscript(segments, summarizationMode);
-    return { segments, summary, keyInsights, usedAudioFallback: true };
+    const { summary, keyInsights, mainEmoji, title } = await summarizeTranscript(
+      segments,
+      summarizationMode,
+    );
+    return { segments, summary, keyInsights, mainEmoji, title, usedAudioFallback: true };
   } catch (err) {
     throw toProcessingFailure(err, 'transcription');
   }
@@ -236,9 +241,12 @@ export async function processRecordingToReady(
     }
 
     callbacks.onStage('summarizing');
-    const { summary, keyInsights } = await summarizeTranscript(segments, summarizationMode);
+    const { summary, keyInsights, mainEmoji, title } = await summarizeTranscript(
+      segments,
+      summarizationMode,
+    );
 
-    return { segments, summary, keyInsights, usedAudioFallback };
+    return { segments, summary, keyInsights, mainEmoji, title, usedAudioFallback };
   } catch (err) {
     if (err instanceof ProcessingFailure) throw err;
     throw toProcessingFailure(err, 'transcription');

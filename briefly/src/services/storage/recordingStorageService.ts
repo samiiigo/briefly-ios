@@ -7,7 +7,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Recording } from '@/types';
-import { logger } from '@/utils/logger';
+import { logger } from '@/utils/logging/logger';
 import { RecordingRepository } from './contracts';
 
 const RECORDINGS_KEY = '@briefly/recordings';

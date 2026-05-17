@@ -51,7 +51,7 @@ playground.xcworkspace
 briefly/ios/
 
 # Android
-briefly/
+briefly/android
 *.iml
 *.hprof
 *.jsbundle

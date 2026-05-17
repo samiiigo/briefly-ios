@@ -1,10 +1,10 @@
 /**
  * Lib barrel — re-exports from focused modules (SRP).
  *
- * Each module has a single reason to change:
- *   formatting.ts  — display formatting (dates, durations, file sizes)
- *   recording.ts   — recording entity helpers (IDs, titles, grouping)
- *   providers/providerDetection.ts — cloud provider key detection and metadata
+ * Domain folders under utils/:
+ *   formatting/  — display formatting (dates, durations, file sizes)
+ *   recording/   — recording entity helpers, export, validation, emoji
+ *   providers/   — cloud provider key detection and metadata
  */
 
 export {
@@ -15,14 +15,14 @@ export {
   formatRecentsCardDate,
   formatRecentsGroupLabel,
   formatFileSize,
-} from './formatting';
+} from './formatting/formatting';
 
 export {
   generateId,
   generateTitle,
   ensureUniqueTitle,
   groupRecordingsByTime,
-} from './recording';
+} from './recording/recording';
 
 export {
   detectProvider,

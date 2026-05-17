@@ -9,14 +9,15 @@ import {
 import {
   normalizeTranscriptionMode,
   resolvePostRecordingPipeline,
-} from '@/utils/transcriptionMode';
-import { toProcessingFailure } from '@/utils/processingErrors';
+} from '@/utils/processing/transcriptionMode';
+import { toProcessingFailure } from '@/utils/processing/processingErrors';
 import {
   hasMeaningfulTranscript,
   isRecordingFileMissing,
   isRecordingTooShort,
-} from '@/utils/recordingValidation';
-import { logger } from '@/utils/logger';
+} from '@/utils/recording/recordingValidation';
+import { logger } from '@/utils/logging/logger';
+import { buildRecordingReadyFromSummarization } from '@/utils/recording/recordingSummarization';
 
 const PROCESSING_TIMEOUT_MS = 12 * 60 * 1000;
 
@@ -65,16 +66,18 @@ async function completeJob(
   result: RecordingProcessingResult,
   processingModeUsed?: ProcessingMode,
 ) {
-  const { updateRecording } = useRecordingStore.getState();
+  const { updateRecording, recordings } = useRecordingStore.getState();
   const modeUsed = processingModeUsed ?? useSettingsStore.getState().summarizationMode;
+  const existingTitles = recordings
+    .filter((r) => r.id !== recordingId)
+    .map((r) => r.title);
 
   await updateRecording(recordingId, {
     status: 'ready',
     transcript: result.segments,
-    summary: result.summary,
-    keyInsights: result.keyInsights,
     processingMode: modeUsed,
     errorMessage: undefined,
+    ...buildRecordingReadyFromSummarization(result, { existingTitles }),
   });
 
   logger.info('RECORDING', 'Background processing completed', { recordingId });
@@ -138,6 +141,7 @@ async function runJob(
       transcript: undefined,
       summary: undefined,
       keyInsights: undefined,
+      mainEmoji: undefined,
     });
     return processRecordingFromSavedAudio(pMode, rec.filePath, callbacks, meta);
   }

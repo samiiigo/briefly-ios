@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyInsight } from '@/types';
-import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
+import { Colors } from '@/theme';
 
 interface Props {
   insights: KeyInsight[];
@@ -14,54 +15,67 @@ export function KeyInsights({ insights }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="sparkles" size={16} color={Colors.primary} />
+        <Ionicons name="sparkles" size={18} color={Colors.insightAccent} />
         <Text style={styles.headerText}>Key insights</Text>
       </View>
-      {insights.map((insight) => (
-        <View key={insight.id} style={styles.item}>
-          <View style={styles.bullet} />
-          <Text style={styles.text}>{insight.text}</Text>
-        </View>
-      ))}
+      <View style={styles.list}>
+        {insights.map((insight) => (
+          <View key={insight.id} style={styles.item}>
+            <Text style={styles.bullet}>•</Text>
+            <EmojiAwareText text={insight.text} style={styles.text} strongStyle={styles.textStrong} />
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.cardXL,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
+    backgroundColor: Colors.insightCard,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: Colors.background,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    marginBottom: 16,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
-    gap: Spacing.xs,
+    gap: 8,
+    marginBottom: 12,
   },
-  headerText: withAppFont({
-    fontSize: 17,
-    fontWeight: '600',
+  headerText: {
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 20,
     color: Colors.textPrimary,
-  }),
+  },
+  list: {
+    gap: 12,
+  },
   item: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 6,
-    gap: Spacing.sm,
   },
   bullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primary,
-    marginTop: 6,
+    width: 20,
+    marginTop: 5,
+    marginRight: 12,
+    fontSize: 13,
+    lineHeight: 16,
+    color: Colors.insightAccent,
   },
-  text: withAppFont({
+  text: {
     flex: 1,
     fontSize: 15,
-    color: Colors.subtext,
     lineHeight: 22,
-  }),
+    color: Colors.summaryBody,
+  },
+  textStrong: {
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
 });

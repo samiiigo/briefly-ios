@@ -6,7 +6,7 @@
  */
 
 import { TranscriptSegment } from '@/types';
-import { splitCompleteSentences } from '@/utils/sentenceSplitter';
+import { splitCompleteSentences } from '@/utils/transcript/sentenceSplitter';
 
 function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);

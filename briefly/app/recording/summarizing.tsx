@@ -24,17 +24,18 @@ import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import {
   normalizeTranscriptionMode,
   resolvePostRecordingPipeline,
-} from '@/utils/transcriptionMode';
-import { ProcessingFailure, toProcessingFailure } from '@/utils/processingErrors';
+} from '@/utils/processing/transcriptionMode';
+import { ProcessingFailure, toProcessingFailure } from '@/utils/processing/processingErrors';
+import { buildRecordingReadyFromSummarization } from '@/utils/recording/recordingSummarization';
 import {
   getNextSummarizationFallback,
   summarizationRetryProgressLabel,
-} from '@/utils/summarizationFallback';
+} from '@/utils/processing/summarizationFallback';
 import {
   hasMeaningfulTranscript,
   isRecordingFileMissing,
   isRecordingTooShort,
-} from '@/utils/recordingValidation';
+} from '@/utils/recording/recordingValidation';
 import { useAppInterruptGuard } from '@/hooks/useAppInterruptGuard';
 import { Colors, Spacing, BorderRadius, SliderAnimation, withAppFont } from '@/theme';
 
@@ -202,6 +203,7 @@ export default function SummarizingScreen() {
           transcript: undefined,
           summary: undefined,
           keyInsights: undefined,
+          mainEmoji: undefined,
         });
         return processRecordingFromSavedAudio(pMode, rec.filePath, callbacks, meta);
       }
@@ -251,13 +253,16 @@ export default function SummarizingScreen() {
       }).start();
 
       const modeUsed = processingModeUsed ?? useSettingsStore.getState().summarizationMode;
+      const { recordings } = useRecordingStore.getState();
+      const existingTitles = recordings
+        .filter((r) => r.id !== recordingId)
+        .map((r) => r.title);
 
       await updateRecording(recordingId, {
         status: 'ready',
-        summary: result.summary,
-        keyInsights: result.keyInsights,
         processingMode: modeUsed,
         errorMessage: undefined,
+        ...buildRecordingReadyFromSummarization(result, { existingTitles }),
       });
 
       setStage('done');
@@ -288,10 +293,11 @@ export default function SummarizingScreen() {
         errorMessage: undefined,
         summary: undefined,
         keyInsights: undefined,
+        mainEmoji: undefined,
         processingMode: mode,
       });
 
-      const { summary, keyInsights } = await retrySummarization(rec.transcript, mode, {
+      const { summary, keyInsights, mainEmoji, title } = await retrySummarization(rec.transcript, mode, {
         onStage: (nextStage) => {
           if (isCancelled.current) return;
           setStage(nextStage);
@@ -300,7 +306,14 @@ export default function SummarizingScreen() {
       });
 
       await completeProcessing(
-        { segments: rec.transcript, summary, keyInsights, usedAudioFallback: false },
+        {
+          segments: rec.transcript,
+          summary,
+          keyInsights,
+          mainEmoji,
+          title,
+          usedAudioFallback: false,
+        },
         mode,
       );
     },

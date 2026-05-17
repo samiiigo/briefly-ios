@@ -8,8 +8,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
-import { installRealtimeTerminalLogs, logger } from '@/utils/logger';
-import { checkEnvironment } from '@/utils/environmentCheck';
+import { installRealtimeTerminalLogs, logger } from '@/utils/logging/logger';
+import { checkEnvironment } from '@/utils/environment/environmentCheck';
 import { Colors, installAppFonts } from '@/theme';
 
 installAppFonts();

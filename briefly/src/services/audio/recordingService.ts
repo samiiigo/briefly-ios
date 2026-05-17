@@ -11,8 +11,10 @@ import type { AudioRecorder, RecordingOptions } from 'expo-audio';
 import { getInfoAsync } from 'expo-file-system/legacy';
 import { AudioRecordingResult } from './types';
 import { assemblyAIRecordingOptions } from './recordingOptions';
-import { logger } from '@/utils/logger';
-import { ensureMicrophonePermission } from '@/utils/recordingPermissions';
+import { normalizeDbMetering } from './audioMetering';
+import { logger } from '@/utils/logging/logger';
+import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
+import { configureRecordingStoppedAudioSession } from './playbackSession';
 
 class RecordingServiceClass {
   private recorder: AudioRecorder | null = null;
@@ -117,21 +119,18 @@ class RecordingServiceClass {
     this.recorder = null;
     this._recordingPaused = false;
 
-    await setAudioModeAsync({ allowsRecording: false });
+    await configureRecordingStoppedAudioSession();
 
     logger.info('AUDIO', 'Local recording stopped', { uri, durationSec: duration, fileSize });
     return { uri, duration, fileSize };
   }
 
-  async getMetering(): Promise<number> {
-    if (!this.recorder) return 0;
+  getMetering(): number {
+    if (!this.recorder || this._recordingPaused) return 0;
     try {
       const status = this.recorder.getStatus();
-      // expo-audio might have a different metering field. 
-      // Checking Audio.types.d.ts if metering is available.
-      // Assuming 'metering' exists in status for now as it's common.
-      if (!status.isRecording || (status as any).metering === undefined) return 0;
-      return Math.max(0, Math.min(1, ((status as any).metering + 60) / 60));
+      if (!status.isRecording || status.metering === undefined) return 0;
+      return normalizeDbMetering(status.metering);
     } catch {
       return 0;
     }

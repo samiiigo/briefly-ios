@@ -1,5 +1,5 @@
 import { TranscriptSegment, TranscriptionMode } from '@/types';
-import { hasMeaningfulTranscript } from '@/utils/recordingValidation';
+import { hasMeaningfulTranscript } from '../recording/recordingValidation';
 
 export type LiveTranscriptionEngine = 'cloud' | 'on-device' | 'none';
 

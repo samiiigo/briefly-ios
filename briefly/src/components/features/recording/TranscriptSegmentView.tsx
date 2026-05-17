@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { TranscriptSegment } from '@/types';
 import { formatTimestamp } from '@/utils';
-import { Colors, Spacing, BorderRadius } from '@/theme';
+import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 interface Props {
   segment: TranscriptSegment;
@@ -75,10 +75,10 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
   },
-  avatarText: {
+  avatarText: withAppFont({
     fontSize: 14,
     fontWeight: '700',
-  },
+  }),
   content: {
     flex: 1,
   },
@@ -88,17 +88,17 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginBottom: 2,
   },
-  speaker: {
+  speaker: withAppFont({
     fontSize: 13,
     fontWeight: '600',
-  },
-  timestamp: {
+  }),
+  timestamp: withAppFont({
     fontSize: 12,
     color: Colors.textTertiary,
-  },
-  text: {
+  }),
+  text: withAppFont({
     fontSize: 15,
     color: Colors.textPrimary,
     lineHeight: 22,
-  },
+  }),
 });

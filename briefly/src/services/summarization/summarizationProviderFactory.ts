@@ -29,7 +29,7 @@ interface SummarizationProviderFactory {
 
 const CLOUD_PROVIDER_LABEL: Record<CloudProvider, string> = {
   openrouter: 'OpenRouter',
-  openai: 'OpenAI',
+  openai: 'OpenAI (OpenRouter)',
   gemini: 'Gemini',
 };
 

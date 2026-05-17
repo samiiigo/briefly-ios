@@ -1,33 +1,15 @@
 /**
- * OpenAIProvider — OpenAI-specific summarization (SRP + OCP)
+ * OpenAIProvider — OpenAI models via OpenRouter (SRP + OCP)
  *
- * Only knows how to resolve OpenAI credentials and model config.
+ * Uses the OpenRouter chat completions API with an `openai/<model>` slug.
+ * Requires an OpenRouter API key (sk-or-...).
  */
 
-import Constants from 'expo-constants';
-import { CloudLLMProvider, CloudLLMConfig } from './cloudLLMProvider';
-import { OpenAIConfig } from '@/constants/api/openai';
+import { OpenRouterProvider } from './openRouterProvider';
 
-export class OpenAIProvider extends CloudLLMProvider {
-  readonly name = 'OpenAI';
-
-  constructor(private readonly apiKey: string) {
-    super();
-  }
-
-  protected resolveConfig(): CloudLLMConfig {
-    const expoConfig: any = Constants.expoConfig ?? {};
-    const extra: any = expoConfig.extra ?? {};
-
-    const model: string =
-      extra.openaiModelId ??
-      extra.OPENAI_MODEL_ID ??
-      OpenAIConfig.model;
-
-    return {
-      endpoint: `${OpenAIConfig.apiBaseUrl}/chat/completions`,
-      model,
-      headers: { Authorization: `Bearer ${this.apiKey}` },
-    };
+/** @deprecated Prefer `new OpenRouterProvider(key, 'openai')` — kept for factory clarity. */
+export class OpenAIProvider extends OpenRouterProvider {
+  constructor(apiKey: string) {
+    super(apiKey, 'openai');
   }
 }

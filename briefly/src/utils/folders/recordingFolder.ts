@@ -1,4 +1,5 @@
-import { Recording, RecordingFolder } from '@/types';
+import { builtInFolderName } from '@/constants/builtInFolders';
+import { Recording, RecordingFolder, UserFolder } from '@/types';
 
 /**
  * Resolves the primary system folder bucket for a recording.
@@ -24,6 +25,29 @@ export function resolveRecordingFolder(recording: Recording): RecordingFolder {
   // Ignore legacy "favorites" folder values – favorites are a state,
   // exposed via `isFavorite` and library filters, not as a folder.
   return 'unlisted';
+}
+
+/** User-facing folder name for a recording (user folder or built-in bucket). */
+export function getRecordingFolderDisplayName(
+  recording: Recording,
+  userFolders: UserFolder[] = [],
+): string {
+  const bucket = resolveRecordingFolder(recording);
+
+  if (bucket === 'recently-deleted') {
+    return builtInFolderName('recently-deleted');
+  }
+
+  if (recording.userFolderId) {
+    const userFolder = userFolders.find((f) => f.id === recording.userFolderId);
+    if (userFolder) return userFolder.name;
+  }
+
+  if (bucket === 'archived') {
+    return builtInFolderName('archived');
+  }
+
+  return builtInFolderName('unlisted');
 }
 
 /**

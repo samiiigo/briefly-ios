@@ -4,7 +4,7 @@ import {
   FolderSortDirection,
   FolderSortField,
 } from '@/context/useFolderBrowsePreferencesStore';
-import { formatGroupLabel } from '../formatting';
+import { formatGroupLabel } from '../formatting/formatting';
 
 function compareByField(
   a: Recording,

@@ -15,7 +15,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { TranscriptSegment, TranscriptionMode } from '@/types';
 import { requireAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
-import { normalizeTranscriptionMode } from '@/utils/transcriptionMode';
+import { normalizeTranscriptionMode } from '@/utils/processing/transcriptionMode';
 import {
   uploadAudio,
   createTranscriptJob,
@@ -24,7 +24,7 @@ import {
 } from './assemblyAIClient';
 import { buildSentenceSegments, buildFallbackSegments } from './segmentBuilder';
 import { WAV_HEADER_BYTES } from '@/services/audio/recordingOptions';
-import { logger } from '@/utils/logger';
+import { logger } from '@/utils/logging/logger';
 
 /** ~0.25 s of 16 kHz mono PCM — below this, AssemblyAI often rejects the file. */
 const MIN_AUDIO_BYTES = WAV_HEADER_BYTES + 8000;

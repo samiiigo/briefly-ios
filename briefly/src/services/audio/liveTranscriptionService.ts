@@ -16,16 +16,18 @@
  * the reference design from the v3 streaming spec.
  */
 
+import { NativeModules } from 'react-native';
 import { getInfoAsync } from 'expo-file-system/legacy';
+import { normalizeDbMetering } from './audioMetering';
 import { AssemblyAIConfig, requireAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
 import { AudioRecordingResult } from './types';
-import { logger } from '@/utils/logger';
+import { logger } from '@/utils/logging/logger';
 import type { AssemblyAIConnectionState } from './assemblyAILiveTranscription';
 import { AssemblyAILiveTranscriptionClient } from './assemblyAILiveTranscription';
 import { AssemblyAIWebSocketService } from './assemblyAIWebSocketService';
 import { NativeAudioCapture } from './nativeAudioCapture';
 import { ExpoAudioStreamingCapture } from './expoAudioStreamingCapture';
-import { ensureMicrophonePermission } from '@/utils/recordingPermissions';
+import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
 
 export interface LiveTranscriptionCallbacks {
   onPartial: (text: string) => void;
@@ -144,6 +146,25 @@ class LiveTranscriptionServiceClass {
       await a.capture.resume();
     }
     logger.info('AUDIO', 'Live transcription resumed');
+  }
+
+  getMetering(): number {
+    const a = this.active;
+    if (!a) return 0;
+
+    if (a.kind === 'native-js') return a.capture.getMetering();
+    if (a.kind === 'expo-js') return a.capture.getMetering();
+
+    const { BrieflyTranscriber } = NativeModules;
+    if (typeof BrieflyTranscriber?.getAudioCaptureMetering === 'function') {
+      try {
+        const db = BrieflyTranscriber.getAudioCaptureMetering();
+        if (typeof db === 'number') return normalizeDbMetering(db);
+      } catch {
+        // optional native API
+      }
+    }
+    return 0;
   }
 
   async stop(): Promise<AudioRecordingResult> {

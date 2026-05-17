@@ -17,7 +17,7 @@ import {
   parseJsonSummary,
   SYSTEM_PROMPT,
 } from './summarizationUtils';
-import { logger } from '@/utils/logger';
+import { logger } from '@/utils/logging/logger';
 
 export interface CloudLLMConfig {
   /** Full URL for the chat completions endpoint. */
@@ -57,7 +57,7 @@ export abstract class CloudLLMProvider implements SummarizationProvider {
           { role: 'user', content: `Transcript:\n${text}` },
         ],
         temperature: 0.3,
-        max_tokens: 800,
+        max_tokens: 2000,
       }),
     };
 

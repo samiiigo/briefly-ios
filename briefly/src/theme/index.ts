@@ -1,7 +1,14 @@
 import { Easing, Platform } from 'react-native';
 import { appFont, withAppFont } from './fonts';
 
-export { Fonts, fontFamilyForSize, withAppFont, appFont, SF_DISPLAY_MIN_SIZE } from './fonts';
+export {
+  Fonts,
+  fontFamilyForSize,
+  withAppFont,
+  withSerifFont,
+  appFont,
+  SF_DISPLAY_MIN_SIZE,
+} from './fonts';
 export { installAppFonts } from './installAppFonts';
 
 export const Colors = {
@@ -34,6 +41,14 @@ export const Colors = {
   waveformGlow: 'rgba(0,122,255,0.3)',
   recordButton: '#FF3B30',
   pauseButton: '#3A3A3C',
+
+  /** Recording detail / summary screen (design mock). */
+  insightCard: '#121212',
+  insightAccent: '#0D99FF',
+  summaryMuted: '#9CA3AF',
+  summaryBody: '#E3E3E3',
+  emojiCircleBorder: '#374151',
+  headerButtonMuted: '#2B2D2D',
 };
 
 /** SF Pro scale — Display for ≥20pt, Text below (Apple HIG). */

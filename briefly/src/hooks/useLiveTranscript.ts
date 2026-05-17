@@ -10,7 +10,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { TranscriptSegment } from '@/types';
-import { splitCompleteSentences, appendChunk } from '@/utils/sentenceSplitter';
+import { splitCompleteSentences, appendChunk } from '@/utils/transcript/sentenceSplitter';
 
 function generateSegmentId() {
   return `seg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

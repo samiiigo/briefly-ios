@@ -6,37 +6,47 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 type Edge = 'top' | 'bottom';
 
-const MASK = {
-  bottom: {
-    colors: ['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.7)', '#000000'] as const,
-    locations: [0, 0.35, 0.72, 1] as const,
-  },
-  top: {
-    colors: ['#000000', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.25)', 'transparent'] as const,
-    locations: [0, 0.28, 0.65, 1] as const,
-  },
+type GradientStops = {
+  colors: readonly string[];
+  locations: readonly number[];
 };
 
-const TINT = {
-  bottom: {
-    colors: ['transparent', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.65)'] as const,
-    locations: [0.35, 0.75, 1] as const,
-  },
-  top: {
-    colors: ['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.35)', 'transparent'] as const,
-    locations: [0, 0.45, 1] as const,
-  },
+/** Mirror a vertical gradient so the bottom edge matches the top (inverted). */
+function mirrorGradient({ colors, locations }: GradientStops): GradientStops {
+  return {
+    colors: [...colors].reverse(),
+    locations: [...locations].map((location) => 1 - location).reverse(),
+  };
+}
+
+const TOP_MASK: GradientStops = {
+  colors: ['#000000', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.25)', 'transparent'],
+  locations: [0, 0.28, 0.65, 1],
 };
 
-const ANDROID_GRADIENT = {
-  bottom: {
-    colors: ['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.82)', 'rgba(0,0,0,0.98)'] as const,
-    locations: [0, 0.35, 0.72, 1] as const,
-  },
-  top: {
-    colors: ['rgba(0,0,0,0.98)', 'rgba(0,0,0,0.82)', 'rgba(0,0,0,0.5)', 'transparent'] as const,
-    locations: [0, 0.28, 0.65, 1] as const,
-  },
+const TOP_TINT: GradientStops = {
+  colors: ['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.35)', 'transparent'],
+  locations: [0, 0.45, 1],
+};
+
+const TOP_ANDROID_GRADIENT: GradientStops = {
+  colors: ['rgba(0,0,0,0.98)', 'rgba(0,0,0,0.82)', 'rgba(0,0,0,0.5)', 'transparent'],
+  locations: [0, 0.28, 0.65, 1],
+};
+
+const MASK: Record<Edge, GradientStops> = {
+  top: TOP_MASK,
+  bottom: mirrorGradient(TOP_MASK),
+};
+
+const TINT: Record<Edge, GradientStops> = {
+  top: TOP_TINT,
+  bottom: mirrorGradient(TOP_TINT),
+};
+
+const ANDROID_GRADIENT: Record<Edge, GradientStops> = {
+  top: TOP_ANDROID_GRADIENT,
+  bottom: mirrorGradient(TOP_ANDROID_GRADIENT),
 };
 
 interface EdgeBlurFadeProps {
