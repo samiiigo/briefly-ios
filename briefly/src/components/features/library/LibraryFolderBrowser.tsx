@@ -81,12 +81,14 @@ type Section = {
   /** Tiles for {@link variant} `pinned-row` (vertical list uses empty `data`). */
   pinnedRowData?: FolderTile[];
   hideHeader?: boolean;
+  /** Your folders: no pin badge, border, or list pin icon (pin state unchanged for actions). */
+  plainUserFolders?: boolean;
 };
 
 export interface LibraryFolderBrowserProps {
   /** When set (Library tab), only pinned folders are shown, up to this limit; "See all" opens all folders. */
   maxPinnedFolders?: number;
-  /** Unpinned user folders previewed under Your folders (defaults to {@link MAX_YOUR_FOLDERS_PREVIEW}). */
+  /** User folders previewed under Your folders, alphabetical (defaults to {@link MAX_YOUR_FOLDERS_PREVIEW}). */
   maxYourFolders?: number;
   /** When true, back control and {@link stackTitle} for the full-folder stack screen. */
   showBack?: boolean;
@@ -221,7 +223,14 @@ export function LibraryFolderBrowser({
 
     if (showBack && folderListFilter === 'all-user') {
       return allUserTilesByName.length > 0
-        ? [{ title: 'Your folders', data: allUserTilesByName, hideHeader: true }]
+        ? [
+            {
+              title: 'Your folders',
+              data: allUserTilesByName,
+              hideHeader: true,
+              plainUserFolders: true,
+            },
+          ]
         : [
             {
               title: 'Your folders',
@@ -236,8 +245,7 @@ export function LibraryFolderBrowser({
 
     if (maxPinnedFolders != null) {
       const pinnedTiles = userTiles.filter((t) => t.pinned);
-      const unpinnedTiles = userTiles.filter((t) => !t.pinned);
-      const previewYourFolders = unpinnedTiles.slice(0, maxYourFolders);
+      const previewYourFolders = allUserTilesByName.slice(0, maxYourFolders);
 
       if (pinnedTiles.length > 0) {
         s.push({
@@ -250,14 +258,15 @@ export function LibraryFolderBrowser({
         });
       }
 
-      if (unpinnedTiles.length > 0) {
+      if (userTiles.length > 0) {
         s.push({
           title: 'Your folders',
           data: previewYourFolders,
           showSeeAll: userTiles.length > maxYourFolders,
           seeAllFilter: 'all-user',
+          plainUserFolders: true,
         });
-      } else if (userTiles.length === 0) {
+      } else {
         s.push({
           title: 'Your folders',
           data: [],
@@ -390,19 +399,21 @@ export function LibraryFolderBrowser({
   );
 
   const renderGridFolderCard = useCallback(
-    (f: FolderTile) => {
+    (f: FolderTile, showPinnedChrome = true) => {
+      const showPinVisuals =
+        showPinnedChrome && f.folderType === 'user' && !!f.pinned;
       const cardInner = (
         <View
           style={[
             styles.folderCardInner,
             f.folderType === 'user' && styles.folderCardUser,
-            f.folderType === 'user' && f.pinned && styles.folderCardPinned,
+            showPinVisuals && styles.folderCardPinned,
           ]}
         >
           <Text style={styles.folderCountBadge}>
             {folderItemCountLabel(f.count, 'grid')}
           </Text>
-          {f.folderType === 'user' && f.pinned ? (
+          {showPinVisuals ? (
             <View style={styles.gridPinBadge} accessibilityLabel="Pinned folder">
               <Ionicons name="pin" size={14} color="#FFD60A" />
             </View>
@@ -545,12 +556,14 @@ export function LibraryFolderBrowser({
   );
 
   const renderListItem = useCallback(
-    ({ item: f }: { item: FolderTile }) => {
+    ({ item: f, showPinnedChrome = true }: { item: FolderTile; showPinnedChrome?: boolean }) => {
+      const showPinVisuals =
+        showPinnedChrome && f.folderType === 'user' && !!f.pinned;
       const rowContent = (
         <View
           style={[
             styles.folderRow,
-            f.folderType === 'user' && f.pinned && styles.folderRowPinned,
+            showPinVisuals && styles.folderRowPinned,
           ]}
         >
           <Text style={[styles.folderCountBadge, styles.folderCountBadgeList]}>
@@ -568,7 +581,7 @@ export function LibraryFolderBrowser({
               <Text style={styles.listFolderName} numberOfLines={1}>
                 {f.name}
               </Text>
-              {f.folderType === 'user' && f.pinned ? (
+              {showPinVisuals ? (
                 <Ionicons
                   name="pin"
                   size={14}
@@ -630,7 +643,10 @@ export function LibraryFolderBrowser({
       if (section.variant === 'utility') {
         return renderUtilityRow(item);
       }
-      return renderListItem({ item });
+      return renderListItem({
+        item,
+        showPinnedChrome: !section.plainUserFolders,
+      });
     },
     [renderListItem, renderUtilityRow]
   );
@@ -746,7 +762,9 @@ export function LibraryFolderBrowser({
                 </View>
               ) : (
                 <View style={styles.folderGrid}>
-                  {section.data.map((f) => renderGridFolderCard(f))}
+                  {section.data.map((f) =>
+                    renderGridFolderCard(f, !section.plainUserFolders)
+                  )}
                 </View>
               )}
             </View>
