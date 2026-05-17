@@ -4,20 +4,17 @@ import { usePathname, useRouter } from 'expo-router';
 import { BottomTabBlurFade } from './BottomTabBlurFade';
 import { FloatingTabBar } from './FloatingTabBar';
 import { useTabBarProps } from './tabBarBridge';
+import { tabRouteShowsRecordButton } from './tabChromeRoutes';
 import { RecordButton } from '@/components/features/recording/RecordButton';
 import { RecordingService } from '@/services/audio';
 
-function useIsRecentsTab() {
-  const pathname = usePathname();
-  return (
-    pathname === '/' ||
-    pathname === '/(tabs)' ||
-    pathname.endsWith('/index') ||
-    pathname.endsWith('/(tabs)/index')
-  );
+function useActiveTabRouteName(): string | undefined {
+  const tabBarProps = useTabBarProps();
+  if (!tabBarProps) return undefined;
+  return tabBarProps.state.routes[tabBarProps.state.index]?.name;
 }
 
-function RecentsRecordButton() {
+function TabRecordButton() {
   const router = useRouter();
 
   const handlePress = useCallback(async () => {
@@ -32,9 +29,10 @@ function RecentsRecordButton() {
 export function TabChromeOverlay() {
   const pathname = usePathname();
   const tabBarProps = useTabBarProps();
-  const isRecents = useIsRecentsTab();
+  const activeTabName = useActiveTabRouteName();
+  const showsRecordButton = tabRouteShowsRecordButton(activeTabName);
 
-  if (pathname.includes('settings')) {
+  if (pathname.includes('settings') || activeTabName === 'settings') {
     return null;
   }
 
@@ -45,7 +43,7 @@ export function TabChromeOverlay() {
       </View>
       <View style={styles.chromeLayer} pointerEvents="box-none">
         {tabBarProps ? <FloatingTabBar {...tabBarProps} /> : null}
-        {isRecents ? <RecentsRecordButton /> : null}
+        {showsRecordButton ? <TabRecordButton /> : null}
       </View>
     </View>
   );

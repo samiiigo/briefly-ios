@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '@/types';
 import { formatDuration, formatDate } from '@/utils';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
-import { Colors } from '@/theme';
+import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 interface Props {
   recording: Recording;
@@ -216,17 +216,17 @@ const styles = StyleSheet.create({
     position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(28,28,30,0.6)',
-    borderRadius: 16,
-    padding: 14,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.cardXL,
+    padding: Spacing.md,
     marginBottom: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: Colors.border,
   },
   cardCompact: {
     flexDirection: 'column',
     alignItems: 'stretch',
-    padding: 12,
+    padding: Spacing.md,
     marginBottom: 0,
     minHeight: 148,
   },
@@ -254,30 +254,30 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,159,10,0.16)',
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
-    backgroundColor: 'rgba(10,132,255,0.12)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#C4C4C4',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: Spacing.md,
     flexShrink: 0,
   },
   iconContainerCompact: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     marginBottom: 10,
     alignSelf: 'center',
-    borderRadius: 12,
-    backgroundColor: 'rgba(10,132,255,0.12)',
+    borderRadius: 24,
+    backgroundColor: '#C4C4C4',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconEmoji: {
-    fontSize: 30,
+    fontSize: 22,
   },
   iconEmojiCompact: {
-    fontSize: 26,
+    fontSize: 22,
   },
   content: {
     flex: 1,
@@ -301,34 +301,36 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 4,
   },
-  title: {
+  title: withAppFont({
+    flex: 1,
+    minWidth: 0,
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    lineHeight: 22,
+    textAlign: 'left',
+  }),
+  titleCompact: withAppFont({
     flex: 1,
     minWidth: 0,
     fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
+    color: Colors.textPrimary,
+    lineHeight: 20,
     textAlign: 'left',
-  },
-  titleCompact: {
-    flex: 1,
-    minWidth: 0,
+  }),
+  date: withAppFont({
     fontSize: 14,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
+    color: Colors.subtext,
     textAlign: 'left',
-  },
-  date: {
+    marginBottom: 6,
+  }),
+  dateCompact: withAppFont({
     fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
+    color: Colors.subtext,
     textAlign: 'left',
     marginBottom: 6,
-  },
-  dateCompact: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
-    textAlign: 'left',
-    marginBottom: 6,
-  },
+  }),
   durationRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -339,14 +341,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
-  duration: {
+  duration: withAppFont({
+    fontSize: 14,
+    color: Colors.subtext,
+    textAlign: 'right',
+  }),
+  durationCompact: withAppFont({
     fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
+    color: Colors.subtext,
     textAlign: 'right',
-  },
-  durationCompact: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
-    textAlign: 'right',
-  },
+  }),
 });

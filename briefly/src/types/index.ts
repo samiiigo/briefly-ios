@@ -15,7 +15,7 @@ export type RecordingFolder = 'unlisted' | 'archived' | 'recently-deleted';
 export interface UserFolder {
   id: string;
   name: string;
-  /** When true, folder is listed first (with other pinned folders) in Library. */
+  /** When true, folder appears in the Library Pinned section (max 6). */
   pinned?: boolean;
   /** Set when pinned; most recently pinned sorts first among pinned folders. */
   pinnedAt?: number;

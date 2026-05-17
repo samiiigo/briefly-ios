@@ -1,6 +1,17 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform, GestureResponderEvent, LayoutChangeEvent, Animated } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Platform,
+  GestureResponderEvent,
+  LayoutChangeEvent,
+  Animated,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useRecordingStore } from '@/context/useRecordingStore';
@@ -9,12 +20,18 @@ import { useExport } from '@/hooks/useExport';
 import { KeyInsights } from '@/components/features/recording/KeyInsights';
 import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
 import { ProcessingBadge } from '@/components/features/recording/ProcessingBadge';
+import { CircularIconButton } from '@/components/ui/CircularIconButton';
+import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
+import { TopBlurFade } from '@/components/navigation/TopBlurFade';
+import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
+import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { transcriptionModeTitle } from '@/utils/transcriptionMode';
 import { formatDuration, formatDate, ensureUniqueTitle } from '@/utils';
-import { Colors, Spacing, BorderRadius } from '@/theme';
+import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 export default function TranscriptScreen() {
+  const { scrollPaddingTop, topInset } = useTopChromeLayout();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id: recordingId } = useLocalSearchParams<{ id: string }>();
@@ -49,14 +66,36 @@ export default function TranscriptScreen() {
     router.replace({ pathname: '/recording/summarizing', params: { recordingId: recording.id } });
   }, [recording, router]);
 
-  if (!recording) return <SafeAreaView style={st.container}><Text style={{ color: Colors.textPrimary, padding: Spacing.screenHorizontal }}>Recording not found.</Text></SafeAreaView>;
+  if (!recording) {
+    return (
+      <View style={sl.container}>
+        <Text style={st.notFound}>Recording not found.</Text>
+      </View>
+    );
+  }
 
   if (recording.deletedAt != null) {
     return (
-      <SafeAreaView style={st.container} edges={['top', 'left', 'right']}>
-        <View style={st.header}><View style={st.headerSide}><TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={Colors.primary} /></TouchableOpacity></View><View style={st.headerCenterSlot}><Text style={st.headerDate} numberOfLines={1}>{formatDate(recording.createdAt)}</Text></View><View style={[st.headerSide, st.headerSideRight]} /></View>
-        <View style={st.deletedOverlay}><Ionicons name="trash-outline" size={48} color={Colors.textSecondary} style={{ marginBottom: 16 }} /><Text style={st.deletedOverlayTitle}>Recording in Deleted</Text><Text style={st.deletedOverlayMessage}>Restore this recording to open it.</Text><TouchableOpacity style={st.restoreButton} onPress={() => restoreRecording(recording.id).then(() => router.back())}><Ionicons name="arrow-undo" size={20} color={Colors.textPrimary} /><Text style={st.restoreButtonText}>Restore recording</Text></TouchableOpacity></View>
-      </SafeAreaView>
+      <View style={sl.container}>
+        <View style={[st.deletedOverlay, { paddingTop: scrollPaddingTop }]}>
+          <Ionicons name="trash-outline" size={48} color={Colors.subtext} style={{ marginBottom: 16 }} />
+          <Text style={st.deletedOverlayTitle}>Recording in Deleted</Text>
+          <Text style={st.deletedOverlayMessage}>
+            Restore this recording to open it.
+          </Text>
+          <TouchableOpacity
+            style={st.restoreButton}
+            onPress={() => restoreRecording(recording.id).then(() => router.back())}
+          >
+            <Ionicons name="arrow-undo" size={20} color={Colors.textPrimary} />
+            <Text style={st.restoreButtonText}>Restore recording</Text>
+          </TouchableOpacity>
+        </View>
+        <TopBlurFade />
+        <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
+          <StackScreenHeader title="Deleted" showBack onBack={() => router.back()} />
+        </View>
+      </View>
     );
   }
 
@@ -65,10 +104,13 @@ export default function TranscriptScreen() {
   const modeLabel = transcriptionModeTitle(recording.transcriptionMode ?? defaultTranscriptionMode);
 
   return (
-    <SafeAreaView style={st.container} edges={['top', 'left', 'right']}>
-      <View style={st.header}><View style={st.headerSide}><TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={Colors.primary} /></TouchableOpacity></View><View style={st.headerCenterSlot}><Text style={st.headerDate} numberOfLines={1}>{formatDate(recording.createdAt)}</Text></View><View style={[st.headerSide, st.headerSideRight]}><TouchableOpacity onPress={handleRename} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Ionicons name="pencil-outline" size={20} color={Colors.textSecondary} /></TouchableOpacity></View></View>
-      <ScrollView style={st.scroll} contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={st.title}>{recording.title}</Text>
+    <View style={sl.container}>
+      <ScrollView
+        style={st.scroll}
+        contentContainerStyle={[st.scrollContent, { paddingTop: scrollPaddingTop }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={st.dateLabel}>{formatDate(recording.createdAt)}</Text>
         <View style={st.metaRow}><ProcessingBadge mode={recording.processingMode} size="sm" /><Text style={st.transcriptionMode}>{modeLabel}</Text></View>
         {(recording.status === 'saved' || recording.status === 'transcribing' || recording.status === 'summarizing') && (
           <View style={st.processingBanner}><View style={st.errorBannerTop}><Ionicons name="sparkles" size={16} color={Colors.primary} /><Text style={st.processingBannerTitle}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Summarization pending' : recording.status === 'saved' ? 'Ready to process' : 'Processing incomplete'}</Text></View><TouchableOpacity style={st.retryButton} onPress={handleStartProcessing}><Ionicons name="sparkles" size={15} color={Colors.textPrimary} /><Text style={st.retryButtonText}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Run Summarization' : 'Transcribe & Summarize'}</Text></TouchableOpacity></View>
@@ -95,38 +137,172 @@ export default function TranscriptScreen() {
           <TouchableOpacity onPress={openShareMenu}><Ionicons name={isExportingPdf ? 'hourglass-outline' : 'share-outline'} size={24} color={Colors.textPrimary} /></TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+
+      <TopBlurFade />
+      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
+        <StackScreenHeader
+          title={recording.title}
+          showBack
+          onBack={() => router.back()}
+          trailing={
+            <CircularIconButton
+              icon="pencil-outline"
+              accessibilityLabel="Rename recording"
+              onPress={handleRename}
+            />
+          }
+        />
+      </View>
+    </View>
   );
 }
 
 const st = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.screenHorizontal, paddingVertical: Spacing.sm },
-  headerSide: { width: 40, justifyContent: 'center' }, headerSideRight: { alignItems: 'flex-end' },
-  headerCenterSlot: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 0 },
-  headerDate: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
-  deletedOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
-  deletedOverlayTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.sm, textAlign: 'center' },
-  deletedOverlayMessage: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xl },
-  restoreButton: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.surface, paddingVertical: 14, paddingHorizontal: Spacing.xl, borderRadius: BorderRadius.lg },
-  restoreButtonText: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
-  scroll: { flex: 1 }, scrollContent: { paddingHorizontal: Spacing.screenHorizontal, paddingTop: Spacing.md, paddingBottom: 160 },
-  title: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.sm },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
-  transcriptionMode: { fontSize: 12, color: Colors.textSecondary },
-  summaryCard: { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, padding: Spacing.md, marginBottom: Spacing.md },
-  summaryText: { fontSize: 15, color: Colors.textPrimary, lineHeight: 22 },
-  transcriptContainer: { marginTop: Spacing.sm }, noTranscript: { padding: Spacing.xl, alignItems: 'center' },
-  noTranscriptText: { color: Colors.textSecondary, fontSize: 15 },
-  processingBanner: { backgroundColor: 'rgba(10,132,255,0.1)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(10,132,255,0.35)', borderRadius: BorderRadius.lg, padding: Spacing.md, marginBottom: Spacing.md, gap: 8 },
-  processingBannerTitle: { fontSize: 14, fontWeight: '600', color: Colors.primary },
-  errorBanner: { backgroundColor: 'rgba(255,159,10,0.1)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,159,10,0.35)', borderRadius: BorderRadius.lg, padding: Spacing.md, marginBottom: Spacing.md, gap: 8 },
+  notFound: withAppFont({
+    color: Colors.textPrimary,
+    padding: Spacing.md,
+    fontSize: 17,
+  }),
+  deletedOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  deletedOverlayTitle: withAppFont({
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  }),
+  deletedOverlayMessage: withAppFont({
+    fontSize: 15,
+    color: Colors.subtext,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Spacing.xl,
+  }),
+  restoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.card,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.cardXL,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  restoreButtonText: withAppFont({
+    fontSize: 17,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  }),
+  scroll: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: 160,
+  },
+  title: withAppFont({
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  }),
+  dateLabel: withAppFont({
+    fontSize: 14,
+    color: Colors.subtext,
+    marginBottom: Spacing.md,
+  }),
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  transcriptionMode: withAppFont({
+    fontSize: 14,
+    color: Colors.subtext,
+  }),
+  summaryCard: {
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.cardXL,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  summaryText: withAppFont({
+    fontSize: 15,
+    color: Colors.textPrimary,
+    lineHeight: 22,
+  }),
+  transcriptContainer: { marginTop: Spacing.sm },
+  noTranscript: { padding: Spacing.xl, alignItems: 'center' },
+  noTranscriptText: withAppFont({
+    color: Colors.subtext,
+    fontSize: 15,
+  }),
+  processingBanner: {
+    backgroundColor: 'rgba(10,132,255,0.1)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(10,132,255,0.35)',
+    borderRadius: BorderRadius.cardXL,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: 8,
+  },
+  processingBannerTitle: withAppFont({
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
+  }),
+  errorBanner: {
+    backgroundColor: 'rgba(255,159,10,0.1)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,159,10,0.35)',
+    borderRadius: BorderRadius.cardXL,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: 8,
+  },
   errorBannerTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  errorBannerTitle: { fontSize: 14, fontWeight: '600', color: Colors.orange },
-  errorBannerMessage: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
-  retryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: Colors.surface, borderRadius: BorderRadius.md, paddingVertical: 10, paddingHorizontal: Spacing.md, marginTop: 4 },
-  retryButtonText: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
-  playbackBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: Colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.border, paddingHorizontal: Spacing.screenHorizontal, paddingTop: Spacing.sm },
+  errorBannerTitle: withAppFont({
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.orange,
+  }),
+  errorBannerMessage: withAppFont({
+    fontSize: 13,
+    color: Colors.subtext,
+    lineHeight: 18,
+  }),
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.md,
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.md,
+    marginTop: 4,
+  },
+  retryButtonText: withAppFont({
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  }),
+  playbackBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.card,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+  },
   progressTrack: { height: 3, backgroundColor: Colors.border, borderRadius: 2, marginBottom: 6, position: 'relative' },
   progressFill: { height: 3, backgroundColor: Colors.primary, borderRadius: 2 },
   progressThumb: { position: 'absolute', width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.primary, top: -4.5, marginLeft: -6 },

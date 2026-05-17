@@ -3,13 +3,10 @@ import { create } from 'zustand';
 export type FolderLayoutMode = 'list' | 'grid';
 export type FolderSortField = 'date' | 'name' | 'type' | 'size';
 export type FolderSortDirection = 'asc' | 'desc';
-export type FolderGroupBy = 'none' | 'date' | 'type' | 'size';
-
 export interface FolderBrowsePreferences {
   layout: FolderLayoutMode;
   sortField: FolderSortField;
   sortDirection: FolderSortDirection;
-  groupBy: FolderGroupBy;
   /** When true, only non-deleted recordings marked favorite are shown. */
   favoritesOnly: boolean;
 }
@@ -18,7 +15,6 @@ const defaultBrowse: FolderBrowsePreferences = {
   layout: 'list',
   sortField: 'date',
   sortDirection: 'desc',
-  groupBy: 'none',
   favoritesOnly: false,
 };
 

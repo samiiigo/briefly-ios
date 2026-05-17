@@ -1,14 +1,17 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LibraryFolderBrowser, MAX_USER_FOLDERS_PREVIEW } from '@/components/features/library/LibraryFolderBrowser';
+import { View, StyleSheet } from 'react-native';
+import { LibraryFolderBrowser } from '@/components/features/library/LibraryFolderBrowser';
+import { MAX_PINNED_FOLDERS, MAX_YOUR_FOLDERS_PREVIEW } from '@/constants/userFolders';
 import { Colors } from '@/theme';
 
 export default function HistoryScreen() {
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <LibraryFolderBrowser maxUserFolders={MAX_USER_FOLDERS_PREVIEW} />
-    </SafeAreaView>
+    <View style={styles.container}>
+      <LibraryFolderBrowser
+        maxPinnedFolders={MAX_PINNED_FOLDERS}
+        maxYourFolders={MAX_YOUR_FOLDERS_PREVIEW}
+      />
+    </View>
   );
 }
 

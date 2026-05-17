@@ -33,9 +33,9 @@ export function CircularIconButton({
 
 const styles = StyleSheet.create({
   button: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',

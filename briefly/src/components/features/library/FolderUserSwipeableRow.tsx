@@ -2,6 +2,7 @@ import React, { useCallback, useRef } from 'react';
 import { Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { Colors, BorderRadius, withAppFont } from '@/theme';
 
 const LEADING_WIDTH = 96;
 
@@ -9,6 +10,7 @@ interface FolderUserSwipeableRowProps {
   pinned: boolean;
   onPress: () => void;
   onTogglePin: () => void;
+  onLongPress: () => void;
   /** Swipe + long-press apply when true (user-created folders). */
   pinInteractionEnabled: boolean;
   layout: 'list' | 'grid';
@@ -16,13 +18,13 @@ interface FolderUserSwipeableRowProps {
 }
 
 /**
- * Swipe right (reveal leading actions) to pin/unpin; long-press toggles pin.
- * Matches the leading swipe pattern used for recordings.
+ * Swipe right (reveal leading actions) to pin/unpin; long-press opens folder options.
  */
 export function FolderUserSwipeableRow({
   pinned,
   onPress,
   onTogglePin,
+  onLongPress,
   pinInteractionEnabled,
   layout,
   children,
@@ -42,7 +44,7 @@ export function FolderUserSwipeableRow({
         accessibilityRole="button"
         accessibilityLabel={pinned ? 'Unpin folder' : 'Pin folder'}
       >
-        <Ionicons name={pinned ? 'pin' : 'pin-outline'} size={24} color="#FFFFFF" />
+        <Ionicons name={pinned ? 'pin' : 'pin-outline'} size={24} color={Colors.textPrimary} />
         <Text style={styles.leadingActionLabel}>{pinned ? 'Unpin' : 'Pin'}</Text>
       </Pressable>
     );
@@ -64,9 +66,9 @@ export function FolderUserSwipeableRow({
       <Pressable
         style={layout === 'grid' ? styles.pressableGrid : styles.pressableList}
         onPress={onPress}
-        onLongPress={onTogglePin}
+        onLongPress={onLongPress}
         delayLongPress={450}
-        accessibilityHint="Long press to pin or unpin. Swipe right for Pin."
+        accessibilityHint="Long press for folder options. Swipe right to pin or unpin."
       >
         {children}
       </Pressable>
@@ -84,22 +86,22 @@ const styles = StyleSheet.create({
   leadingAction: {
     width: LEADING_WIDTH,
     marginBottom: 0,
-    borderRadius: 12,
-    backgroundColor: '#FF9F0A',
+    borderRadius: BorderRadius.cardXL,
+    backgroundColor: Colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
   leadingActionGrid: {
     alignSelf: 'stretch',
-    minHeight: 108,
+    minHeight: 94,
     marginRight: 8,
     marginBottom: 12,
   },
-  leadingActionLabel: {
-    color: '#FFFFFF',
+  leadingActionLabel: withAppFont({
+    color: Colors.textPrimary,
     fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 0.3,
-  },
+    letterSpacing: 0.2,
+  }),
 });

@@ -1,0 +1,51 @@
+import { Alert, Platform } from 'react-native';
+
+export interface UserFolderActionHandlers {
+  onRename: (newName: string) => void | Promise<void>;
+  onDelete: () => void;
+  onTogglePin: () => void | Promise<void>;
+}
+
+export function showUserFolderActions(
+  folderName: string,
+  pinned: boolean,
+  handlers: UserFolderActionHandlers
+): void {
+  const buttons: {
+    text: string;
+    style?: 'destructive' | 'cancel';
+    onPress?: () => void;
+  }[] = [
+    {
+      text: 'Rename',
+      onPress: () => {
+        if (Platform.OS === 'ios') {
+          Alert.prompt(
+            'Rename Folder',
+            undefined,
+            (text) => {
+              const trimmed = text?.trim();
+              if (trimmed) void handlers.onRename(trimmed);
+            },
+            'plain-text',
+            folderName
+          );
+        } else {
+          Alert.alert('Rename', 'Folder rename is available on iOS.');
+        }
+      },
+    },
+    {
+      text: pinned ? 'Unpin' : 'Pin',
+      onPress: () => void handlers.onTogglePin(),
+    },
+    {
+      text: 'Delete',
+      style: 'destructive',
+      onPress: handlers.onDelete,
+    },
+    { text: 'Cancel', style: 'cancel' },
+  ];
+
+  Alert.alert(folderName, undefined, buttons);
+}

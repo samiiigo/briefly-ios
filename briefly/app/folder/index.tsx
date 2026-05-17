@@ -1,20 +1,33 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { LibraryFolderBrowser } from '@/components/features/library/LibraryFolderBrowser';
+import { UserFolderListFilter } from '@/constants/userFolders';
+import { Colors } from '@/theme';
 
-/** Full folder list (all user folders); opened from Library "See all". */
+function parseFolderListFilter(
+  value: string | string[] | undefined
+): UserFolderListFilter | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (raw === 'pinned' || raw === 'all-user') return raw;
+  return undefined;
+}
+
+/** Full user-folder list opened from Library “See all”. */
 export default function FolderListScreen() {
+  const { list } = useLocalSearchParams<{ list?: string }>();
+  const folderListFilter = parseFolderListFilter(list);
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <LibraryFolderBrowser showBack />
-    </SafeAreaView>
+    <View style={styles.container}>
+      <LibraryFolderBrowser showBack folderListFilter={folderListFilter} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: Colors.background,
   },
 });

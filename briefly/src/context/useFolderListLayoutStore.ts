@@ -2,6 +2,10 @@ import { create } from 'zustand';
 
 export type FolderListLayoutMode = 'list' | 'grid';
 
+export function folderListLayoutTitle(layout: FolderListLayoutMode): string {
+  return layout === 'grid' ? 'Grid' : 'List';
+}
+
 interface State {
   layout: FolderListLayoutMode;
   setLayout: (layout: FolderListLayoutMode) => void;

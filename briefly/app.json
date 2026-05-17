@@ -8,6 +8,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "backgroundColor": "#000000",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,6 +16,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "backgroundColor": "#000000",
       "bundleIdentifier": "com.briefly.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Briefly needs microphone access to record audio for transcription.",

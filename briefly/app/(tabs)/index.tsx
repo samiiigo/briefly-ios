@@ -6,13 +6,14 @@ import {
   TouchableOpacity,
   SectionList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { RecordingService } from '@/services/audio';
 import { RecentsHeader } from '@/components/features/recents/RecentsHeader';
+import { TopBlurFade } from '@/components/navigation/TopBlurFade';
+import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { RecentsEntryCard } from '@/components/features/recents/RecentsEntryCard';
 import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
 import { Recording } from '@/types';
@@ -27,6 +28,7 @@ import { Colors, Spacing, withAppFont } from '@/theme';
 const LIST_BOTTOM_PADDING = 140;
 
 export default function HomeScreen() {
+  const { scrollPaddingTop, topInset } = useTopChromeLayout();
   const router = useRouter();
   const recordings = useRecordingStore((s) => s.recordings);
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);
@@ -94,10 +96,8 @@ export default function HomeScreen() {
 
   if (visibleRecordings.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <RecentsHeader />
-
-        <View style={styles.emptyState}>
+      <View style={styles.container}>
+        <View style={[styles.emptyState, { paddingTop: scrollPaddingTop }]}>
           <View style={styles.emptyIconRing}>
             <View style={styles.emptyIconInner}>
               <Ionicons name="mic" size={40} color={Colors.subtext} />
@@ -113,18 +113,20 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-      </SafeAreaView>
+        <TopBlurFade />
+        <View style={[styles.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
+          <RecentsHeader />
+        </View>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <RecentsHeader />
-
+    <View style={styles.container}>
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingTop: scrollPaddingTop }]}
         stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
         onScrollBeginDrag={closeOpenSwipe}
@@ -149,7 +151,12 @@ export default function HomeScreen() {
           </RecordingSwipeableRow>
         )}
       />
-    </SafeAreaView>
+
+      <TopBlurFade />
+      <View style={[styles.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
+        <RecentsHeader />
+      </View>
+    </View>
   );
 }
 
@@ -157,6 +164,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
   listContent: {
     paddingHorizontal: Spacing.md,

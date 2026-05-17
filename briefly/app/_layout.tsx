@@ -1,6 +1,8 @@
 import 'react-native-gesture-handler';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -16,6 +18,8 @@ export default function RootLayout() {
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);
 
   useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(Colors.background);
+
     installRealtimeTerminalLogs();
     logger.info('SYSTEM', 'App startup: loading recordings from storage');
     loadRecordings();
@@ -42,24 +46,33 @@ export default function RootLayout() {
   }, [loadRecordings]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={rootStyles.root}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: Colors.background },
-            animation: 'slide_from_right',
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-          <Stack.Screen name="recording" />
-          <Stack.Screen name="folder" />
-          <Stack.Screen name="transcription-mode" />
-          <Stack.Screen name="processing-mode" />
-          <Stack.Screen name="+not-found" />
-        </Stack>
+        <View style={rootStyles.root}>
+          <StatusBar style="light" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: Colors.background },
+              animation: 'slide_from_right',
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+            <Stack.Screen name="recording" />
+            <Stack.Screen name="folder" />
+            <Stack.Screen name="transcription-mode" />
+            <Stack.Screen name="processing-mode" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+        </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
+
+const rootStyles = {
+  root: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+} as const;

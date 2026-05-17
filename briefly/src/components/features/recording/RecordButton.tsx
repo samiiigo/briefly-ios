@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { View, StyleSheet, TouchableOpacity, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -18,11 +18,26 @@ const RING_SIZE = 24;
 
 interface RecordButtonProps {
   onPress: () => void;
-  style?: object;
+  style?: ViewStyle;
+}
+
+/** Strip layout keys so every screen shares the same FAB anchor from `useFloatingTabBarLayout`. */
+function fabStyleWithoutPosition(style?: ViewStyle): ViewStyle | undefined {
+  if (!style) return undefined;
+  const {
+    position: _position,
+    top: _top,
+    right: _right,
+    bottom: _bottom,
+    left: _left,
+    ...rest
+  } = style;
+  return Object.keys(rest).length > 0 ? rest : undefined;
 }
 
 export function RecordButton({ onPress, style }: RecordButtonProps) {
   const { recordButtonBottom, horizontalInset } = useFloatingTabBarLayout();
+  const extraStyle = useMemo(() => fabStyleWithoutPosition(style), [style]);
   const pingScale = useSharedValue(1);
   const pingOpacity = useSharedValue(0.5);
 
@@ -49,7 +64,7 @@ export function RecordButton({ onPress, style }: RecordButtonProps) {
       style={[
         styles.fab,
         { bottom: recordButtonBottom, right: horizontalInset },
-        style,
+        extraStyle,
       ]}
       onPress={onPress}
       activeOpacity={0.9}

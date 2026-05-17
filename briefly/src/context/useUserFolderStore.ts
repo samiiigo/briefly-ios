@@ -3,6 +3,7 @@ import { UserFolder } from '@/types';
 import { FolderStorageService } from '@/services/storage';
 import type { FolderRepository } from '@/services/storage';
 import { generateId } from '@/utils';
+import { MAX_PINNED_FOLDERS } from '@/constants/userFolders';
 import { sortUserFolders } from '@/utils/folders/userFolderSort';
 
 export interface UserFolderStore {
@@ -82,6 +83,12 @@ export const useUserFolderStore = create<UserFolderStore>((set, get) => ({
     const existing = get().folders.find((f) => f.id === id);
     if (!existing) return;
     const nextPinned = !existing.pinned;
+    if (nextPinned) {
+      const pinnedCount = get().folders.filter((f) => f.pinned).length;
+      if (pinnedCount >= MAX_PINNED_FOLDERS) {
+        throw new Error(`You can pin up to ${MAX_PINNED_FOLDERS} folders`);
+      }
+    }
     const updated: UserFolder = {
       ...existing,
       pinned: nextPinned,

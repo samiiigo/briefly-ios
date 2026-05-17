@@ -1,7 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import {
   TOP_HEADER_BUTTON_ROW_HEIGHT,
@@ -10,20 +8,39 @@ import {
 } from '@/components/navigation/topHeaderMetrics';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
-export function RecentsHeader() {
-  const router = useRouter();
+interface Props {
+  title?: string;
+  showBack?: boolean;
+  onBack?: () => void;
+  onAddFolder: () => void;
+}
 
+export function LibraryHeader({
+  title = 'Library',
+  showBack = false,
+  onBack,
+  onAddFolder,
+}: Props) {
   return (
     <View style={styles.header}>
-      <Text style={styles.title}>Briefly</Text>
+      <View style={styles.titleRow}>
+        {showBack ? (
+          <CircularIconButton
+            icon="arrow-back"
+            accessibilityLabel="Back"
+            onPress={onBack}
+            style={styles.backButton}
+          />
+        ) : null}
+        <Text style={styles.title} numberOfLines={1}>
+          {title}
+        </Text>
+      </View>
       <View style={styles.actions}>
         <CircularIconButton
-          icon="settings-outline"
-          accessibilityLabel="Settings"
-          onPress={() => {
-            useActiveSwipeableStore.getState().closeActive();
-            router.push('/(tabs)/settings');
-          }}
+          icon="add"
+          accessibilityLabel="New folder"
+          onPress={onAddFolder}
         />
         <CircularIconButton icon="search" accessibilityLabel="Search" />
       </View>
@@ -41,7 +58,18 @@ const styles = StyleSheet.create({
     paddingBottom: TOP_HEADER_PADDING_BOTTOM,
     minHeight: TOP_HEADER_BUTTON_ROW_HEIGHT + TOP_HEADER_PADDING_TOP + TOP_HEADER_PADDING_BOTTOM,
   },
+  titleRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+    marginRight: Spacing.md,
+  },
+  backButton: {
+    marginRight: Spacing.sm,
+  },
   title: withAppFont({
+    flexShrink: 1,
     fontSize: 36,
     fontWeight: '700',
     color: Colors.textPrimary,

@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useRef, isValidElement, cloneElement } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  isValidElement,
+  cloneElement,
+} from 'react';
 import {
   View,
   Text,
@@ -29,6 +36,7 @@ import {
   RECORDING_SWIPE_OVERSHOOT_FRICTION,
   RECORDING_SWIPE_SPRING,
 } from './recordingSwipeSpring';
+import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 interface RecordingSwipeableRowProps {
   recording: Recording;
@@ -52,8 +60,18 @@ export function RecordingSwipeableRow({
   isRecentlyDeleted = false,
 }: RecordingSwipeableRowProps) {
   const swipeableRef = useRef<React.ElementRef<typeof Swipeable> | null>(null);
-  const dragTranslation = useSharedValue(0);
+  const swipeTranslationRef = useRef<SharedValue<number> | null>(null);
+  const fallbackTranslation = useSharedValue(0);
+  const [, syncSwipeTranslation] = useReducer((count) => count + 1, 0);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
+
+  const bindSwipeTranslation = useCallback((translation: SharedValue<number>) => {
+    if (swipeTranslationRef.current === translation) return;
+    swipeTranslationRef.current = translation;
+    queueMicrotask(syncSwipeTranslation);
+  }, []);
+
+  const motionTranslation = swipeTranslationRef.current ?? fallbackTranslation;
   const { folders, loadFolders } = useUserFolderStore();
 
   const closeThisRow = useCallback(() => {
@@ -216,7 +234,7 @@ export function RecordingSwipeableRow({
 
   const renderRightActions = useCallback(
     (progress: SharedValue<number>, translation: SharedValue<number>) => {
-      dragTranslation.value = translation.value;
+      bindSwipeTranslation(translation);
 
       if (isRecentlyDeleted) {
         return (
@@ -279,13 +297,13 @@ export function RecordingSwipeableRow({
       recording.isArchived,
       removeFromArchive,
       showMoveSheet,
-      dragTranslation,
+      bindSwipeTranslation,
     ]
   );
 
   const renderLeftActions = useCallback(
     (progress: SharedValue<number>, translation: SharedValue<number>) => {
-      dragTranslation.value = translation.value;
+      bindSwipeTranslation(translation);
 
       if (isRecentlyDeleted && onRestore) {
         return (
@@ -325,7 +343,7 @@ export function RecordingSwipeableRow({
       onRestore,
       recording.isFavorite,
       toggleFavorite,
-      dragTranslation,
+      bindSwipeTranslation,
     ]
   );
 
@@ -347,7 +365,7 @@ export function RecordingSwipeableRow({
         renderRightActions={renderRightActions}
         renderLeftActions={renderLeftActions}
       >
-        <SwipeableMotionCard translation={dragTranslation}>
+        <SwipeableMotionCard translation={motionTranslation}>
           {wrapChildPress(children)}
         </SwipeableMotionCard>
       </Swipeable>
@@ -408,37 +426,38 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   moveModalContent: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: 14,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.cardXL,
     maxHeight: 400,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: Colors.border,
+    overflow: 'hidden',
   },
-  moveModalTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.5)',
-    paddingHorizontal: 16,
+  moveModalTitle: withAppFont({
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.subtext,
+    paddingHorizontal: Spacing.md,
     paddingTop: 14,
     paddingBottom: 8,
-  },
+  }),
   moveModalRow: {
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.md,
   },
-  moveModalRowText: {
+  moveModalRowText: withAppFont({
     fontSize: 17,
-    color: '#FFFFFF',
-  },
+    color: Colors.textPrimary,
+  }),
   moveModalCancel: {
     paddingVertical: 14,
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopColor: Colors.border,
   },
-  moveModalCancelText: {
+  moveModalCancelText: withAppFont({
     fontSize: 17,
     fontWeight: '600',
-    color: '#0A84FF',
-  },
+    color: Colors.primary,
+  }),
 });

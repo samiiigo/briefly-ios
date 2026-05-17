@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyInsight } from '@/types';
-import { Colors, Spacing, BorderRadius } from '@/theme';
+import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 interface Props {
   insights: KeyInsight[];
@@ -15,7 +15,7 @@ export function KeyInsights({ insights }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Ionicons name="sparkles" size={16} color={Colors.primary} />
-        <Text style={styles.headerText}>Key Insights</Text>
+        <Text style={styles.headerText}>Key insights</Text>
       </View>
       {insights.map((insight) => (
         <View key={insight.id} style={styles.item}>
@@ -29,8 +29,8 @@ export function KeyInsights({ insights }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.cardXL,
     padding: Spacing.md,
     marginBottom: Spacing.md,
   },
@@ -40,11 +40,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     gap: Spacing.xs,
   },
-  headerText: {
-    fontSize: 15,
-    fontWeight: '700',
+  headerText: withAppFont({
+    fontSize: 17,
+    fontWeight: '600',
     color: Colors.textPrimary,
-  },
+  }),
   item: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -58,10 +58,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     marginTop: 6,
   },
-  text: {
+  text: withAppFont({
     flex: 1,
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
+    fontSize: 15,
+    color: Colors.subtext,
+    lineHeight: 22,
+  }),
 });

@@ -7,10 +7,11 @@ export function TabBarPropsReporter(props: BottomTabBarProps) {
   const propsRef = useRef(props);
   propsRef.current = props;
   const activeIndex = props.state.index;
+  const activeRouteKey = props.state.routes[activeIndex]?.key;
 
   useLayoutEffect(() => {
     publishTabBarProps(propsRef.current);
-  }, [activeIndex]);
+  }, [activeIndex, activeRouteKey]);
 
   return null;
 }

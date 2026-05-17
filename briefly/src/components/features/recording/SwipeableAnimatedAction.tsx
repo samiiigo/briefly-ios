@@ -7,7 +7,7 @@ import Animated, {
   SharedValue,
   useAnimatedStyle,
 } from 'react-native-reanimated';
-import { BorderRadius, Spacing, withAppFont } from '@/theme';
+import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
 
 export const SWIPE_ACTION_SIZE = 76;
 export const SWIPE_ACTION_GAP = Spacing.sm;
@@ -80,7 +80,7 @@ export function SwipeableAnimatedAction({
         accessibilityRole="button"
         accessibilityLabel={label}
       >
-        <Ionicons name={icon} size={22} color="#FFFFFF" />
+        <Ionicons name={icon} size={22} color={Colors.textPrimary} />
         <Text style={styles.label} numberOfLines={numberOfLines}>
           {label}
         </Text>
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   label: withAppFont({
-    color: '#FFFFFF',
+    color: Colors.textPrimary,
     fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',

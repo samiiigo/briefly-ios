@@ -1,63 +1,125 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/context/useSettingsStore';
+import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
+import { TopBlurFade } from '@/components/navigation/TopBlurFade';
+import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
+import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { TranscriptionMode } from '@/types';
-import { normalizeTranscriptionMode, transcriptionModeDescription, transcriptionModeTitle } from '@/utils/transcriptionMode';
-import { Colors, Spacing } from '@/theme';
+import {
+  normalizeTranscriptionMode,
+  transcriptionModeDescription,
+  transcriptionModeTitle,
+} from '@/utils/transcriptionMode';
+import { Colors, withAppFont } from '@/theme';
 
-const TRANSCRIPTION_MODES: TranscriptionMode[] = ['live-assemblyai', 'post-assemblyai', 'local-on-device'];
+const TRANSCRIPTION_MODES: TranscriptionMode[] = [
+  'live-assemblyai',
+  'post-assemblyai',
+  'local-on-device',
+];
 
 export default function TranscriptionModePickerScreen() {
   const router = useRouter();
+  const { scrollPaddingTop, topInset } = useTopChromeLayout();
   const { defaultTranscriptionMode, setDefaultTranscriptionMode } = useSettingsStore();
   const selectedMode = normalizeTranscriptionMode(defaultTranscriptionMode);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Ionicons name="chevron-back" size={28} color={Colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Transcription Mode</Text>
-      </View>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.sectionDescription}>Choose how each recording is transcribed by default.</Text>
-        <View style={styles.card}>
+    <View style={sl.container}>
+      <ScrollView
+        contentContainerStyle={[sl.scrollContent, { paddingTop: scrollPaddingTop }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={sl.sectionDescription}>
+          Choose how each recording is transcribed by default.
+        </Text>
+        <View style={sl.card}>
           {TRANSCRIPTION_MODES.map((mode, index) => {
             const selected = selectedMode === mode;
             return (
               <React.Fragment key={mode}>
-                <TouchableOpacity style={styles.optionRow} onPress={() => setDefaultTranscriptionMode(mode)}>
-                  <View style={[styles.radio, selected && styles.radioSelected]}>{selected && <View style={styles.radioDot} />}</View>
-                  <View style={styles.optionText}><Text style={styles.optionTitle}>{transcriptionModeTitle(mode)}</Text><Text style={styles.optionSubtitle}>{transcriptionModeDescription(mode)}</Text></View>
+                <TouchableOpacity
+                  style={styles.optionRow}
+                  onPress={() => setDefaultTranscriptionMode(mode)}
+                >
+                  <View style={[styles.radio, selected && styles.radioSelected]}>
+                    {selected ? <View style={styles.radioDot} /> : null}
+                  </View>
+                  <View style={styles.optionText}>
+                    <Text style={styles.optionTitle}>{transcriptionModeTitle(mode)}</Text>
+                    <Text style={styles.optionSubtitle}>
+                      {transcriptionModeDescription(mode)}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
-                {index !== TRANSCRIPTION_MODES.length - 1 && <View style={styles.divider} />}
+                {index !== TRANSCRIPTION_MODES.length - 1 ? (
+                  <View style={styles.optionDivider} />
+                ) : null}
               </React.Fragment>
             );
           })}
         </View>
       </ScrollView>
-    </SafeAreaView>
+
+      <TopBlurFade />
+      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
+        <StackScreenHeader
+          title="Transcription"
+          showBack
+          onBack={() => router.back()}
+        />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.screenHorizontal, paddingVertical: Spacing.sm, paddingBottom: Spacing.xs },
-  backButton: { padding: 4 },
-  headerTitle: { flex: 1, fontSize: 17, fontWeight: '600', color: '#FFFFFF', marginLeft: 4 },
-  content: { paddingHorizontal: Spacing.screenHorizontal, paddingBottom: 100 },
-  sectionDescription: { fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 20, marginBottom: 16 },
-  card: { backgroundColor: '#1C1C1E', borderRadius: 12, overflow: 'hidden' },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.1)', marginLeft: Spacing.md + 22 + 12 },
-  optionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 16, gap: 12, minHeight: 72 },
-  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  radioSelected: { borderColor: '#0A84FF', backgroundColor: '#0A84FF' },
-  radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF' },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    gap: 12,
+    minHeight: 72,
+  },
+  optionDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.border,
+    marginLeft: 16 + 22 + 12,
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  radioSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
+  },
+  radioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.textPrimary,
+  },
   optionText: { flex: 1 },
-  optionTitle: { fontSize: 16, fontWeight: '600', color: '#FFFFFF', lineHeight: 22 },
-  optionSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 18, marginTop: 4 },
+  optionTitle: withAppFont({
+    fontSize: 17,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    lineHeight: 22,
+  }),
+  optionSubtitle: withAppFont({
+    fontSize: 14,
+    color: Colors.subtext,
+    lineHeight: 20,
+    marginTop: 4,
+  }),
 });

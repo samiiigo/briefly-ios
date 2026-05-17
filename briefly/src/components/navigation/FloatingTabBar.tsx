@@ -5,8 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Colors, withAppFont } from '@/theme';
 import { useFloatingTabBarLayout } from './useFloatingTabBarLayout';
-
-const VISIBLE_ROUTES = new Set(['index', 'history']);
+import { TAB_CHROME_MAIN_ROUTES } from './tabChromeRoutes';
 
 type TabConfig = {
   label: string;
@@ -27,7 +26,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     return null;
   }
 
-  const visibleRoutes = state.routes.filter((r) => VISIBLE_ROUTES.has(r.name));
+  const visibleRoutes = state.routes.filter((r) => TAB_CHROME_MAIN_ROUTES.has(r.name));
 
   return (
     <View

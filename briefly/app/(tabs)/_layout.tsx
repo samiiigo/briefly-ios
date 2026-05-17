@@ -13,6 +13,7 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarStyle: { display: 'none' },
           sceneStyle: { backgroundColor: Colors.background },
+          animation: 'fade',
         }}
       >
         <Tabs.Screen name="index" options={{ title: 'Recents' }} />

@@ -1,26 +1,43 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SectionList, FlatList, ListRenderItem } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SectionList,
+  FlatList,
+  ListRenderItem,
+} from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useShallow } from 'zustand/react/shallow';
 import { RecordingService } from '@/services/audio';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useLibraryFolderPreferencesStore } from '@/context/useLibraryFolderPreferencesStore';
-import { getFolderBrowsePreferences, useFolderBrowsePreferencesStore } from '@/context/useFolderBrowsePreferencesStore';
+import {
+  getFolderBrowsePreferences,
+  useFolderBrowsePreferencesStore,
+} from '@/context/useFolderBrowsePreferencesStore';
 import { applyFolderRecordingPreferences } from '@/utils/folders/folderRecordingPreferences';
 import { buildFolderSections } from '@/utils/folders/folderBrowse';
+import { ensureUniqueTitle } from '@/utils';
+import { RecentsEntryCard } from '@/components/features/recents/RecentsEntryCard';
 import { RecordingCard } from '@/components/features/recording/RecordingCard';
 import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
 import { RecordButton } from '@/components/features/recording/RecordButton';
-import { GlassCircleIconButton } from '@/components/features/library/GlassAddFolderButton';
+import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { FolderViewOptionsSheet } from '@/components/features/library/FolderViewOptionsSheet';
+import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
+import { TopBlurFade } from '@/components/navigation/TopBlurFade';
+import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
+import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { Recording } from '@/types';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
-import { Spacing, Typography } from '@/theme';
+import { Colors, Spacing, withAppFont } from '@/theme';
+
+const LIST_BOTTOM_PADDING = 140;
 
 export default function FolderRecordingsScreen() {
+  const { scrollPaddingTop, topInset } = useTopChromeLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; folderName?: string; folderType?: string }>();
   const folderId = params.id!;
@@ -30,51 +47,161 @@ export default function FolderRecordingsScreen() {
   const deleteRecording = useRecordingStore((s) => s.deleteRecording);
   const restoreRecording = useRecordingStore((s) => s.restoreRecording);
   const permanentDelete = useRecordingStore((s) => s.permanentDelete);
-  const prefs = useLibraryFolderPreferencesStore(useShallow((s) => ({ datePreset: s.datePreset, scopeRefinement: s.scopeRefinement })));
+  const updateRecording = useRecordingStore((s) => s.updateRecording);
+  const prefs = useLibraryFolderPreferencesStore(
+    useShallow((s) => ({ datePreset: s.datePreset, scopeRefinement: s.scopeRefinement }))
+  );
   const folderKey = useMemo(() => `${folderType}:${folderId}`, [folderType, folderId]);
   const byFolder = useFolderBrowsePreferencesStore((s) => s.byFolder);
-  const browse = useMemo(() => getFolderBrowsePreferences(byFolder, folderKey), [byFolder, folderKey]);
+  const browse = useMemo(
+    () => getFolderBrowsePreferences(byFolder, folderKey),
+    [byFolder, folderKey]
+  );
   const [now, setNow] = useState(() => Date.now());
   const [viewSheetVisible, setViewSheetVisible] = useState(false);
 
-  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(id); }, []);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const isRecentlyDeleted = folderId === 'recently-deleted';
+
   const filtered = useMemo(() => {
     if (folderType === 'built-in') {
       if (folderId === 'all') return recordings;
-      if (folderId === 'unlisted') return recordings.filter(r => r.deletedAt == null && resolveRecordingFolder(r) === 'unlisted');
-      if (folderId === 'favorites') return recordings.filter(r => r.deletedAt == null && r.isFavorite);
-      if (folderId === 'imports') return recordings.filter(r => r.deletedAt == null && !!r.isImported);
-      return recordings.filter(r => resolveRecordingFolder(r) === folderId);
+      if (folderId === 'unlisted') {
+        return recordings.filter(
+          (r) => r.deletedAt == null && resolveRecordingFolder(r) === 'unlisted'
+        );
+      }
+      if (folderId === 'favorites') {
+        return recordings.filter((r) => r.deletedAt == null && r.isFavorite);
+      }
+      if (folderId === 'imports') {
+        return recordings.filter((r) => r.deletedAt == null && !!r.isImported);
+      }
+      return recordings.filter((r) => resolveRecordingFolder(r) === folderId);
     }
-    return recordings.filter(r => r.userFolderId === folderId);
+    return recordings.filter((r) => r.userFolderId === folderId);
   }, [recordings, folderId, folderType]);
 
-  const afterLibraryFilters = useMemo(() => applyFolderRecordingPreferences(filtered, prefs, now), [filtered, prefs, now]);
-  const afterBrowseFilter = useMemo(() => browse.favoritesOnly ? afterLibraryFilters.filter(r => r.deletedAt == null && !!r.isFavorite) : afterLibraryFilters, [afterLibraryFilters, browse.favoritesOnly]);
-  const sections = useMemo(() => buildFolderSections(afterBrowseFilter, browse), [afterBrowseFilter, browse]);
-  const effectiveLayout = browse.groupBy !== 'none' ? 'list' : browse.layout;
-  const flatData = useMemo(() => sections.flatMap(s => s.data), [sections]);
+  const afterLibraryFilters = useMemo(
+    () => applyFolderRecordingPreferences(filtered, prefs, now),
+    [filtered, prefs, now]
+  );
+  const afterBrowseFilter = useMemo(
+    () =>
+      browse.favoritesOnly
+        ? afterLibraryFilters.filter((r) => r.deletedAt == null && !!r.isFavorite)
+        : afterLibraryFilters,
+    [afterLibraryFilters, browse.favoritesOnly]
+  );
+  const sections = useMemo(
+    () => buildFolderSections(afterBrowseFilter, browse),
+    [afterBrowseFilter, browse]
+  );
+  const effectiveLayout = browse.layout;
+  const flatData = useMemo(() => sections.flatMap((s) => s.data), [sections]);
   const listEmpty = afterBrowseFilter.length === 0;
+
+  const handleRename = useCallback(
+    async (recording: Recording, newTitle: string) => {
+      const existingTitles = recordings
+        .filter((r) => r.id !== recording.id)
+        .map((r) => r.title);
+      try {
+        await updateRecording(recording.id, {
+          title: ensureUniqueTitle(newTitle, existingTitles),
+        });
+      } catch (err) {
+        console.error('Failed to rename recording:', err);
+      }
+    },
+    [recordings, updateRecording]
+  );
 
   const handleRecordIntoFolder = useCallback(async () => {
     if (isRecentlyDeleted) return;
     const granted = await RecordingService.requestPermissions();
     if (!granted) return;
-    if (folderType === 'user') router.push({ pathname: '/recording/new', params: { targetFolder: 'unlisted', targetUserFolderId: folderId } });
-    else if (folderId === 'archived') router.push({ pathname: '/recording/new', params: { targetFolder: 'archived' } });
-    else if (folderId === 'imports') router.push({ pathname: '/recording/new', params: { targetFolder: 'unlisted', markImported: 'true' } });
-    else router.push({ pathname: '/recording/new', params: { targetFolder: 'unlisted' } });
+    if (folderType === 'user') {
+      router.push({
+        pathname: '/recording/new',
+        params: { targetFolder: 'unlisted', targetUserFolderId: folderId },
+      });
+    } else if (folderId === 'archived') {
+      router.push({ pathname: '/recording/new', params: { targetFolder: 'archived' } });
+    } else if (folderId === 'imports') {
+      router.push({
+        pathname: '/recording/new',
+        params: { targetFolder: 'unlisted', markImported: 'true' },
+      });
+    } else {
+      router.push({ pathname: '/recording/new', params: { targetFolder: 'unlisted' } });
+    }
   }, [router, folderType, folderId, isRecentlyDeleted]);
 
-  const renderCard = useCallback((item: Recording, compact: boolean) => (
-    <RecordingSwipeableRow recording={item} onPress={() => router.push(`/recording/${item.id}`)} onDelete={isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)} onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined} isRecentlyDeleted={isRecentlyDeleted}>
-      <RecordingCard recording={item} compact={compact} onPress={() => router.push(`/recording/${item.id}`)} onDelete={isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)} onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined} />
-    </RecordingSwipeableRow>
-  ), [router, isRecentlyDeleted, permanentDelete, deleteRecording, restoreRecording]);
+  const renderListCard = useCallback(
+    (item: Recording) => (
+      <RecordingSwipeableRow
+        recording={item}
+        onPress={() => router.push(`/recording/${item.id}`)}
+        onDelete={
+          isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
+        }
+        onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
+        isRecentlyDeleted={isRecentlyDeleted}
+      >
+        <RecentsEntryCard
+          recording={item}
+          onPress={() => router.push(`/recording/${item.id}`)}
+          onDelete={
+            isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
+          }
+          onRename={(newTitle) => handleRename(item, newTitle)}
+        />
+      </RecordingSwipeableRow>
+    ),
+    [
+      router,
+      isRecentlyDeleted,
+      permanentDelete,
+      deleteRecording,
+      restoreRecording,
+      handleRename,
+    ]
+  );
 
-  const renderGridItem: ListRenderItem<Recording> = useCallback(({ item }) => <View style={styles.gridCell}>{renderCard(item, true)}</View>, [renderCard]);
+  const renderGridCard = useCallback(
+    (item: Recording, compact: boolean) => (
+      <RecordingSwipeableRow
+        recording={item}
+        onPress={() => router.push(`/recording/${item.id}`)}
+        onDelete={
+          isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
+        }
+        onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
+        isRecentlyDeleted={isRecentlyDeleted}
+      >
+        <RecordingCard
+          recording={item}
+          compact={compact}
+          onPress={() => router.push(`/recording/${item.id}`)}
+          onDelete={
+            isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
+          }
+          onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
+        />
+      </RecordingSwipeableRow>
+    ),
+    [router, isRecentlyDeleted, permanentDelete, deleteRecording, restoreRecording]
+  );
+
+  const renderGridItem: ListRenderItem<Recording> = useCallback(
+    ({ item }) => <View style={styles.gridCell}>{renderGridCard(item, true)}</View>,
+    [renderGridCard]
+  );
 
   const closeOpenSwipe = useCallback(() => {
     useActiveSwipeableStore.getState().closeActive();
@@ -87,33 +214,103 @@ export default function FolderRecordingsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => { closeOpenSwipe(); router.back(); }} style={styles.headerIconBtn}><Ionicons name="arrow-back" size={24} color="#FFFFFF" /></TouchableOpacity>
-        <Text style={styles.pageTitle} numberOfLines={1}>{folderName}</Text>
-        <View style={styles.headerRight}><GlassCircleIconButton ionIcon="ellipsis-horizontal" iconSize={22} onPress={() => setViewSheetVisible(true)} accessibilityLabel="View options" /></View>
-      </View>
-      {listEmpty ? <View style={styles.emptyWrap}><Text style={styles.emptyText}>No recordings match this view.</Text></View> : effectiveLayout === 'grid' ? <FlatList key={`grid-${folderKey}`} data={flatData} numColumns={2} keyExtractor={item => item.id} columnWrapperStyle={styles.gridRow} contentContainerStyle={styles.contentGrid} renderItem={renderGridItem} onScrollBeginDrag={closeOpenSwipe} onMomentumScrollBegin={closeOpenSwipe} /> : <SectionList sections={sections} keyExtractor={item => item.id} contentContainerStyle={styles.content} stickySectionHeadersEnabled onScrollBeginDrag={closeOpenSwipe} onMomentumScrollBegin={closeOpenSwipe} renderSectionHeader={({ section }) => section.title ? <View style={styles.sectionHeaderWrap}><Text style={styles.sectionHeader}>{section.title}</Text></View> : null} renderItem={({ item }) => <View>{renderCard(item, false)}</View>} />}
-      {!isRecentlyDeleted && (
-        <RecordButton onPress={handleRecordIntoFolder} style={{ bottom: 90 }} />
+    <View style={sl.container}>
+      {listEmpty ? (
+        <View style={[styles.emptyWrap, { paddingTop: scrollPaddingTop }]}>
+          <Text style={styles.emptyText}>No recordings match this view.</Text>
+        </View>
+      ) : effectiveLayout === 'grid' ? (
+        <FlatList
+          key={`grid-${folderKey}`}
+          data={flatData}
+          numColumns={2}
+          keyExtractor={(item) => item.id}
+          columnWrapperStyle={styles.gridRow}
+          contentContainerStyle={[styles.listContent, { paddingTop: scrollPaddingTop }]}
+          renderItem={renderGridItem}
+          showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={closeOpenSwipe}
+          onMomentumScrollBegin={closeOpenSwipe}
+        />
+      ) : (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.listContent, { paddingTop: scrollPaddingTop }]}
+          stickySectionHeadersEnabled={false}
+          showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={closeOpenSwipe}
+          onMomentumScrollBegin={closeOpenSwipe}
+          ItemSeparatorComponent={() => <View style={sl.listItemGap} />}
+          SectionSeparatorComponent={() => <View style={sl.listSectionGap} />}
+          renderSectionHeader={({ section }) =>
+            section.title ? (
+              <Text style={sl.listSectionHeader}>{section.title}</Text>
+            ) : null
+          }
+          renderItem={({ item }) => renderListCard(item)}
+        />
       )}
-      <FolderViewOptionsSheet visible={viewSheetVisible} folderKey={folderKey} onClose={() => setViewSheetVisible(false)} />
-    </SafeAreaView>
+
+      {!isRecentlyDeleted ? (
+        <RecordButton onPress={handleRecordIntoFolder} />
+      ) : null}
+
+      <FolderViewOptionsSheet
+        visible={viewSheetVisible}
+        folderKey={folderKey}
+        onClose={() => setViewSheetVisible(false)}
+      />
+
+      <TopBlurFade />
+      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
+        <StackScreenHeader
+          title={folderName}
+          showBack
+          onBack={() => {
+            closeOpenSwipe();
+            router.back();
+          }}
+          trailing={
+            <CircularIconButton
+              icon="funnel-outline"
+              accessibilityLabel="Filters"
+              onPress={() => setViewSheetVisible(true)}
+            />
+          }
+        />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.screenHorizontal, paddingTop: Spacing.lg, paddingBottom: Spacing.md, gap: 12 },
-  headerIconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  pageTitle: { flex: 1, minWidth: 0, ...Typography.largeTitle, color: '#FFFFFF', textAlign: 'left' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  content: { flexGrow: 1, paddingTop: Spacing.xs, paddingHorizontal: Spacing.screenHorizontal, paddingBottom: 100 },
-  contentGrid: { flexGrow: 1, paddingTop: Spacing.xs, paddingHorizontal: Spacing.screenHorizontal, paddingBottom: 100 },
-  gridRow: { gap: 10, marginBottom: 10, justifyContent: 'space-between' },
-  gridCell: { flex: 1, maxWidth: '50%', paddingHorizontal: 4 },
-  sectionHeaderWrap: { backgroundColor: '#000000', paddingTop: Spacing.sm, paddingBottom: Spacing.sm },
-  sectionHeader: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.45)', letterSpacing: 0.2, textTransform: 'uppercase' },
-  emptyWrap: { flex: 1, paddingHorizontal: Spacing.screenHorizontal, paddingTop: Spacing.md },
-  emptyText: { color: 'rgba(255,255,255,0.42)', fontSize: 15, textAlign: 'center', marginTop: 40, fontWeight: '500' },
+  listContent: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: LIST_BOTTOM_PADDING,
+  },
+  gridRow: {
+    gap: 12,
+    marginBottom: 12,
+    justifyContent: 'space-between',
+  },
+  gridCell: {
+    flex: 1,
+    maxWidth: '50%',
+    paddingHorizontal: 4,
+  },
+  emptyWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: LIST_BOTTOM_PADDING,
+  },
+  emptyText: withAppFont({
+    fontSize: 15,
+    fontWeight: '500',
+    color: Colors.subtext,
+    textAlign: 'center',
+  }),
 });

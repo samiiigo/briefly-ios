@@ -55,8 +55,8 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   active: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.cardXL,
   },
   left: {
     width: 36,
