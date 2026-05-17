@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { normalizeSummarizationResult, parseJsonSummary } from './summarizationUtils';
+import {
+  normalizeSummarizationResult,
+  parseJsonSummary,
+  structuredSummaryToResult,
+} from './summarizationUtils';
 
 describe('summarization result normalization', () => {
   it('keeps a valid summary and trims insight text', () => {
@@ -55,5 +59,42 @@ describe('JSON summary parsing', () => {
     );
 
     assert.equal(result.summary, markdown);
+  });
+
+  it('parses structured title/overview/sections/actionItems schema', () => {
+    const result = parseJsonSummary(
+      JSON.stringify({
+        title: '📊 Q2 planning sync',
+        overview: 'Team aligned on **Q2 goals** and launch timing.',
+        sections: [
+          {
+            heading: '🎯 Goals',
+            points: ['Ship beta by June', 'Focus on retention'],
+          },
+        ],
+        actionItems: [{ owner: 'Alex', task: 'Send timeline doc' }],
+      }),
+      'fallback text'
+    );
+
+    assert.match(result.summary, /## Overview/);
+    assert.match(result.summary, /Team aligned on \*\*Q2 goals\*\*/);
+    assert.match(result.summary, /### 🎯 Goals/);
+    assert.match(result.summary, /- Ship beta by June/);
+    assert.equal(result.keyInsights.length, 1);
+    assert.equal(result.keyInsights[0].text, '**Alex**: Send timeline doc');
+  });
+});
+
+describe('structuredSummaryToResult', () => {
+  it('uses section points as key insights when there are no action items', () => {
+    const result = structuredSummaryToResult({
+      overview: 'Quick standup.',
+      sections: [{ heading: 'Updates', points: ['Backend deploy done'] }],
+      actionItems: [],
+    });
+
+    assert.equal(result.keyInsights.length, 1);
+    assert.equal(result.keyInsights[0].text, 'Backend deploy done');
   });
 });

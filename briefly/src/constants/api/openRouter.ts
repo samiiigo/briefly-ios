@@ -35,6 +35,8 @@ export function requireOpenRouterSharedApiKey(): string {
   return key;
 }
 
+export { toOpenRouterOpenAIModelId } from './openRouterModel';
+
 export const OpenRouterConfig = {
   apiBaseUrl: OPENROUTER_API_BASE_URL,
   model: OPENROUTER_DEFAULT_MODEL,

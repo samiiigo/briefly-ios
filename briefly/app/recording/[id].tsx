@@ -250,7 +250,12 @@ export default function TranscriptScreen() {
         {recording.keyInsights && recording.keyInsights.length > 0 && (
           <KeyInsights insights={recording.keyInsights} />
         )}
-        {recording.summary ? <SummaryMarkdownSection markdown={recording.summary} /> : null}
+        {recording.summary ? (
+          <SummaryMarkdownSection
+            markdown={recording.summary}
+            hasKeyInsights={(recording.keyInsights?.length ?? 0) > 0}
+          />
+        ) : null}
       </ScrollView>
       <RecordingPlaybackBar
         recording={recording}

@@ -25,10 +25,10 @@ const PROVIDER_META: Record<CloudProvider, CloudProviderMeta> = {
     isValidFormat: (k) => k.startsWith('sk-or-'),
   },
   openai: {
-    title: 'OpenAI',
-    placeholder: 'sk-proj-...',
-    matchesKeyPrefix: (k) => k.startsWith('sk-') || k.startsWith('sk-proj-'),
-    isValidFormat: (k) => k.startsWith('sk-') || k.startsWith('sk-proj-'),
+    title: 'OpenAI (OpenRouter)',
+    placeholder: 'sk-or-...',
+    matchesKeyPrefix: (k) => k.startsWith('sk-or-'),
+    isValidFormat: (k) => k.startsWith('sk-or-'),
   },
   gemini: {
     title: 'Google Gemini',

@@ -21,15 +21,104 @@ export function segmentsToText(segments: TranscriptSegment[]): string {
   return segments.map((s) => s.text).join(' ').trim();
 }
 
-export const SYSTEM_PROMPT = `You are a concise meeting/lecture summarizer. Given a transcript, output a JSON object with:
-- "summary": a Markdown string for the app summary screen. Structure it clearly:
-  - Start with "## Summary" then 2-4 sentences on the main topic and outcome
-  - Optionally add "## Key points" with "- " bullets for the most important takeaways
-  - Use **bold** for names, dates, decisions, and action owners
-  - Use plain Markdown only (no code fences around the summary)
-- "keyInsights": an array of 3-6 short bullet strings capturing decisions, action items, or important points (plain text, no Markdown)
+export const SYSTEM_PROMPT = `You are an expert meeting and lecture summarizer. Given a transcript, extract the key information and output a highly structured JSON object. 
 
-Respond ONLY with valid JSON. No markdown fences around the JSON, no extra explanation.`;
+Your JSON object must strictly follow this schema:
+- "title": A short, catchy title summarizing the entire transcript (include 1 relevant emoji at the start).
+- "overview": A concise 2-3 sentence paragraph explaining the main topic and overall outcome.
+- "sections": An array of objects representing the core topics discussed. Each object must contain:
+  - "heading": A short subsection title (include 1 relevant emoji).
+  - "points": An array of 2-4 string elements detailing the key insights, arguments, or decisions made in this section.
+- "actionItems": An array of objects capturing next steps. Each object must contain:
+  - "owner": The person responsible (use "Unassigned" if not specified).
+  - "task": A clear, short description of the required action.
+
+Content & Formatting Rules:
+- Use **bold** text within "overview", "points", and "task" strings to highlight names, dates, metrics, and critical decisions.
+- Keep emojis tasteful and sparse (limit to titles and headings).
+- Do not use markdown bullet dashes (e.g., "- ") inside the strings; the JSON array structure naturally handles the lists.
+- Do not include markdown code fences (like \`\`\`json) around the output.
+
+Respond ONLY with valid JSON. Do not include any introductory text, extra explanations, or trailing remarks.`;
+
+interface StructuredSection {
+  heading?: string;
+  points?: string[];
+}
+
+interface StructuredActionItem {
+  owner?: string;
+  task?: string;
+}
+
+interface StructuredSummaryJson {
+  title?: string;
+  overview?: string;
+  sections?: StructuredSection[];
+  actionItems?: StructuredActionItem[];
+}
+
+function isStructuredSummaryJson(parsed: Record<string, unknown>): boolean {
+  return (
+    typeof parsed.overview === 'string' ||
+    Array.isArray(parsed.sections) ||
+    Array.isArray(parsed.actionItems)
+  );
+}
+
+/** Maps the LLM structured schema to stored summary markdown + key insights. */
+export function structuredSummaryToResult(
+  parsed: StructuredSummaryJson
+): { summary: string; keyInsights: KeyInsight[] } {
+  const lines: string[] = [];
+
+  const overview = parsed.overview?.trim();
+  if (overview) {
+    lines.push('## Overview', '', overview, '');
+  }
+
+  for (const section of parsed.sections ?? []) {
+    const heading = section.heading?.trim();
+    const points = (section.points ?? []).map((p) => p?.trim()).filter((p): p is string => !!p);
+    if (!heading && points.length === 0) continue;
+    if (heading) {
+      lines.push(`### ${heading}`, '');
+    }
+    for (const point of points) {
+      lines.push(`- ${point}`);
+    }
+    if (points.length > 0) lines.push('');
+  }
+
+  const actionInsights = (parsed.actionItems ?? [])
+    .map((item) => {
+      const task = item.task?.trim();
+      if (!task) return null;
+      const owner = item.owner?.trim() || 'Unassigned';
+      return { id: generateId(), text: `**${owner}**: ${task}` };
+    })
+    .filter((item): item is KeyInsight => item !== null);
+
+  let keyInsights = actionInsights;
+  if (keyInsights.length === 0) {
+    const sectionPoints = (parsed.sections ?? [])
+      .flatMap((section) => (section.points ?? []).map((p) => p?.trim()).filter((p): p is string => !!p))
+      .slice(0, 6);
+    keyInsights = sectionPoints.map((text) => ({ id: generateId(), text }));
+  }
+
+  let summary = lines.join('\n').trim();
+  if (!summary) {
+    const title = parsed.title?.trim();
+    if (title) {
+      summary = `## Overview\n\n${title}`;
+    } else if (keyInsights.length > 0) {
+      summary = '## Overview\n\n_Key points and action items are listed below._';
+    }
+  }
+
+  return { summary, keyInsights };
+}
 
 /**
  * Simple extractive summarization — no model needed.
@@ -77,6 +166,16 @@ export function parseJsonSummary(
     logger.warn('SUMMARY', 'Model response was not valid JSON; using extractive fallback');
     return extractiveSummarize(fallbackText);
   }
+  if (isStructuredSummaryJson(parsed)) {
+    const structured = structuredSummaryToResult(parsed as StructuredSummaryJson);
+    logger.info('SUMMARY', 'Structured JSON summary parsed successfully', {
+      hasOverview: !!parsed.overview,
+      sectionCount: Array.isArray(parsed.sections) ? parsed.sections.length : 0,
+      actionItemCount: Array.isArray(parsed.actionItems) ? parsed.actionItems.length : 0,
+    });
+    return normalizeSummarizationResult(structured, fallbackText);
+  }
+
   logger.info('SUMMARY', 'JSON summary parsed successfully', {
     hasSummary: typeof parsed.summary === 'string' && parsed.summary.length > 0,
     keyInsightCount: Array.isArray(parsed.keyInsights) ? parsed.keyInsights.length : 0,

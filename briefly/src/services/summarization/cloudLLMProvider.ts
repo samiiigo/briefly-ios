@@ -57,7 +57,7 @@ export abstract class CloudLLMProvider implements SummarizationProvider {
           { role: 'user', content: `Transcript:\n${text}` },
         ],
         temperature: 0.3,
-        max_tokens: 800,
+        max_tokens: 1200,
       }),
     };
 
