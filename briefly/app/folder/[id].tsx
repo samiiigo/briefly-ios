@@ -250,7 +250,7 @@ export default function FolderRecordingsScreen() {
 const styles = StyleSheet.create({
   listContent: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingBottom: LIST_BOTTOM_PADDING,
   },
   emptyWrap: {

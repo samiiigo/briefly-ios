@@ -1,5 +1,8 @@
 import { StyleSheet } from 'react-native';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import { SCREEN_HORIZONTAL_GUTTER } from './screenGutter';
+
+export { SCREEN_HORIZONTAL_GUTTER, screenGutterStyles } from './screenGutter';
 
 /** Bottom inset so list content clears the floating tab bar. */
 export const SCREEN_LIST_BOTTOM_PADDING = 140;
@@ -18,7 +21,7 @@ export const screenLayoutStyles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: SCREEN_HORIZONTAL_GUTTER,
     paddingBottom: SCREEN_LIST_BOTTOM_PADDING,
   },
   sectionLabel: withAppFont({
@@ -26,7 +29,7 @@ export const screenLayoutStyles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 16,
     color: Colors.subtext,
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: 0,
     marginTop: Spacing.lg,
     marginBottom: Spacing.sm,
   }),
@@ -34,7 +37,7 @@ export const screenLayoutStyles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     color: Colors.subtext,
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: 0,
     marginBottom: Spacing.md,
   }),
   card: {
@@ -76,7 +79,7 @@ export const screenLayoutStyles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 16,
     color: Colors.subtext,
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: 0,
   }),
   listItemGap: {
     height: 12,

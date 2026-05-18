@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   listContent: {
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingBottom: LIST_BOTTOM_PADDING,
   },
   sectionHeader: withAppFont({
@@ -176,7 +176,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: Colors.subtext,
     marginBottom: 0,
-    paddingHorizontal: Spacing.sm,
   }),
   emptyState: {
     flex: 1,

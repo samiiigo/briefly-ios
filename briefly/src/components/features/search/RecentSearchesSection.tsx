@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { RECORDING_LIST_HEADER_GAP } from '@/utils/list/flattenRecordingSections';
 import { RecentSearchCard } from './RecentSearchCard';
-import { Colors, withAppFont } from '@/theme';
+import { Colors, Spacing, withAppFont } from '@/theme';
 
 interface Props {
   queries: string[];
@@ -44,6 +44,8 @@ export function RecentSearchesSection({
 const styles = StyleSheet.create({
   section: {
     gap: RECORDING_LIST_HEADER_GAP,
+    /** Align with {@link SearchField} / {@link SearchResultItem} inner content inset. */
+    paddingLeft: Spacing.sm,
   },
   headerRow: {
     flexDirection: 'row',

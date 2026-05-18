@@ -45,8 +45,8 @@ export const Spacing = {
   lg: 24,
   xl: 32,
   xxl: 48,
-  /** Horizontal inset for screen edges, headers, and list content (iOS-style 20pt gutter). */
-  screenHorizontal: 20,
+  /** Horizontal inset for screen edges, lists, headers, and floating chrome. */
+  screenHorizontal: 16,
   contentTop: 0,
 };
 

@@ -43,7 +43,7 @@ const FOLDER_GRID_CARD_WIDTH_RATIO = 0.485;
 
 function useFolderGridCardWidth(): number {
   const { width: windowWidth } = useWindowDimensions();
-  return (windowWidth - 2 * Spacing.md) * FOLDER_GRID_CARD_WIDTH_RATIO;
+  return (windowWidth - 2 * Spacing.screenHorizontal) * FOLDER_GRID_CARD_WIDTH_RATIO;
 }
 
 function folderItemCountLabel(count: number, variant: 'grid' | 'list'): string {
@@ -820,12 +820,12 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   gridContent: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingBottom: LIST_BOTTOM_PADDING,
   },
   listContent: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
     paddingBottom: LIST_BOTTOM_PADDING,
   },
   itemGap: {
@@ -848,7 +848,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.sm,
   },
   sectionHeaderRowList: {
     marginBottom: Spacing.xs,
@@ -882,10 +881,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   }),
   pinnedRow: {
-    marginHorizontal: -Spacing.md,
+    marginHorizontal: -Spacing.screenHorizontal,
   },
   pinnedRowScroll: {
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.screenHorizontal,
   },
   pinnedCard: {
     marginRight: 12,

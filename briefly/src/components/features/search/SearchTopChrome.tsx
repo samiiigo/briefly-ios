@@ -7,6 +7,7 @@ import {
   TOP_HEADER_PADDING_TOP,
 } from '@/components/navigation/topHeaderMetrics';
 import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
+import { screenGutterStyles } from '@/components/navigation/screenGutter';
 import { SearchField, type SearchFieldHandle } from './SearchField';
 import { Spacing } from '@/theme';
 
@@ -56,10 +57,10 @@ export function SearchTopChrome({
 
 const styles = StyleSheet.create({
   header: {
+    ...screenGutterStyles.headerRow,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
     paddingTop: TOP_HEADER_PADDING_TOP,
     paddingBottom: TOP_HEADER_PADDING_BOTTOM,
     minHeight: TOP_HEADER_BUTTON_ROW_HEIGHT + TOP_HEADER_PADDING_TOP + TOP_HEADER_PADDING_BOTTOM,
