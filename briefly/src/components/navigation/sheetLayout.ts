@@ -3,27 +3,33 @@ import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 /** Shared bottom-sheet chrome aligned with Recents cards and section labels. */
 export const sheetLayoutStyles = StyleSheet.create({
+  /** @deprecated Use {@link SheetModal} — backdrop tint must not share a slide transition with the sheet. */
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.65)',
   },
+  /** Outer shell (shadow only); pairs with {@link sheetPanel}. */
+  sheetShell: {
+    marginTop: -1,
+    borderTopLeftRadius: BorderRadius.cardXL,
+    borderTopRightRadius: BorderRadius.cardXL,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: { elevation: 16 },
+    }),
+  },
   sheet: {
     backgroundColor: Colors.background,
     borderTopLeftRadius: BorderRadius.cardXL,
     borderTopRightRadius: BorderRadius.cardXL,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
+    overflow: 'hidden',
     maxHeight: '92%',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.35,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: -4 },
-      },
-      android: { elevation: 24 },
-    }),
   },
   grabberWrap: {
     alignItems: 'center',

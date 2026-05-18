@@ -7,7 +7,6 @@ export interface FolderBrowsePreferences {
   layout: FolderLayoutMode;
   sortField: FolderSortField;
   sortDirection: FolderSortDirection;
-  /** When true, only non-deleted recordings marked favorite are shown. */
   favoritesOnly: boolean;
 }
 

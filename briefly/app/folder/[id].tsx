@@ -1,16 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { useShallow } from 'zustand/react/shallow';
 import { RecordingService } from '@/services/audio';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
-import { useLibraryFolderPreferencesStore } from '@/context/useLibraryFolderPreferencesStore';
 import {
   getFolderBrowsePreferences,
   useFolderBrowsePreferencesStore,
 } from '@/context/useFolderBrowsePreferencesStore';
-import { applyFolderRecordingPreferences } from '@/utils/folders/folderRecordingPreferences';
 import { buildFolderSections } from '@/utils/folders/folderBrowse';
 import { ensureUniqueTitle } from '@/utils';
 import { RecentsEntryCard } from '@/components/features/recents/RecentsEntryCard';
@@ -42,22 +39,13 @@ export default function FolderRecordingsScreen() {
   const restoreRecording = useRecordingStore((s) => s.restoreRecording);
   const permanentDelete = useRecordingStore((s) => s.permanentDelete);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
-  const prefs = useLibraryFolderPreferencesStore(
-    useShallow((s) => ({ datePreset: s.datePreset, scopeRefinement: s.scopeRefinement }))
-  );
   const folderKey = useMemo(() => `${folderType}:${folderId}`, [folderType, folderId]);
   const byFolder = useFolderBrowsePreferencesStore((s) => s.byFolder);
   const browse = useMemo(
     () => getFolderBrowsePreferences(byFolder, folderKey),
     [byFolder, folderKey]
   );
-  const [now, setNow] = useState(() => Date.now());
   const [viewSheetVisible, setViewSheetVisible] = useState(false);
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(id);
-  }, []);
 
   const isRecentlyDeleted = folderId === 'recently-deleted';
 
@@ -80,24 +68,20 @@ export default function FolderRecordingsScreen() {
     return recordings.filter((r) => r.userFolderId === folderId);
   }, [recordings, folderId, folderType]);
 
-  const afterLibraryFilters = useMemo(
-    () => applyFolderRecordingPreferences(filtered, prefs, now),
-    [filtered, prefs, now]
-  );
-  const afterBrowseFilter = useMemo(
+  const afterShowFilter = useMemo(
     () =>
       browse.favoritesOnly
-        ? afterLibraryFilters.filter((r) => r.deletedAt == null && !!r.isFavorite)
-        : afterLibraryFilters,
-    [afterLibraryFilters, browse.favoritesOnly]
+        ? filtered.filter((r) => r.deletedAt == null && !!r.isFavorite)
+        : filtered,
+    [filtered, browse.favoritesOnly]
   );
   const sections = useMemo(
-    () => buildFolderSections(afterBrowseFilter, browse),
-    [afterBrowseFilter, browse]
+    () => buildFolderSections(afterShowFilter, browse),
+    [afterShowFilter, browse]
   );
   const effectiveLayout = browse.layout;
   const flatData = useMemo(() => sections.flatMap((s) => s.data), [sections]);
-  const listEmpty = afterBrowseFilter.length === 0;
+  const listEmpty = afterShowFilter.length === 0;
 
   const handleRename = useCallback(
     async (recording: Recording, newTitle: string) => {
@@ -239,6 +223,8 @@ export default function FolderRecordingsScreen() {
       <FolderViewOptionsSheet
         visible={viewSheetVisible}
         folderKey={folderKey}
+        folderId={folderId}
+        folderType={folderType}
         onClose={() => setViewSheetVisible(false)}
       />
 
