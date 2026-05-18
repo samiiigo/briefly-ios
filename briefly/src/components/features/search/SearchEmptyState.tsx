@@ -17,7 +17,7 @@ export function SearchEmptyState({ query }: Props) {
       </View>
       <Text style={styles.title}>No results found</Text>
       <Text style={styles.subtitle}>
-        Nothing matched &apos;{query}&apos;. Try a different term or filter.
+        Nothing matched &apos;{query}&apos;. Try a different term.
       </Text>
     </View>
   );

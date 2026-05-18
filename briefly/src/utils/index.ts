@@ -13,7 +13,6 @@ export {
   formatDate,
   formatGroupLabel,
   formatRecentsCardDate,
-  formatSearchResultDate,
   formatRecentsGroupLabel,
   formatFileSize,
 } from './formatting/formatting';

@@ -16,6 +16,7 @@ export function pathnameUsesTabsLayoutBlur(pathname: string): boolean {
 /** Root stack screens (blur via {@link NavigatorBottomBlur} `scope="root"`). */
 export function pathnameUsesRootStackBlur(pathname: string): boolean {
   return (
+    pathname === '/search' ||
     pathname === '/settings' ||
     pathname.includes('transcription-mode') ||
     pathname.includes('processing-mode') ||

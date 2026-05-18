@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { Recording } from '@/types';
 import { buildSearchCatalog } from './searchIndex';
-import { filterRecentQueriesForFilter } from './searchPristineContent';
+import { filterRecentQueriesWithHits } from './searchPristineContent';
 
 function mkRecording(id: string, overrides: Partial<Recording> = {}): Recording {
   return {
@@ -18,26 +18,31 @@ function mkRecording(id: string, overrides: Partial<Recording> = {}): Recording 
   };
 }
 
-describe('filterRecentQueriesForFilter', () => {
+describe('filterRecentQueriesWithHits', () => {
   const recordings = [
     mkRecording('1', { title: 'Alpha note' }),
     mkRecording('2', { title: 'Beta favorite', isFavorite: true }),
   ];
   const catalog = buildSearchCatalog([], recordings);
 
-  it('keeps terms with hits in the active filter scope', () => {
-    const filtered = filterRecentQueriesForFilter(['beta', 'alpha'], 'favorites', catalog);
+  it('keeps terms with recording hits', () => {
+    const filtered = filterRecentQueriesWithHits(['beta', 'alpha'], catalog);
+    assert.deepEqual(filtered, ['beta', 'alpha']);
+  });
+
+  it('drops terms with no hits', () => {
+    const filtered = filterRecentQueriesWithHits(['beta', 'zzz'], catalog);
     assert.deepEqual(filtered, ['beta']);
   });
 
   it('keeps terms with folder name matches', () => {
     const withFolders = buildSearchCatalog([{ id: 'f1', name: 'Design' }], recordings);
-    const filtered = filterRecentQueriesForFilter(['design', 'zzz'], 'all', withFolders);
+    const filtered = filterRecentQueriesWithHits(['design', 'zzz'], withFolders);
     assert.deepEqual(filtered, ['design']);
   });
 
-  it('returns all terms when filter scoping is deferred', () => {
-    const filtered = filterRecentQueriesForFilter(['alpha', 'zzz'], 'all', catalog, {
+  it('returns all terms when scoping is deferred', () => {
+    const filtered = filterRecentQueriesWithHits(['alpha', 'zzz'], catalog, {
       scopeRecents: false,
     });
     assert.deepEqual(filtered, ['alpha', 'zzz']);

@@ -1,10 +1,8 @@
-import { SearchFilterId } from '@/constants/search';
 import { runIndexedSearch, type SearchCatalog } from './searchIndex';
 
-/** Recent terms that still produce at least one hit under the active filter. */
-export function filterRecentQueriesForFilter(
+/** Recent terms that still produce at least one search hit. */
+export function filterRecentQueriesWithHits(
   queries: readonly string[],
-  filterId: SearchFilterId,
   catalog: SearchCatalog,
   options?: { scopeRecents?: boolean }
 ): string[] {
@@ -12,7 +10,7 @@ export function filterRecentQueriesForFilter(
   if (options?.scopeRecents === false) return [...queries];
 
   return queries.filter((term) => {
-    const { folders, recordings } = runIndexedSearch(term, filterId, catalog);
+    const { folders, recordings } = runIndexedSearch(term, catalog);
     return folders.length > 0 || recordings.length > 0;
   });
 }

@@ -4,14 +4,10 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { useUserFolderStore } from '@/context/useUserFolderStore';
 import { useSearchStore } from '@/context/useSearchStore';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import {
-  DEFAULT_SEARCH_FILTER,
-  SEARCH_DEBOUNCE_MS,
-  SearchFilterId,
-} from '@/constants/search';
+import { SEARCH_DEBOUNCE_MS } from '@/constants/search';
 import { buildSearchCatalog, runIndexedSearch } from '@/utils/search/searchIndex';
 import { normalizeSearchQuery } from '@/utils/search/searchEngine';
-import { filterRecentQueriesForFilter } from '@/utils/search/searchPristineContent';
+import { filterRecentQueriesWithHits } from '@/utils/search/searchPristineContent';
 
 export function useSearchScreen() {
   const router = useRouter();
@@ -30,7 +26,6 @@ export function useSearchScreen() {
   const queryRef = useRef(query);
   queryRef.current = query;
 
-  const [filterId, setFilterId] = useState<SearchFilterId>(DEFAULT_SEARCH_FILTER);
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
   const deferredQuery = useDeferredValue(debouncedQuery);
 
@@ -45,27 +40,20 @@ export function useSearchScreen() {
   );
 
   const results = useMemo(
-    () => runIndexedSearch(deferredQuery, filterId, catalog),
-    [deferredQuery, filterId, catalog]
+    () => runIndexedSearch(deferredQuery, catalog),
+    [deferredQuery, catalog]
   );
 
   const isActiveSearch = normalizeSearchQuery(deferredQuery).length > 0;
-  const hasScopedResults = results.folders.length > 0 || results.recordings.length > 0;
+  const hasResults = results.folders.length > 0 || results.recordings.length > 0;
   const isStaleResults = debouncedQuery !== deferredQuery;
-
-  const globalResults = useMemo(
-    () => runIndexedSearch(deferredQuery, DEFAULT_SEARCH_FILTER, catalog),
-    [deferredQuery, catalog]
-  );
-  const hasGlobalResults =
-    globalResults.folders.length > 0 || globalResults.recordings.length > 0;
 
   const scopedRecentQueries = useMemo(
     () =>
-      filterRecentQueriesForFilter(recentQueries, filterId, catalog, {
+      filterRecentQueriesWithHits(recentQueries, catalog, {
         scopeRecents: recordingsLoaded,
       }),
-    [recentQueries, filterId, catalog, recordingsLoaded]
+    [recentQueries, catalog, recordingsLoaded]
   );
 
   const handleSearchSubmit = useCallback(() => {
@@ -114,12 +102,9 @@ export function useSearchScreen() {
   return {
     query,
     deferredQuery,
-    filterId,
-    setFilterId,
     results,
     isActiveSearch,
-    hasScopedResults,
-    hasGlobalResults,
+    hasResults,
     isStaleResults,
     scopedRecentQueries,
     handleQueryChange,

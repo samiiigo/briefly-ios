@@ -1,6 +1,4 @@
-import { SearchFilterId, SEARCH_FILTER_PILLS } from '@/constants/search';
 import { Recording, UserFolder } from '@/types';
-import { SEARCH_FILTER_PREDICATES } from './searchFilters';
 import {
   buildSearchableFolders,
   normalizeSearchQuery,
@@ -20,7 +18,7 @@ export interface IndexedRecording {
 
 export interface SearchCatalog {
   folders: IndexedSearchFolder[];
-  scopedByFilter: Record<SearchFilterId, IndexedRecording[]>;
+  recordings: IndexedRecording[];
 }
 
 const EMPTY_RESULTS: SearchResults = { folders: [], recordings: [] };
@@ -39,7 +37,7 @@ function buildRecordingHaystack(recording: Recording): string {
   return parts.join('\u0001').toLowerCase();
 }
 
-/** Precomputes folder names and per-filter recording haystacks (rebuilt when data changes). */
+/** Precomputes folder names and recording haystacks (rebuilt when data changes). */
 export function buildSearchCatalog(
   userFolders: UserFolder[],
   recordings: Recording[]
@@ -51,31 +49,17 @@ export function buildSearchCatalog(
     })
   );
 
-  const indexed: IndexedRecording[] = new Array(recordings.length);
+  const indexed: IndexedRecording[] = [];
   for (let i = 0; i < recordings.length; i++) {
     const recording = recordings[i]!;
-    indexed[i] = { recording, haystack: buildRecordingHaystack(recording) };
+    if (recording.deletedAt != null) continue;
+    indexed.push({ recording, haystack: buildRecordingHaystack(recording) });
   }
 
-  const scopedByFilter = {} as Record<SearchFilterId, IndexedRecording[]>;
-  for (const pill of SEARCH_FILTER_PILLS) {
-    const predicate = SEARCH_FILTER_PREDICATES[pill.id];
-    const scoped: IndexedRecording[] = [];
-    for (let i = 0; i < indexed.length; i++) {
-      const item = indexed[i]!;
-      if (predicate(item.recording)) scoped.push(item);
-    }
-    scopedByFilter[pill.id] = scoped;
-  }
-
-  return { folders, scopedByFilter };
+  return { folders, recordings: indexed };
 }
 
-export function runIndexedSearch(
-  query: string,
-  filterId: SearchFilterId,
-  catalog: SearchCatalog
-): SearchResults {
+export function runIndexedSearch(query: string, catalog: SearchCatalog): SearchResults {
   const normalized = normalizeSearchQuery(query);
   if (!normalized) return EMPTY_RESULTS;
 
@@ -87,10 +71,9 @@ export function runIndexedSearch(
     }
   }
 
-  const scoped = catalog.scopedByFilter[filterId];
   const matchingRecordings: Recording[] = [];
-  for (let i = 0; i < scoped.length; i++) {
-    const item = scoped[i]!;
+  for (let i = 0; i < catalog.recordings.length; i++) {
+    const item = catalog.recordings[i]!;
     if (item.haystack.includes(normalized)) {
       matchingRecordings.push(item.recording);
     }
@@ -109,9 +92,8 @@ export function runIndexedSearch(
 /** Convenience wrapper for tests; production should cache {@link SearchCatalog}. */
 export function runSearch(
   query: string,
-  filterId: SearchFilterId,
   recordings: Recording[],
   userFolders: UserFolder[] = []
 ): SearchResults {
-  return runIndexedSearch(query, filterId, buildSearchCatalog(userFolders, recordings));
+  return runIndexedSearch(query, buildSearchCatalog(userFolders, recordings));
 }

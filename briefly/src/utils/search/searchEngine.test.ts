@@ -30,27 +30,29 @@ describe('search engine', () => {
     }),
   ];
   it('matches folder names case-insensitively', () => {
-    const { folders: hits } = runSearch('ui', 'all', recordings, userFolders);
+    const { folders: hits } = runSearch('ui', recordings, userFolders);
     assert.ok(hits.some((f) => f.id === 'uf_ui'));
   });
 
-  it('respects favorites filter scope', () => {
-    const { recordings: hits } = runSearch('stand', 'favorites', recordings, userFolders);
+  it('includes favorites and archived recordings', () => {
+    const { recordings: hits } = runSearch('stand', recordings, userFolders);
     assert.deepEqual(hits.map((r) => r.id), ['2']);
+    const { recordings: archivedHits } = runSearch('old', recordings, userFolders);
+    assert.deepEqual(archivedHits.map((r) => r.id), ['3']);
   });
 
-  it('excludes deleted recordings from all scope', () => {
-    const { recordings: hits } = runSearch('deleted', 'all', recordings, userFolders);
+  it('excludes deleted recordings', () => {
+    const { recordings: hits } = runSearch('deleted', recordings, userFolders);
     assert.equal(hits.length, 0);
   });
 
   it('matches transcript content', () => {
-    const { recordings: hits } = runSearch('kk', 'all', recordings, userFolders);
+    const { recordings: hits } = runSearch('kk', recordings, userFolders);
     assert.deepEqual(hits.map((r) => r.id), ['5']);
   });
 
   it('returns empty results for blank query', () => {
-    const result = runSearch('   ', 'all', recordings, userFolders);
+    const result = runSearch('   ', recordings, userFolders);
     assert.deepEqual(result, { folders: [], recordings: [] });
   });
 
@@ -61,7 +63,7 @@ describe('search engine', () => {
       mkRecording('may', { title: 'Morning standup', createdAt: may18 }),
       mkRecording('apr', { title: 'Design sync', createdAt: april10 }),
     ];
-    const { recordings: mayHits } = runSearch('may', 'all', dated);
+    const { recordings: mayHits } = runSearch('may', dated);
     assert.deepEqual(mayHits.map((r) => r.id), ['may']);
   });
 
@@ -72,14 +74,14 @@ describe('search engine', () => {
       mkRecording('a', { title: 'Note A', createdAt: may18 }),
       mkRecording('b', { title: 'Note B', createdAt: may20 }),
     ];
-    const { recordings: hits } = runSearch('may 18', 'all', dated);
+    const { recordings: hits } = runSearch('may 18', dated);
     assert.deepEqual(hits.map((r) => r.id), ['a']);
   });
 
   it('matches recordings by numeric month/day', () => {
     const may18 = new Date(2026, 4, 18, 14, 0, 0).getTime();
     const dated = [mkRecording('a', { title: 'Note A', createdAt: may18 })];
-    const { recordings: hits } = runSearch('5/18', 'all', dated);
+    const { recordings: hits } = runSearch('5/18', dated);
     assert.deepEqual(hits.map((r) => r.id), ['a']);
   });
 });
