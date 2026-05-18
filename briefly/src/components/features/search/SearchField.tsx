@@ -6,6 +6,7 @@ import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
 
 export interface SearchFieldHandle {
   focus: () => void;
+  blur: () => void;
 }
 
 interface Props {
@@ -24,6 +25,7 @@ export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchF
 
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current?.focus(),
+    blur: () => inputRef.current?.blur(),
   }));
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchF
         placeholderTextColor={Colors.textSecondary}
         returnKeyType="search"
         onSubmitEditing={() => onSubmit?.()}
-        blurOnSubmit={false}
+        blurOnSubmit
         autoCorrect={false}
         autoCapitalize="none"
         selectionColor={Colors.primary}

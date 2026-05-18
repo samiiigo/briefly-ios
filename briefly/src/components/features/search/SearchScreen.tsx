@@ -4,6 +4,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Keyboard,
+  PanResponder,
+  Platform,
+  TouchableWithoutFeedback,
   useWindowDimensions,
 } from 'react-native';
 import { FlashList, type FlashListRef, type ListRenderItem } from '@shopify/flash-list';
@@ -27,6 +31,14 @@ import {
 import { Colors, Spacing, withAppFont } from '@/theme';
 
 const FOLDER_CARD_WIDTH_RATIO = 0.42;
+
+/** Dismiss keyboard when the finger moves more than this (px) outside the search field. */
+const KEYBOARD_DISMISS_MOVE_THRESHOLD = 4;
+
+const LIST_KEYBOARD_DISMISS_MODE = Platform.select({
+  ios: 'interactive' as const,
+  default: 'on-drag' as const,
+});
 
 const sectionHeaderStyle = withAppFont({
   fontSize: 14,
@@ -73,6 +85,31 @@ export function SearchScreen() {
     }
   }, [deferredQuery, isActiveSearch]);
 
+  const dismissKeyboard = useCallback(() => {
+    Keyboard.dismiss();
+  }, []);
+
+  const dismissKeyboardOnMoveCapture = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponderCapture: (_evt, gestureState) => {
+          const moved =
+            Math.abs(gestureState.dx) > KEYBOARD_DISMISS_MOVE_THRESHOLD ||
+            Math.abs(gestureState.dy) > KEYBOARD_DISMISS_MOVE_THRESHOLD;
+          if (moved) {
+            dismissKeyboard();
+          }
+          return false;
+        },
+      }).panHandlers,
+    [dismissKeyboard]
+  );
+
+  const handleSubmit = useCallback(() => {
+    handleSearchSubmit();
+    dismissKeyboard();
+  }, [handleSearchSubmit, dismissKeyboard]);
+
   const folderHeader = useMemo(() => {
     if (!isActiveSearch || results.folders.length === 0) return null;
 
@@ -84,6 +121,8 @@ export function SearchScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.folderRow}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          onScrollBeginDrag={dismissKeyboard}
         >
           {results.folders.map((folder) => (
             <SearchFolderCard
@@ -107,6 +146,7 @@ export function SearchScreen() {
     deferredQuery,
     folderCardWidth,
     openFolder,
+    dismissKeyboard,
   ]);
 
   const renderRecording: ListRenderItem<Recording> = useCallback(
@@ -146,40 +186,46 @@ export function SearchScreen() {
 
   return (
     <View style={styles.container}>
-      {isActiveSearch ? (
-        <FlashList
-          ref={listRef}
-          style={styles.list}
-          data={results.recordings}
-          renderItem={renderRecording}
-          keyExtractor={keyExtractor}
-          ItemSeparatorComponent={ResultSeparator}
-          ListHeaderComponent={folderHeader}
-          ListEmptyComponent={listEmpty}
-          contentContainerStyle={listContentStyle}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="none"
-          showsVerticalScrollIndicator={false}
-          drawDistance={400}
-        />
-      ) : (
-        <ScrollView
-          ref={pristineScrollRef}
-          style={styles.list}
-          contentContainerStyle={listContentStyle}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="none"
-          showsVerticalScrollIndicator={false}
-        >
-          {pristineContent}
-        </ScrollView>
-      )}
+      <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
+        <View style={styles.listHost} {...dismissKeyboardOnMoveCapture}>
+          {isActiveSearch ? (
+            <FlashList
+              ref={listRef}
+              style={styles.list}
+              data={results.recordings}
+              renderItem={renderRecording}
+              keyExtractor={keyExtractor}
+              ItemSeparatorComponent={ResultSeparator}
+              ListHeaderComponent={folderHeader}
+              ListEmptyComponent={listEmpty}
+              contentContainerStyle={listContentStyle}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={LIST_KEYBOARD_DISMISS_MODE}
+              onScrollBeginDrag={dismissKeyboard}
+              showsVerticalScrollIndicator={false}
+              drawDistance={400}
+            />
+          ) : (
+            <ScrollView
+              ref={pristineScrollRef}
+              style={styles.list}
+              contentContainerStyle={listContentStyle}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={LIST_KEYBOARD_DISMISS_MODE}
+              onScrollBeginDrag={dismissKeyboard}
+              showsVerticalScrollIndicator={false}
+            >
+              {pristineContent}
+            </ScrollView>
+          )}
+        </View>
+      </TouchableWithoutFeedback>
 
       <SearchTopChrome
         query={query}
         onChangeText={handleQueryChange}
         onClearQuery={handleClearQuery}
-        onSubmit={handleSearchSubmit}
+        onSubmit={handleSubmit}
         onClose={handleClose}
       />
     </View>
@@ -192,6 +238,9 @@ function ResultSeparator() {
 
 const styles = StyleSheet.create({
   container: screenLayoutStyles.container,
+  listHost: {
+    flex: 1,
+  },
   list: {
     flex: 1,
   },
