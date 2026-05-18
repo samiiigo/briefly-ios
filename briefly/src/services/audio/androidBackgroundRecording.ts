@@ -29,11 +29,6 @@ let statusSubscription: EventSubscription | null = null;
 let externalStopHandler: AndroidRecordingStoppedExternally | null = null;
 let stopInitiatedFromApp = false;
 
-/** True when this device should use the Android background recording path. */
-export function supportsAndroidBackgroundRecording(): boolean {
-  return isAndroid;
-}
-
 /** Requests POST_NOTIFICATIONS on Android 13+ so the recording control can appear. */
 export async function ensureAndroidRecordingNotificationPermission(): Promise<boolean> {
   if (!isAndroid) return true;
@@ -61,7 +56,6 @@ export async function ensureAndroidRecordingNotificationPermission(): Promise<bo
 export async function configureAndroidBackgroundRecordingSession(): Promise<void> {
   if (!isAndroid) return;
 
-  await ensureAndroidRecordingNotificationPermission();
   await setAudioModeAsync(ANDROID_BACKGROUND_RECORDING_MODE);
   logger.info('AUDIO', 'Android background recording session configured');
 }

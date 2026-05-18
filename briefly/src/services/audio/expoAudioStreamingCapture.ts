@@ -17,14 +17,13 @@ import { Platform } from 'react-native';
 import { assemblyAIRecordingOptions, WAV_HEADER_BYTES } from './recordingOptions';
 import { normalizeDbMetering, pcmBufferToLevel, smoothMeteringLevel } from './audioMetering';
 import {
-  attachAndroidRecordingNotificationControls,
-  configureAndroidBackgroundRecordingSession,
-  detachAndroidRecordingNotificationControls,
-  markAndroidRecordingStopFromApp,
-  supportsAndroidBackgroundRecording,
-} from './androidBackgroundRecording';
+  attachActiveRecordingControls,
+  configureActiveRecordingSession,
+  finalizeActiveRecorderStop,
+  reapplyActiveRecordingSession,
+} from './recordingSession';
 import { PlaybackService } from './playbackService';
-import { configureRecordingAudioSession, prepareRecorderAsync } from './playbackSession';
+import { prepareRecorderAsync } from './playbackSession';
 
 const POLL_INTERVAL_MS = 250;
 
@@ -51,6 +50,7 @@ export class ExpoAudioStreamingCapture {
   private startTime = 0;
   private isPaused = false;
   private meteringLevel = 0;
+  private pollInFlight = false;
 
   async start(
     onChunk: (data: ArrayBuffer) => void,
@@ -62,11 +62,7 @@ export class ExpoAudioStreamingCapture {
     }
 
     await PlaybackService.stop();
-    if (supportsAndroidBackgroundRecording()) {
-      await configureAndroidBackgroundRecordingSession();
-    } else {
-      await configureRecordingAudioSession();
-    }
+    await configureActiveRecordingSession();
 
     this.onChunk = onChunk;
     this.onCaptureError = onError;
@@ -82,7 +78,7 @@ export class ExpoAudioStreamingCapture {
     await prepareRecorderAsync(recorder);
     recorder.record();
     this.recorder = recorder;
-    attachAndroidRecordingNotificationControls(recorder);
+    attachActiveRecordingControls(recorder);
 
     this.startPolling();
   }
@@ -109,6 +105,7 @@ export class ExpoAudioStreamingCapture {
 
   async resume(): Promise<void> {
     this.isPaused = false;
+    await reapplyActiveRecordingSession();
     this.recorder?.record();
     this.startPolling();
   }
@@ -132,15 +129,7 @@ export class ExpoAudioStreamingCapture {
         // Proceed with native stop.
       }
 
-      markAndroidRecordingStopFromApp(true);
-      try {
-        if (!alreadyStopped) {
-          await recorder.stop();
-        }
-      } finally {
-        markAndroidRecordingStopFromApp(false);
-        detachAndroidRecordingNotificationControls();
-      }
+      await finalizeActiveRecorderStop(recorder, alreadyStopped);
       this.recorder = null;
     }
 
@@ -163,14 +152,16 @@ export class ExpoAudioStreamingCapture {
   }
 
   private async pollFile(): Promise<void> {
+    if (this.pollInFlight || this.isPaused) return;
     const uri = this.recorder?.uri;
-    if (!uri || this.isPaused) return;
+    if (!uri) return;
 
+    this.pollInFlight = true;
     try {
       const info = await FileSystem.getInfoAsync(uri);
       if (!info.exists) return;
 
-      const totalBytes: number = (info as any).size ?? 0;
+      const totalBytes: number = (info as { size?: number }).size ?? 0;
       // Skip the 44-byte WAV header on the very first read.
       const readFrom = this.sentBytes === 0 ? WAV_HEADER_BYTES : this.sentBytes;
       const newByteCount = totalBytes - readFrom;
@@ -183,16 +174,35 @@ export class ExpoAudioStreamingCapture {
       });
 
       const buffer = base64ToArrayBuffer(b64);
-      if (buffer.byteLength > 0) {
+      if (buffer.byteLength === 0) return;
+
+      const recorder = this.recorder;
+      let usedNativeMetering = false;
+      if (recorder) {
+        try {
+          const status = recorder.getStatus();
+          if (status.isRecording && status.metering !== undefined) {
+            const level = normalizeDbMetering(status.metering);
+            this.meteringLevel = smoothMeteringLevel(this.meteringLevel, level);
+            usedNativeMetering = true;
+          }
+        } catch {
+          // Fall back to PCM-derived metering.
+        }
+      }
+
+      if (!usedNativeMetering) {
         const instant = pcmBufferToLevel(buffer);
         this.meteringLevel = smoothMeteringLevel(this.meteringLevel, instant);
-        this.onChunk?.(buffer);
-        this.sentBytes = totalBytes;
       }
-    } catch (err: any) {
-      this.onCaptureError?.(
-        `Audio poll failed: ${err?.message ?? String(err)}`,
-      );
+
+      this.onChunk?.(buffer);
+      this.sentBytes = totalBytes;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.onCaptureError?.(`Audio poll failed: ${message}`);
+    } finally {
+      this.pollInFlight = false;
     }
   }
 }

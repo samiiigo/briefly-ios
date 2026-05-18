@@ -29,6 +29,16 @@ export function useLiveTranscript(
   const isStopped = useRef(false);
   const pendingPartialRef = useRef('');
   const partialFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastLiveTranscriptRef = useRef('');
+
+  const publishLiveTranscript = useCallback(
+    (text: string) => {
+      if (text === lastLiveTranscriptRef.current) return;
+      lastLiveTranscriptRef.current = text;
+      setLiveTranscript(text);
+    },
+    [setLiveTranscript],
+  );
 
   const onPartial = useCallback((text: string) => {
     pendingPartialRef.current = text;
@@ -39,10 +49,10 @@ export function useLiveTranscript(
         const buffered = pendingPartialRef.current;
         setPartialText(buffered);
         const accFinal = liveSegments.current.map((s) => s.text).join(' ');
-        setLiveTranscript(accFinal ? `${accFinal} ${buffered}` : buffered);
+        publishLiveTranscript(accFinal ? `${accFinal} ${buffered}` : buffered);
       }, 80);
     }
-  }, [setLiveTranscript]);
+  }, [publishLiveTranscript]);
 
   const onFinal = useCallback((text: string) => {
     if (partialFlushTimerRef.current) {
@@ -91,12 +101,12 @@ export function useLiveTranscript(
     const accumulated = liveSegments.current.map((s) => s.text).join(' ');
     setFinalText(accumulated);
     setPartialText(finalSentenceBufferRef.current);
-    setLiveTranscript(
+    publishLiveTranscript(
       finalSentenceBufferRef.current
         ? appendChunk(accumulated, finalSentenceBufferRef.current)
-        : accumulated
+        : accumulated,
     );
-  }, [elapsedRef, setLiveTranscript]);
+  }, [elapsedRef, publishLiveTranscript]);
 
   /** Flush any trailing partial/buffer text into a final segment. */
   const flush = useCallback(() => {
@@ -132,6 +142,7 @@ export function useLiveTranscript(
     liveSegments.current = [];
     prevFinalText.current = '';
     finalSentenceBufferRef.current = '';
+    lastLiveTranscriptRef.current = '';
     isStopped.current = false;
   }, []);
 

@@ -23,6 +23,7 @@ import { LibraryHeader } from './LibraryHeader';
 import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
+import { computeLibraryFolderCounts } from '@/utils/folders/folderCounts';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
 import { showUserFolderActions } from '@/utils/folders/userFolderActions';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
@@ -121,34 +122,36 @@ export function LibraryFolderBrowser({
     loadFolders();
   }, [loadFolders]);
 
+  const folderCounts = useMemo(
+    () => computeLibraryFolderCounts(recordings),
+    [recordings],
+  );
+
   const countForBuiltIn = useCallback(
     (id: string) => {
-      if (id === 'all') return recordings.length;
-      if (id === 'unlisted') {
-        return recordings.filter(
-          (r) => r.deletedAt == null && resolveRecordingFolder(r) === 'unlisted'
-        ).length;
+      switch (id) {
+        case 'all':
+          return folderCounts.all;
+        case 'unlisted':
+          return folderCounts.unlisted;
+        case 'imports':
+          return folderCounts.imports;
+        case 'favorites':
+          return folderCounts.favorites;
+        case 'archived':
+          return folderCounts.archived;
+        case 'recently-deleted':
+          return folderCounts.recentlyDeleted;
+        default:
+          return 0;
       }
-      if (id === 'imports') {
-        return recordings.filter((r) => r.deletedAt == null && !!r.isImported).length;
-      }
-      if (id === 'favorites') {
-        return recordings.filter((r) => r.deletedAt == null && r.isFavorite).length;
-      }
-      if (id === 'archived') {
-        return recordings.filter((r) => resolveRecordingFolder(r) === 'archived').length;
-      }
-      if (id === 'recently-deleted') {
-        return recordings.filter((r) => resolveRecordingFolder(r) === 'recently-deleted').length;
-      }
-      return 0;
     },
-    [recordings]
+    [folderCounts],
   );
 
   const countForUserFolder = useCallback(
-    (id: string) => recordings.filter((r) => r.userFolderId === id).length,
-    [recordings]
+    (id: string) => folderCounts.byUserFolderId.get(id) ?? 0,
+    [folderCounts],
   );
 
   const mapBuiltInTile = useCallback(

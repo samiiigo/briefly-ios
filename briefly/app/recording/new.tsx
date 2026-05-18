@@ -46,8 +46,8 @@ import {
   onAndroidRecordingReturnedForeground,
   registerAndroidRecordingStoppedHandler,
   shouldPauseRecordingWhenAppBackgrounds,
-  supportsAndroidBackgroundRecording,
-} from '@/services/audio/androidBackgroundRecording';
+} from '@/services/audio/recordingSession';
+import { isAndroid } from '@/utils/platform';
 function isPermissionError(message: string): boolean {
   return /microphone|permission|speech recognition/i.test(message);
 }
@@ -60,7 +60,7 @@ export default function NewRecordingScreen() {
     targetUserFolderId?: string;
     markImported?: string;
   }>();
-  const { setLiveTranscript } = useRecordingStore();
+  const setLiveTranscript = useRecordingStore((s) => s.setLiveTranscript);
   const { transcriptionMode: settingsTranscriptionMode } = useSettingsStore();
   const { elapsed, elapsedRef, start: startTimer, stop: stopTimer } = useTimer();
   const live = useLiveTranscript(setLiveTranscript, elapsedRef);
@@ -118,7 +118,7 @@ export default function NewRecordingScreen() {
   const executeStopAndSaveRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
-    if (!supportsAndroidBackgroundRecording()) return;
+    if (!isAndroid) return;
 
     registerAndroidRecordingStoppedHandler(() => {
       void executeStopAndSaveRef.current();

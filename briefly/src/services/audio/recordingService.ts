@@ -16,17 +16,14 @@ import { logger } from '@/utils/logging/logger';
 import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
 import { PlaybackService } from './playbackService';
 import {
-  attachAndroidRecordingNotificationControls,
-  configureAndroidBackgroundRecordingSession,
-  detachAndroidRecordingNotificationControls,
-  markAndroidRecordingStopFromApp,
-  supportsAndroidBackgroundRecording,
-} from './androidBackgroundRecording';
+  attachActiveRecordingControls,
+  configureActiveRecordingSession,
+  finalizeActiveRecorderStop,
+  reapplyActiveRecordingSession,
+} from './recordingSession';
 import {
-  configureRecordingAudioSession,
   configureRecordingStoppedAudioSession,
   prepareRecorderAsync,
-  reapplyRecordingAudioMode,
 } from './playbackSession';
 
 class RecordingServiceClass {
@@ -91,11 +88,7 @@ class RecordingServiceClass {
     logger.info('AUDIO', 'Starting local recording');
     await ensureMicrophonePermission();
     await PlaybackService.stop();
-    if (supportsAndroidBackgroundRecording()) {
-      await configureAndroidBackgroundRecordingSession();
-    } else {
-      await configureRecordingAudioSession();
-    }
+    await configureActiveRecordingSession();
 
     const AudioRecorderCtor = (AudioModule as any)['AudioRecorder'] as new (
       options: Partial<RecordingOptions>
@@ -107,7 +100,7 @@ class RecordingServiceClass {
     this.recorder = recorder;
     this._recordingPaused = false;
     this.startTime = Date.now();
-    attachAndroidRecordingNotificationControls(recorder);
+    attachActiveRecordingControls(recorder);
     logger.info('AUDIO', 'Local recording started');
   }
 
@@ -121,11 +114,7 @@ class RecordingServiceClass {
 
   async resume(): Promise<void> {
     if (!this.recorder) return;
-    if (supportsAndroidBackgroundRecording()) {
-      await configureAndroidBackgroundRecordingSession();
-    } else {
-      await reapplyRecordingAudioMode();
-    }
+    await reapplyActiveRecordingSession();
     this.recorder.record();
     this._recordingPaused = false;
     logger.info('AUDIO', 'Local recording resumed');
@@ -148,20 +137,12 @@ class RecordingServiceClass {
       // Proceed with native stop.
     }
 
-    markAndroidRecordingStopFromApp(true);
     try {
-      if (!alreadyStopped) {
-        try {
-          await recorder.stop();
-        } catch (error: unknown) {
-          logger.error('AUDIO', 'Failed to stop recorder', {
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
-    } finally {
-      markAndroidRecordingStopFromApp(false);
-      detachAndroidRecordingNotificationControls();
+      await finalizeActiveRecorderStop(recorder, alreadyStopped);
+    } catch (error: unknown) {
+      logger.error('AUDIO', 'Failed to stop recorder', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     const result = await this.buildResultFromRecorder(recorder, fallbackDurationSec);

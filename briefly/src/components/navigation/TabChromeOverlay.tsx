@@ -8,6 +8,8 @@ import { useTabBarProps } from './tabBarBridge';
 import { tabRouteShowsRecordButton } from './tabChromeRoutes';
 import { RecordButton } from '@/components/features/recording/RecordButton';
 import { RecordingService } from '@/services/audio';
+import { ensureRecordingPrerequisites } from '@/services/audio/recordingSession';
+import { isAndroid } from '@/utils/platform';
 
 function useActiveTabRouteName(): string | undefined {
   const tabBarProps = useTabBarProps();
@@ -21,6 +23,9 @@ function TabRecordButton() {
   const handlePress = useCallback(async () => {
     const granted = await RecordingService.requestPermissions();
     if (!granted) return;
+    if (isAndroid) {
+      await ensureRecordingPrerequisites();
+    }
     router.push({ pathname: '/recording/new', params: { targetFolder: 'unlisted' } });
   }, [router]);
 
