@@ -53,4 +53,33 @@ describe('search engine', () => {
     const result = runSearch('   ', 'all', recordings, userFolders);
     assert.deepEqual(result, { folders: [], recordings: [] });
   });
+
+  it('matches recordings by month name', () => {
+    const may18 = new Date(2026, 4, 18, 14, 0, 0).getTime();
+    const april10 = new Date(2026, 3, 10, 9, 0, 0).getTime();
+    const dated = [
+      mkRecording('may', { title: 'Morning standup', createdAt: may18 }),
+      mkRecording('apr', { title: 'Design sync', createdAt: april10 }),
+    ];
+    const { recordings: mayHits } = runSearch('may', 'all', dated);
+    assert.deepEqual(mayHits.map((r) => r.id), ['may']);
+  });
+
+  it('matches recordings by month and day', () => {
+    const may18 = new Date(2026, 4, 18, 14, 0, 0).getTime();
+    const may20 = new Date(2026, 4, 20, 10, 0, 0).getTime();
+    const dated = [
+      mkRecording('a', { title: 'Note A', createdAt: may18 }),
+      mkRecording('b', { title: 'Note B', createdAt: may20 }),
+    ];
+    const { recordings: hits } = runSearch('may 18', 'all', dated);
+    assert.deepEqual(hits.map((r) => r.id), ['a']);
+  });
+
+  it('matches recordings by numeric month/day', () => {
+    const may18 = new Date(2026, 4, 18, 14, 0, 0).getTime();
+    const dated = [mkRecording('a', { title: 'Note A', createdAt: may18 })];
+    const { recordings: hits } = runSearch('5/18', 'all', dated);
+    assert.deepEqual(hits.map((r) => r.id), ['a']);
+  });
 });

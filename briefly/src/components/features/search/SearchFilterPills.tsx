@@ -44,12 +44,13 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   content: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: 0,
     gap: Spacing.sm,
     paddingBottom: Spacing.md,
+    flexWrap: 'nowrap',
   },
   contentCompact: {
-    paddingBottom: Spacing.sm,
+    paddingBottom: 0,
   },
   pill: {
     paddingHorizontal: 16,

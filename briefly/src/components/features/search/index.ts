@@ -1,4 +1,5 @@
 export * from './SearchScreen';
+export * from './SearchTopChrome';
 export * from './SearchHeader';
 export * from './SearchField';
 export * from './SearchBar';
@@ -6,6 +7,7 @@ export * from './searchLayout';
 export * from './SearchFilterPills';
 export * from './ScrollRevealSearchFilters';
 export * from './RecentSearchesSection';
+export * from './RecentSearchCard';
 export * from './SearchFolderCard';
 export * from './SearchResultItem';
 export * from './SearchEmptyState';

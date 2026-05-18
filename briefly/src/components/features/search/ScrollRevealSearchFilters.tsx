@@ -8,9 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SearchFilterId } from '@/constants/search';
 import { SearchFilterPills } from './SearchFilterPills';
-
-/** Collapsed row height (padding + pill) for scroll-reveal animation. */
-export const SEARCH_FILTER_ROW_HEIGHT = 52;
+import { SEARCH_FILTER_ROW_HEIGHT } from './searchLayout';
 
 const REVEAL_THRESHOLD = 32;
 const HIDE_THRESHOLD = 4;

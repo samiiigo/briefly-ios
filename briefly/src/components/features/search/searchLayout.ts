@@ -1,12 +1,22 @@
-import { getScrollPaddingTop } from '@/components/navigation/topHeaderMetrics';
 import { Spacing } from '@/theme';
 
-/** Search field row below the large title (matches embedded SearchField). */
-export const SEARCH_FIELD_ROW_HEIGHT =
-  Spacing.sm + 44 + Spacing.sm;
+/** Horizontal inset for search chrome and list content. */
+export const SEARCH_CHROME_HORIZONTAL_PADDING = Spacing.md;
 
-export const SEARCH_LIST_BOTTOM_PADDING = 140;
+/** Search bar row (field + cancel). */
+export const SEARCH_BAR_ROW_HEIGHT = 44 + Spacing.sm;
 
-export function getSearchScrollPaddingTop(safeAreaTop: number): number {
-  return getScrollPaddingTop(safeAreaTop) + SEARCH_FIELD_ROW_HEIGHT;
+/** Filter pill strip height (matches {@link SearchFilterPills} compact row). */
+export const SEARCH_FILTER_ROW_HEIGHT = 44;
+
+export const SEARCH_LIST_BOTTOM_PADDING = 32;
+
+export function getSearchChromeHeight(safeAreaTop: number): number {
+  return (
+    safeAreaTop +
+    Spacing.sm +
+    SEARCH_BAR_ROW_HEIGHT +
+    SEARCH_FILTER_ROW_HEIGHT +
+    Spacing.sm
+  );
 }

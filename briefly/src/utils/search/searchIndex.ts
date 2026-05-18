@@ -7,6 +7,7 @@ import {
   type SearchFolderResult,
   type SearchResults,
 } from './searchEngine';
+import { buildRecordingDateSearchTerms } from './searchDateTerms';
 
 export interface IndexedSearchFolder extends SearchFolderResult {
   nameLower: string;
@@ -27,6 +28,7 @@ const EMPTY_RESULTS: SearchResults = { folders: [], recordings: [] };
 function buildRecordingHaystack(recording: Recording): string {
   const parts: string[] = [recording.title];
   if (recording.summary) parts.push(recording.summary);
+  parts.push(buildRecordingDateSearchTerms(recording.createdAt));
   const transcript = recording.transcript;
   if (transcript) {
     for (let i = 0; i < transcript.length; i++) {

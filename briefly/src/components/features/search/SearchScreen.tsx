@@ -1,40 +1,27 @@
-import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   useWindowDimensions,
-  KeyboardAvoidingView,
-  Platform,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
 import { FlashList, type FlashListRef, type ListRenderItem } from '@shopify/flash-list';
-import { useRouter } from 'expo-router';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
-import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { useRecordingStore } from '@/context/useRecordingStore';
-import { useUserFolderStore } from '@/context/useUserFolderStore';
-import { useSearchStore } from '@/context/useSearchStore';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import {
-  DEFAULT_SEARCH_FILTER,
-  SEARCH_DEBOUNCE_MS,
-  SearchFilterId,
-} from '@/constants/search';
-import { buildSearchCatalog, runIndexedSearch } from '@/utils/search/searchIndex';
-import { normalizeSearchQuery } from '@/utils/search/searchEngine';
-import { RECORDING_LIST_ITEM_GAP } from '@/utils/list/flattenRecordingSections';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSearchScreen } from '@/hooks/useSearchScreen';
 import { Recording } from '@/types';
-import { SearchHeader } from './SearchHeader';
+import { RECORDING_LIST_ITEM_GAP } from '@/utils/list/flattenRecordingSections';
+import { SearchTopChrome } from './SearchTopChrome';
 import { HIDE_THRESHOLD, REVEAL_THRESHOLD } from './ScrollRevealSearchFilters';
 import { RecentSearchesSection } from './RecentSearchesSection';
 import { SearchFolderCard } from './SearchFolderCard';
 import { SearchResultItem } from './SearchResultItem';
 import { SearchEmptyState } from './SearchEmptyState';
 import {
-  getSearchScrollPaddingTop,
+  SEARCH_CHROME_HORIZONTAL_PADDING,
   SEARCH_LIST_BOTTOM_PADDING,
 } from './searchLayout';
 import { Colors, Spacing, withAppFont } from '@/theme';
@@ -51,61 +38,33 @@ const sectionHeaderStyle = withAppFont({
 });
 
 export function SearchScreen() {
-  const router = useRouter();
-  const { topInset } = useTopChromeLayout();
-  const searchScrollPaddingTop = getSearchScrollPaddingTop(topInset);
+  const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const folderCardWidth = (windowWidth - 2 * Spacing.md) * FOLDER_CARD_WIDTH_RATIO;
+  const folderCardWidth =
+    (windowWidth - 2 * SEARCH_CHROME_HORIZONTAL_PADDING) * FOLDER_CARD_WIDTH_RATIO;
   const listRef = useRef<FlashListRef<Recording>>(null);
-
-  const recordings = useRecordingStore((s) => s.recordings);
-  const loadRecordings = useRecordingStore((s) => s.loadRecordings);
-  const folders = useUserFolderStore((s) => s.folders);
-  const loadFolders = useUserFolderStore((s) => s.loadFolders);
-
-  const recentQueries = useSearchStore((s) => s.recentQueries);
-  const removeRecentQuery = useSearchStore((s) => s.removeRecentQuery);
-  const clearRecentQueries = useSearchStore((s) => s.clearRecentQueries);
-
-  const [query, setQuery] = useState('');
-  const queryRef = useRef(query);
-  queryRef.current = query;
-
-  const [filterId, setFilterId] = useState<SearchFilterId>(DEFAULT_SEARCH_FILTER);
-  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
-  const deferredQuery = useDeferredValue(debouncedQuery);
   const filterReveal = useSharedValue(0);
 
-  const handleSearchSubmit = useCallback(() => {
-    useSearchStore.getState().commitRecentQuery(queryRef.current);
-  }, []);
-
-  const persistQueryOnResultTap = useCallback(() => {
-    useSearchStore.getState().commitRecentQuery(queryRef.current);
-  }, []);
-
-  const handleQueryChange = useCallback((text: string) => {
-    setQuery(text);
-  }, []);
-
-  useEffect(() => {
-    void loadRecordings();
-    void loadFolders();
-  }, [loadRecordings, loadFolders]);
-
-  const catalog = useMemo(
-    () => buildSearchCatalog(folders, recordings),
-    [folders, recordings]
-  );
-
-  const results = useMemo(
-    () => runIndexedSearch(deferredQuery, filterId, catalog),
-    [deferredQuery, filterId, catalog]
-  );
-
-  const isActiveSearch = normalizeSearchQuery(deferredQuery).length > 0;
-  const hasResults = results.folders.length > 0 || results.recordings.length > 0;
-  const isStaleResults = debouncedQuery !== deferredQuery;
+  const {
+    query,
+    deferredQuery,
+    filterId,
+    setFilterId,
+    results,
+    isActiveSearch,
+    hasResults,
+    isStaleResults,
+    scopedRecentQueries,
+    handleQueryChange,
+    handleClearQuery,
+    handleSearchSubmit,
+    handleClose,
+    openFolder,
+    openRecording,
+    handleRecentSelect,
+    removeRecentQuery,
+    clearRecentQueries,
+  } = useSearchScreen();
 
   const collapseFilters = useCallback(() => {
     filterReveal.value = withTiming(0, { duration: 180 });
@@ -132,33 +91,6 @@ export function SearchScreen() {
     [filterReveal]
   );
 
-  const handleClose = useCallback(() => {
-    router.back();
-  }, [router]);
-
-  const openFolder = useCallback(
-    (folderId: string, folderName: string, folderType: 'built-in' | 'user') => {
-      persistQueryOnResultTap();
-      router.push({
-        pathname: `/folder/${folderId}` as any,
-        params: { folderName, folderType },
-      });
-    },
-    [router, persistQueryOnResultTap]
-  );
-
-  const openRecording = useCallback(
-    (id: string) => {
-      persistQueryOnResultTap();
-      router.push(`/recording/${id}`);
-    },
-    [router, persistQueryOnResultTap]
-  );
-
-  const handleRecentSelect = useCallback((term: string) => {
-    setQuery(term);
-  }, []);
-
   const folderHeader = useMemo(() => {
     if (!isActiveSearch || results.folders.length === 0) return null;
 
@@ -169,6 +101,7 @@ export function SearchScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.folderRow}
+          keyboardShouldPersistTaps="handled"
         >
           {results.folders.map((folder) => (
             <SearchFolderCard
@@ -211,7 +144,7 @@ export function SearchScreen() {
     if (!isActiveSearch) {
       return (
         <RecentSearchesSection
-          queries={recentQueries}
+          queries={scopedRecentQueries}
           onSelect={handleRecentSelect}
           onRemove={removeRecentQuery}
           onClearAll={clearRecentQueries}
@@ -227,29 +160,27 @@ export function SearchScreen() {
     isActiveSearch,
     hasResults,
     isStaleResults,
-    recentQueries,
+    scopedRecentQueries,
     handleRecentSelect,
     removeRecentQuery,
     clearRecentQueries,
     deferredQuery,
   ]);
 
-  const listContentStyle = useMemo(
-    () => [
-      styles.listContent,
-      {
-        paddingTop: searchScrollPaddingTop,
-        paddingBottom: SEARCH_LIST_BOTTOM_PADDING,
-      },
-    ],
-    [searchScrollPaddingTop]
-  );
-
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={styles.container}>
+      <SearchTopChrome
+        topInset={insets.top}
+        query={query}
+        onChangeText={handleQueryChange}
+        onClearQuery={handleClearQuery}
+        onSubmit={handleSearchSubmit}
+        onClose={handleClose}
+        filterId={filterId}
+        onFilterSelect={setFilterId}
+        filterReveal={filterReveal}
+      />
+
       <FlashList
         ref={listRef}
         style={styles.list}
@@ -259,24 +190,15 @@ export function SearchScreen() {
         ItemSeparatorComponent={ResultSeparator}
         ListHeaderComponent={folderHeader}
         ListEmptyComponent={listEmpty}
-        contentContainerStyle={listContentStyle}
+        contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
         showsVerticalScrollIndicator={false}
         drawDistance={400}
         scrollEventThrottle={16}
         onScroll={handleScroll}
       />
-
-      <SearchHeader
-        query={query}
-        onChangeText={handleQueryChange}
-        onClose={handleClose}
-        onSubmit={handleSearchSubmit}
-        filterReveal={filterReveal}
-        filterId={filterId}
-        onFilterSelect={setFilterId}
-      />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -293,7 +215,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: SEARCH_CHROME_HORIZONTAL_PADDING,
+    paddingBottom: SEARCH_LIST_BOTTOM_PADDING + 280,
   },
   itemGap: {
     height: RECORDING_LIST_ITEM_GAP,
