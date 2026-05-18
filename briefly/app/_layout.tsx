@@ -1,8 +1,9 @@
 import 'react-native-gesture-handler';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
+import * as NavigationBar from 'expo-navigation-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -19,6 +20,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(Colors.background);
+    if (Platform.OS === 'android') {
+      void NavigationBar.setBackgroundColorAsync(Colors.background);
+      void NavigationBar.setButtonStyleAsync('light');
+    }
 
     installRealtimeTerminalLogs();
     logger.info('SYSTEM', 'App startup: loading recordings from storage');
@@ -55,6 +60,14 @@ export default function RootLayout() {
               headerShown: false,
               contentStyle: { backgroundColor: Colors.background },
               animation: 'slide_from_right',
+              ...Platform.select({
+                ios: {
+                  gestureEnabled: true,
+                },
+                android: {
+                  gestureEnabled: false,
+                },
+              }),
             }}
           >
             <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />

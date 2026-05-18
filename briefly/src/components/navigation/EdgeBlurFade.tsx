@@ -7,15 +7,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 type Edge = 'top' | 'bottom';
 
 type GradientStops = {
-  colors: readonly string[];
-  locations: readonly number[];
+  colors: readonly [string, string, ...string[]];
+  locations: readonly [number, number, ...number[]];
 };
 
 /** Mirror a vertical gradient so the bottom edge matches the top (inverted). */
 function mirrorGradient({ colors, locations }: GradientStops): GradientStops {
+  const newColors = [...colors].reverse() as unknown as [string, string, ...string[]];
+  const newLocations = [...locations].map((location) => 1 - location).reverse() as unknown as [number, number, ...number[]];
   return {
-    colors: [...colors].reverse(),
-    locations: [...locations].map((location) => 1 - location).reverse(),
+    colors: newColors,
+    locations: newLocations,
   };
 }
 

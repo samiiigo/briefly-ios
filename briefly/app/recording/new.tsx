@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  BackHandler,
+  Pressable,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
@@ -232,6 +235,23 @@ export default function NewRecordingScreen() {
     ]);
   }, [cleanup, isStarted, router, startFailed, stopTimer, teardownCapture]);
 
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isStarted && !isStopped.current && !startFailed) {
+        handleDiscard();
+        return true; // Prevent default behavior
+      }
+      return false; // Let default behavior happen (e.g., if failed to start)
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => backHandler.remove();
+  }, [isStarted, startFailed, handleDiscard]);
+
   const pauseIfRecording = useCallback(async (): Promise<boolean> => {
     if (!isStarted || startFailed || isPausedRef.current) return true;
     await pauseRecording();
@@ -452,20 +472,21 @@ export default function NewRecordingScreen() {
               <Ionicons name="document-text" size={14} color={Colors.primary} />
               <Text style={s.lpLbl}>Live transcript</Text>
               {isLocalLive ? (
-                <TouchableOpacity
-                  style={s.streamToggle}
+                <Pressable
+                  style={({ pressed }) => [s.streamToggle, pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
                   onPress={() => setLiveStreamVisible((v) => !v)}
                   accessibilityLabel={
                     liveStreamVisible ? 'Hide live transcript' : 'Show live transcript'
                   }
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  android_ripple={{ color: 'rgba(0,0,0,0.1)', borderless: true, radius: 16 }}
                 >
                   <Ionicons
                     name={liveStreamVisible ? 'eye-off-outline' : 'eye-outline'}
                     size={20}
                     color={Colors.textSecondary}
                   />
-                </TouchableOpacity>
+                </Pressable>
               ) : null}
             </View>
             {showLiveStream ? (
@@ -506,23 +527,25 @@ export default function NewRecordingScreen() {
 
         <View style={s.ctrls}>
           <View style={s.ctrlItem}>
-            <TouchableOpacity
-              style={s.pauseBtn}
+            <Pressable
+              style={({ pressed }) => [s.pauseBtn, pressed && Platform.OS === 'ios' && { opacity: 0.75 }]}
               onPress={handlePause}
               disabled={!isStarted || startFailed || isStopping}
+              android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: false, radius: 32 }}
             >
               <Ionicons name={isPaused ? 'play' : 'pause'} size={26} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            </Pressable>
             <Text style={s.ctrlLbl}>{isPaused ? 'RESUME' : 'PAUSE'}</Text>
           </View>
           <View style={s.ctrlItem}>
-            <TouchableOpacity
-              style={s.stopBtn}
+            <Pressable
+              style={({ pressed }) => [s.stopBtn, pressed && Platform.OS === 'ios' && { opacity: 0.75 }]}
               onPress={handleStop}
               disabled={!isStarted || startFailed || isStopping}
+              android_ripple={{ color: 'rgba(0,0,0,0.2)', borderless: false, radius: 32 }}
             >
               <View style={s.stopSq} />
-            </TouchableOpacity>
+            </Pressable>
             <Text style={[s.ctrlLbl, { color: Colors.recordButton }]}>
               {isStopping ? 'STOPPING…' : 'STOP'}
             </Text>

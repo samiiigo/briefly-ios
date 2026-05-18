@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
+import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { ensureUniqueTitle } from '@/utils';
 import { getNextSummarizationFallback } from '@/utils/processing/summarizationFallback';
@@ -42,6 +43,8 @@ export default function TranscriptScreen() {
   const folders = useUserFolderStore((s) => s.folders);
   const loadFolders = useUserFolderStore((s) => s.loadFolders);
   const { summarizationMode } = useSettingsStore();
+
+  const [renameDialogVisible, setRenameDialogVisible] = useState(false);
 
   useEffect(() => {
     void loadFolders();
@@ -63,7 +66,7 @@ export default function TranscriptScreen() {
     const existingTitles = recordings.filter((r) => r.id !== recording.id).map((r) => r.title);
     const save = (text: string) => { const t = text.trim(); if (t) updateRecording(recording.id, { title: ensureUniqueTitle(t, existingTitles) }); };
     if (Platform.OS === 'ios') { Alert.prompt('Rename Recording', undefined, save, 'plain-text', recording.title); }
-    else { Alert.alert('Rename', 'Long-press the recording card on the home screen to rename it.'); }
+    else { setRenameDialogVisible(true); }
   }, [recording, recordings, updateRecording]);
 
   const handleTranscriptionFallback = useCallback(async () => {
@@ -278,6 +281,21 @@ export default function TranscriptScreen() {
           menuItems={overflowMenuItems}
         />
       </View>
+      <TextInputDialog
+        visible={renameDialogVisible}
+        title="Rename Recording"
+        defaultValue={recording?.title ?? ''}
+        placeholder="Recording name"
+        submitLabel="Rename"
+        onSubmit={(text) => {
+          setRenameDialogVisible(false);
+          if (recording) {
+            const existingTitles = recordings.filter((r) => r.id !== recording.id).map((r) => r.title);
+            updateRecording(recording.id, { title: ensureUniqueTitle(text, existingTitles) });
+          }
+        }}
+        onCancel={() => setRenameDialogVisible(false)}
+      />
     </View>
   );
 }

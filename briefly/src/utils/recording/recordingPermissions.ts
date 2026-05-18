@@ -40,8 +40,10 @@ export async function ensureMicrophonePermission(): Promise<void> {
 
 export function openAppSettings(): void {
   void Linking.openSettings().catch(() => {
+    // iOS-specific fallback URL scheme
     if (Platform.OS === 'ios') {
       void Linking.openURL('app-settings:');
     }
+    // Android: Linking.openSettings() handles android.settings.APPLICATION_DETAILS_SETTINGS automatically
   });
 }

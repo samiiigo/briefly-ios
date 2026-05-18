@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '@/types';
 import { formatRecentsCardDate } from '@/utils';
 import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
+import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
 
 interface Props {
@@ -21,6 +22,8 @@ interface Props {
 }
 
 export function RecentsEntryCard({ recording, onPress, onRename, onDelete }: Props) {
+  const [renameDialogVisible, setRenameDialogVisible] = useState(false);
+
   const handleLongPress = () => {
     const buttons: { text: string; style?: 'destructive' | 'cancel'; onPress?: () => void }[] = [];
     if (onRename) {
@@ -38,7 +41,7 @@ export function RecentsEntryCard({ recording, onPress, onRename, onDelete }: Pro
               recording.title
             );
           } else {
-            Alert.alert('Rename', 'Open the recording to rename it from the detail screen.');
+            setRenameDialogVisible(true);
           }
         },
       });
@@ -59,23 +62,37 @@ export function RecentsEntryCard({ recording, onPress, onRename, onDelete }: Pro
   };
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={onPress}
-      onLongPress={handleLongPress}
-      activeOpacity={0.85}
-    >
-      <View style={styles.leading}>
-        <RecordingAvatar recording={recording} trailingSpacing={false} />
-        <View style={styles.textBlock}>
-          <Text style={styles.title} numberOfLines={1}>
-            {recording.title}
-          </Text>
-          <Text style={styles.subtitle}>{formatRecentsCardDate(recording.createdAt)}</Text>
+    <>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={onPress}
+        onLongPress={handleLongPress}
+        activeOpacity={0.85}
+      >
+        <View style={styles.leading}>
+          <RecordingAvatar recording={recording} trailingSpacing={false} />
+          <View style={styles.textBlock}>
+            <Text style={styles.title} numberOfLines={1}>
+              {recording.title}
+            </Text>
+            <Text style={styles.subtitle}>{formatRecentsCardDate(recording.createdAt)}</Text>
+          </View>
         </View>
-      </View>
-      <Ionicons name="chevron-forward" size={16} color={Colors.subtext} />
-    </TouchableOpacity>
+        <Ionicons name="chevron-forward" size={16} color={Colors.subtext} />
+      </TouchableOpacity>
+      <TextInputDialog
+        visible={renameDialogVisible}
+        title="Rename Recording"
+        defaultValue={recording.title}
+        placeholder="Recording name"
+        submitLabel="Rename"
+        onSubmit={(text) => {
+          setRenameDialogVisible(false);
+          onRename?.(text);
+        }}
+        onCancel={() => setRenameDialogVisible(false)}
+      />
+    </>
   );
 }
 

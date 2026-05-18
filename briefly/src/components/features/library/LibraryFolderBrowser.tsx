@@ -22,6 +22,7 @@ import { useFolderListLayoutStore } from '@/context/useFolderListLayoutStore';
 import { LibraryHeader } from './LibraryHeader';
 import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
+import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
 import { showUserFolderActions } from '@/utils/folders/userFolderActions';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
@@ -115,7 +116,7 @@ export function LibraryFolderBrowser({
   const layout = useFolderListLayoutStore((s) => s.layout);
 
   const [addModalVisible, setAddModalVisible] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
+  const [renameFolderTarget, setRenameFolderTarget] = useState<FolderTile | null>(null);
   useEffect(() => {
     loadFolders();
   }, [loadFolders]);
@@ -297,38 +298,8 @@ export function LibraryFolderBrowser({
   );
 
   const handleAddFolder = useCallback(() => {
-    if (Platform.OS === 'ios') {
-      Alert.prompt(
-        'New Folder',
-        'Enter a name for the folder',
-        (name) => {
-          const trimmed = name?.trim();
-          if (!trimmed) return;
-          addFolder(trimmed).catch((err: unknown) =>
-            Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
-          );
-        },
-        'plain-text',
-        ''
-      );
-    } else {
-      setNewFolderName('');
-      setAddModalVisible(true);
-    }
-  }, [addFolder]);
-
-  const confirmAddFolder = useCallback(() => {
-    const trimmed = newFolderName.trim();
-    if (!trimmed) return;
-    addFolder(trimmed)
-      .then(() => {
-        setAddModalVisible(false);
-        setNewFolderName('');
-      })
-      .catch((err: unknown) =>
-        Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
-      );
-  }, [addFolder, newFolderName]);
+    setAddModalVisible(true);
+  }, []);
 
   const openFolder = useCallback(
     (folderId: string, folderName: string, folderType: 'built-in' | 'user') => {
@@ -350,44 +321,52 @@ export function LibraryFolderBrowser({
     (folder: FolderTile) => {
       const recordingCount = recordings.filter((r) => r.userFolderId === folder.id).length;
 
-      showUserFolderActions(folder.name, !!folder.pinned, {
-        onRename: (newName) =>
-          renameFolder(folder.id, newName).catch((err: unknown) =>
-            Alert.alert('Error', err instanceof Error ? err.message : 'Could not rename folder')
-          ),
-        onTogglePin: () => handleToggleUserFolderPin(folder.id),
-        onDelete: () => {
-          Alert.alert(
-            'Delete Folder',
-            recordingCount > 0
-              ? `Delete "${folder.name}"? ${recordingCount} recording${recordingCount === 1 ? '' : 's'} will move to Unlisted.`
-              : `Delete "${folder.name}"?`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: () => {
-                  void (async () => {
-                    try {
-                      const inFolder = recordings.filter((r) => r.userFolderId === folder.id);
-                      await Promise.all(
-                        inFolder.map((r) => updateRecording(r.id, { userFolderId: undefined }))
-                      );
-                      await deleteFolder(folder.id);
-                    } catch (err: unknown) {
-                      Alert.alert(
-                        'Error',
-                        err instanceof Error ? err.message : 'Could not delete folder'
-                      );
-                    }
-                  })();
+      showUserFolderActions(
+        folder.name,
+        !!folder.pinned,
+        {
+          onRename: (newName) =>
+            renameFolder(folder.id, newName).catch((err: unknown) =>
+              Alert.alert('Error', err instanceof Error ? err.message : 'Could not rename folder')
+            ),
+          onTogglePin: () => handleToggleUserFolderPin(folder.id),
+          onDelete: () => {
+            Alert.alert(
+              'Delete Folder',
+              recordingCount > 0
+                ? `Delete "${folder.name}"? ${recordingCount} recording${recordingCount === 1 ? '' : 's'} will move to Unlisted.`
+                : `Delete "${folder.name}"?`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => {
+                    void (async () => {
+                      try {
+                        const inFolder = recordings.filter((r) => r.userFolderId === folder.id);
+                        await Promise.all(
+                          inFolder.map((r) => updateRecording(r.id, { userFolderId: undefined }))
+                        );
+                        await deleteFolder(folder.id);
+                      } catch (err: unknown) {
+                        Alert.alert(
+                          'Error',
+                          err instanceof Error ? err.message : 'Could not delete folder'
+                        );
+                      }
+                    })();
+                  },
                 },
-              },
-            ]
-          );
+              ]
+            );
+          },
         },
-      });
+        () => {
+          // Store the active folder for rename in state to render the dialog
+          setRenameFolderTarget(folder);
+        }
+      );
     },
     [recordings, renameFolder, deleteFolder, handleToggleUserFolderPin, updateRecording]
   );
@@ -766,53 +745,20 @@ export function LibraryFolderBrowser({
         </ScrollView>
       )}
 
-      <Modal
+      <TextInputDialog
         visible={addModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAddModalVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setAddModalVisible(false)}
-        >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.modalContentWrap}
-          >
-            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.addFolderModal}>
-                <Text style={styles.addFolderModalTitle}>New Folder</Text>
-                <TextInput
-                  style={styles.addFolderInput}
-                  value={newFolderName}
-                  onChangeText={setNewFolderName}
-                  placeholder="Folder name"
-                  placeholderTextColor={Colors.textTertiary}
-                  autoFocus
-                  onSubmitEditing={confirmAddFolder}
-                />
-                <View style={styles.addFolderModalActions}>
-                  <TouchableOpacity
-                    style={styles.addFolderModalBtn}
-                    onPress={() => setAddModalVisible(false)}
-                  >
-                    <Text style={styles.addFolderModalBtnCancel}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.addFolderModalBtn, styles.addFolderModalBtnPrimary]}
-                    onPress={confirmAddFolder}
-                    disabled={!newFolderName.trim()}
-                  >
-                    <Text style={styles.addFolderModalBtnPrimaryText}>Create</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </KeyboardAvoidingView>
-        </TouchableOpacity>
-      </Modal>
+        title="New Folder"
+        message="Enter a name for the folder"
+        placeholder="Folder name"
+        submitLabel="Create"
+        onSubmit={(text) => {
+          setAddModalVisible(false);
+          addFolder(text).catch((err: unknown) =>
+            Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
+          );
+        }}
+        onCancel={() => setAddModalVisible(false)}
+      />
 
       <TopBlurFade />
       <View style={[styles.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
@@ -823,6 +769,23 @@ export function LibraryFolderBrowser({
           onAddFolder={handleAddFolder}
         />
       </View>
+
+      <TextInputDialog
+        visible={!!renameFolderTarget}
+        title="Rename Folder"
+        defaultValue={renameFolderTarget?.name ?? ''}
+        placeholder="Folder name"
+        submitLabel="Rename"
+        onSubmit={(text) => {
+          if (renameFolderTarget) {
+            renameFolder(renameFolderTarget.id, text).catch((err: unknown) =>
+              Alert.alert('Error', err instanceof Error ? err.message : 'Could not rename folder')
+            );
+          }
+          setRenameFolderTarget(null);
+        }}
+        onCancel={() => setRenameFolderTarget(null)}
+      />
     </View>
   );
 }

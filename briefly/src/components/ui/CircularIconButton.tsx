@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, StyleProp, ViewStyle, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/theme';
 
@@ -19,15 +19,19 @@ export function CircularIconButton({
   style,
 }: CircularIconButtonProps) {
   return (
-    <TouchableOpacity
-      style={[styles.button, style]}
+    <Pressable
+      style={({ pressed }) => [
+        styles.button,
+        style,
+        pressed && Platform.OS === 'ios' && { opacity: 0.75 },
+      ]}
       onPress={onPress}
-      activeOpacity={0.75}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
+      android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: false, radius: 22 }}
     >
       <Ionicons name={icon} size={22} color={Colors.textPrimary} />
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 

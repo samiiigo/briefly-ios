@@ -10,6 +10,15 @@ export {
   SF_DISPLAY_MIN_SIZE,
 } from './fonts';
 export { installAppFonts } from './installAppFonts';
+export {
+  useTheme,
+  FontStack,
+  CornerRadius,
+  shadowCard,
+  shadowElevated,
+  shadowHigh,
+} from './tokens';
+export type { ThemeTokens, ShadowToken } from './tokens';
 
 export const Colors = {
   background: '#000000',
