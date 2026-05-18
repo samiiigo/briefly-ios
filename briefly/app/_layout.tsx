@@ -93,6 +93,7 @@ export default function RootLayout() {
             <Stack.Screen name="transcription-mode" />
             <Stack.Screen name="processing-mode" />
             <Stack.Screen name="folder-layout" />
+            <Stack.Screen name="search" options={{ animation: 'fade' }} />
             <Stack.Screen name="+not-found" />
           </Stack>
           <NavigatorBottomBlur scope="root" />

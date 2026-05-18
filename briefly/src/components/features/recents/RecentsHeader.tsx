@@ -27,7 +27,14 @@ export function RecentsHeader() {
               router.push('/settings');
             }}
           />
-          <CircularIconButton icon="search" accessibilityLabel="Search" />
+          <CircularIconButton
+            icon="search"
+            accessibilityLabel="Search"
+            onPress={() => {
+              useActiveSwipeableStore.getState().closeActive();
+              router.push('/search');
+            }}
+          />
         </View>
       </View>
     </TopChromeOverlay>
