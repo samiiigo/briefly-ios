@@ -16,6 +16,10 @@ import { logger } from '@/utils/logging/logger';
 import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
 import { PlaybackService } from './playbackService';
 import {
+  configureAndroidBackgroundRecordingSession,
+  supportsAndroidBackgroundRecording,
+} from './androidBackgroundRecording';
+import {
   configureRecordingAudioSession,
   configureRecordingStoppedAudioSession,
   prepareRecorderAsync,
@@ -48,7 +52,11 @@ class RecordingServiceClass {
     logger.info('AUDIO', 'Starting local recording');
     await ensureMicrophonePermission();
     await PlaybackService.stop();
-    await configureRecordingAudioSession();
+    if (supportsAndroidBackgroundRecording()) {
+      await configureAndroidBackgroundRecordingSession();
+    } else {
+      await configureRecordingAudioSession();
+    }
 
     const AudioRecorderCtor = (AudioModule as any)['AudioRecorder'] as new (
       options: Partial<RecordingOptions>
@@ -73,7 +81,11 @@ class RecordingServiceClass {
 
   async resume(): Promise<void> {
     if (!this.recorder) return;
-    await reapplyRecordingAudioMode();
+    if (supportsAndroidBackgroundRecording()) {
+      await configureAndroidBackgroundRecordingSession();
+    } else {
+      await reapplyRecordingAudioMode();
+    }
     this.recorder.record();
     this._recordingPaused = false;
     logger.info('AUDIO', 'Local recording resumed');

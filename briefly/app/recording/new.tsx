@@ -41,6 +41,11 @@ import { openAppSettings } from '@/utils/recording/recordingPermissions';
 import { useTimer } from '@/hooks/useTimer';
 import { useLiveTranscript } from '@/hooks/useLiveTranscript';
 import { useAppInterruptGuard } from '@/hooks/useAppInterruptGuard';
+import {
+  onAndroidRecordingEnteredBackground,
+  onAndroidRecordingReturnedForeground,
+  shouldPauseRecordingWhenAppBackgrounds,
+} from '@/services/audio/androidBackgroundRecording';
 function isPermissionError(message: string): boolean {
   return /microphone|permission|speech recognition/i.test(message);
 }
@@ -112,10 +117,20 @@ export default function NewRecordingScreen() {
   useAppInterruptGuard({
     enabled: isStarted && !startFailed && !isStopped.current,
     onBackground: () => {
-      setInterruptHint('Recording paused while the app was in the background.');
-      void handlePauseRef.current();
+      if (shouldPauseRecordingWhenAppBackgrounds()) {
+        setInterruptHint('Recording paused while the app was in the background.');
+        void handlePauseRef.current();
+        return;
+      }
+      void (async () => {
+        const hint = await onAndroidRecordingEnteredBackground();
+        if (hint) setInterruptHint(hint);
+      })();
     },
     onForeground: () => {
+      if (!shouldPauseRecordingWhenAppBackgrounds()) {
+        void onAndroidRecordingReturnedForeground();
+      }
       setInterruptHint(null);
     },
   });

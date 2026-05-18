@@ -10,14 +10,18 @@
  * file polling (~250–500 ms) is acceptable for speech transcription.
  */
 
-import { AudioModule, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
+import { AudioModule, requestRecordingPermissionsAsync } from 'expo-audio';
 import type { AudioRecorder, RecordingOptions } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import { assemblyAIRecordingOptions, WAV_HEADER_BYTES } from './recordingOptions';
 import { normalizeDbMetering, pcmBufferToLevel, smoothMeteringLevel } from './audioMetering';
+import {
+  configureAndroidBackgroundRecordingSession,
+  supportsAndroidBackgroundRecording,
+} from './androidBackgroundRecording';
 import { PlaybackService } from './playbackService';
-import { prepareRecorderAsync } from './playbackSession';
+import { configureRecordingAudioSession, prepareRecorderAsync } from './playbackSession';
 
 const POLL_INTERVAL_MS = 250;
 
@@ -55,11 +59,11 @@ export class ExpoAudioStreamingCapture {
     }
 
     await PlaybackService.stop();
-    await setAudioModeAsync({
-      allowsRecording: true,
-      playsInSilentMode: true,
-      interruptionMode: 'duckOthers',
-    });
+    if (supportsAndroidBackgroundRecording()) {
+      await configureAndroidBackgroundRecordingSession();
+    } else {
+      await configureRecordingAudioSession();
+    }
 
     this.onChunk = onChunk;
     this.onCaptureError = onError;

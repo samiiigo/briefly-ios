@@ -29,6 +29,10 @@ import { NativeAudioCapture } from './nativeAudioCapture';
 import { ExpoAudioStreamingCapture } from './expoAudioStreamingCapture';
 import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
 import { PlaybackService } from './playbackService';
+import {
+  configureAndroidBackgroundRecordingSession,
+  supportsAndroidBackgroundRecording,
+} from './androidBackgroundRecording';
 import { configureRecordingAudioSession } from './playbackSession';
 
 export interface LiveTranscriptionCallbacks {
@@ -63,7 +67,11 @@ class LiveTranscriptionServiceClass {
     this.stopActive();
     await ensureMicrophonePermission();
     await PlaybackService.stop();
-    await configureRecordingAudioSession();
+    if (supportsAndroidBackgroundRecording()) {
+      await configureAndroidBackgroundRecordingSession();
+    } else {
+      await configureRecordingAudioSession();
+    }
 
     if (mode === 'on-device') {
       // On-device path stays in Swift (iOS Speech framework).
