@@ -1,9 +1,13 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
+import {
+  TOP_HEADER_BUTTON_ROW_HEIGHT,
+  TOP_HEADER_PADDING_BOTTOM,
+  TOP_HEADER_PADDING_TOP,
+} from '@/components/navigation/topHeaderMetrics';
 import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
 import { SearchField, type SearchFieldHandle } from './SearchField';
-import { SEARCH_CHROME_HORIZONTAL_PADDING } from './searchLayout';
 import { Spacing } from '@/theme';
 
 interface Props {
@@ -27,8 +31,8 @@ export function SearchTopChrome({
 }: Props) {
   return (
     <TopChromeOverlay>
-      <View style={styles.chrome}>
-        <View style={styles.searchRow}>
+      <View style={styles.header}>
+        <View style={styles.searchHost}>
           <SearchField
             ref={fieldRef}
             value={query}
@@ -37,11 +41,12 @@ export function SearchTopChrome({
             onSubmit={onSubmit}
             onBlur={onBlur}
           />
+        </View>
+        <View style={styles.actions}>
           <CircularIconButton
             icon="close"
             accessibilityLabel="Close search"
             onPress={onClose}
-            style={styles.cancelButton}
           />
         </View>
       </View>
@@ -50,17 +55,23 @@ export function SearchTopChrome({
 }
 
 const styles = StyleSheet.create({
-  chrome: {
-    paddingHorizontal: SEARCH_CHROME_HORIZONTAL_PADDING,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
-  },
-  searchRow: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: TOP_HEADER_PADDING_TOP,
+    paddingBottom: TOP_HEADER_PADDING_BOTTOM,
+    minHeight: TOP_HEADER_BUTTON_ROW_HEIGHT + TOP_HEADER_PADDING_TOP + TOP_HEADER_PADDING_BOTTOM,
   },
-  cancelButton: {
-    flexShrink: 0,
+  searchHost: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: Spacing.md,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
   },
 });
