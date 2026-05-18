@@ -10,9 +10,6 @@ import { SearchFilterId } from '@/constants/search';
 import { SearchFilterPills } from './SearchFilterPills';
 import { SEARCH_FILTER_ROW_HEIGHT } from './searchLayout';
 
-const REVEAL_THRESHOLD = 32;
-const HIDE_THRESHOLD = 4;
-
 interface Props {
   progress: SharedValue<number>;
   selected: SearchFilterId;
@@ -27,7 +24,12 @@ export function ScrollRevealSearchFilters({ progress, selected, onSelect }: Prop
       [0, SEARCH_FILTER_ROW_HEIGHT],
       Extrapolation.CLAMP
     ),
-    opacity: interpolate(progress.value, [0, 0.35, 1], [0, 0, 1], Extrapolation.CLAMP),
+    opacity: interpolate(progress.value, [0, 0.45, 1], [0, 0, 1], Extrapolation.CLAMP),
+    transform: [
+      {
+        translateY: interpolate(progress.value, [0, 1], [-6, 0], Extrapolation.CLAMP),
+      },
+    ],
   }));
 
   return (
@@ -36,8 +38,6 @@ export function ScrollRevealSearchFilters({ progress, selected, onSelect }: Prop
     </Animated.View>
   );
 }
-
-export { REVEAL_THRESHOLD, HIDE_THRESHOLD };
 
 const styles = StyleSheet.create({
   clip: {

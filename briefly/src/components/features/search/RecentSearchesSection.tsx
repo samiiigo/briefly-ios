@@ -1,9 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import {
-  RECORDING_LIST_HEADER_GAP,
-  RECORDING_LIST_ITEM_GAP,
-} from '@/utils/list/flattenRecordingSections';
+import { RECORDING_LIST_HEADER_GAP } from '@/utils/list/flattenRecordingSections';
 import { RecentSearchCard } from './RecentSearchCard';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
@@ -30,7 +27,7 @@ export function RecentSearchesSection({
           <Text style={styles.clearAll}>Clear All</Text>
         </Pressable>
       </View>
-      <View style={styles.list}>
+      <View>
         {queries.map((query) => (
           <RecentSearchCard
             key={query}
@@ -65,7 +62,4 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.primary,
   }),
-  list: {
-    gap: RECORDING_LIST_ITEM_GAP,
-  },
 });

@@ -1,9 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
-
-const RECENT_SEARCH_ICON = '🕒';
+import { Colors, Spacing, withAppFont } from '@/theme';
 
 interface Props {
   query: string;
@@ -13,17 +11,14 @@ interface Props {
 
 export function RecentSearchCard({ query, onPress, onRemove }: Props) {
   return (
-    <View style={styles.card}>
+    <View style={styles.row}>
       <Pressable
-        style={styles.leading}
+        style={styles.labelPressable}
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={`Search for ${query}`}
       >
-        <View style={styles.iconCircle}>
-          <Text style={styles.iconEmoji}>{RECENT_SEARCH_ICON}</Text>
-        </View>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={styles.label} numberOfLines={1}>
           {query}
         </Text>
       </Pressable>
@@ -41,38 +36,21 @@ export function RecentSearchCard({ query, onPress, onRemove }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.cardXL,
-    padding: Spacing.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    minHeight: 44,
   },
-  leading: {
+  labelPressable: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
     minWidth: 0,
     marginRight: Spacing.sm,
   },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  iconEmoji: {
-    fontSize: 22,
-    lineHeight: 26,
-  },
-  title: withAppFont({
-    flex: 1,
-    fontSize: 18,
+  label: withAppFont({
+    fontSize: 17,
     fontWeight: '600',
     color: Colors.textPrimary,
     lineHeight: 22,

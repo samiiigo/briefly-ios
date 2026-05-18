@@ -5,17 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   useWindowDimensions,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from 'react-native';
 import { FlashList, type FlashListRef, type ListRenderItem } from '@shopify/flash-list';
-import { useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSearchScreen } from '@/hooks/useSearchScreen';
+import { useSearchFilterReveal } from '@/hooks/useSearchFilterReveal';
 import { Recording } from '@/types';
 import { RECORDING_LIST_ITEM_GAP } from '@/utils/list/flattenRecordingSections';
 import { SearchTopChrome } from './SearchTopChrome';
-import { HIDE_THRESHOLD, REVEAL_THRESHOLD } from './ScrollRevealSearchFilters';
 import { RecentSearchesSection } from './RecentSearchesSection';
 import { SearchFolderCard } from './SearchFolderCard';
 import { SearchResultItem } from './SearchResultItem';
@@ -44,7 +41,6 @@ export function SearchScreen() {
     (windowWidth - 2 * SEARCH_CHROME_HORIZONTAL_PADDING) * FOLDER_CARD_WIDTH_RATIO;
   const listRef = useRef<FlashListRef<Recording>>(null);
   const pristineScrollRef = useRef<ScrollView>(null);
-  const filterReveal = useSharedValue(0);
 
   const {
     query,
@@ -67,34 +63,20 @@ export function SearchScreen() {
     clearRecentQueries,
   } = useSearchScreen();
 
-  const collapseFilters = useCallback(() => {
-    filterReveal.value = withTiming(0, { duration: 180 });
+  const { filterReveal, collapseFilters, handleScroll } = useSearchFilterReveal({
+    isActiveSearch,
+    hasResults,
+    resetToken: deferredQuery,
+  });
+
+  useEffect(() => {
+    collapseFilters();
     if (isActiveSearch) {
       listRef.current?.scrollToOffset({ offset: 0, animated: false });
     } else {
       pristineScrollRef.current?.scrollTo({ y: 0, animated: false });
     }
-  }, [filterReveal, isActiveSearch]);
-
-  useEffect(() => {
-    collapseFilters();
-  }, [isActiveSearch, collapseFilters]);
-
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const y = event.nativeEvent.contentOffset.y;
-      if (y > REVEAL_THRESHOLD) {
-        if (filterReveal.value < 1) {
-          filterReveal.value = withTiming(1, { duration: 200 });
-        }
-      } else if (y < HIDE_THRESHOLD) {
-        if (filterReveal.value > 0) {
-          filterReveal.value = withTiming(0, { duration: 180 });
-        }
-      }
-    },
-    [filterReveal]
-  );
+  }, [deferredQuery, isActiveSearch, collapseFilters]);
 
   const folderHeader = useMemo(() => {
     if (!isActiveSearch || results.folders.length === 0) return null;
@@ -202,8 +184,6 @@ export function SearchScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="none"
           showsVerticalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onScroll={handleScroll}
         >
           {pristineContent}
         </ScrollView>
