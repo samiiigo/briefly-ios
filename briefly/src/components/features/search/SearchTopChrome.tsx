@@ -43,7 +43,7 @@ export function SearchTopChrome({
             onBlur={onBlur}
           />
         </View>
-        <View style={styles.actions}>
+        <View style={[styles.actions, screenGutterStyles.headerActions]}>
           <CircularIconButton
             icon="close"
             accessibilityLabel="Close search"

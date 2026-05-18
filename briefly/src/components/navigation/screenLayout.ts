@@ -1,8 +1,13 @@
 import { StyleSheet } from 'react-native';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
-import { SCREEN_HORIZONTAL_GUTTER } from './screenGutter';
+import { SCREEN_HORIZONTAL_GUTTER, screenGutterStyles } from './screenGutter';
 
-export { SCREEN_HORIZONTAL_GUTTER, screenGutterStyles } from './screenGutter';
+export {
+  BOTTOM_CHROME_HORIZONTAL_INSET,
+  CHROME_LABEL_OFFSET,
+  SCREEN_HORIZONTAL_GUTTER,
+  screenGutterStyles,
+} from './screenGutter';
 
 /** Bottom inset so list content clears the floating tab bar. */
 export const SCREEN_LIST_BOTTOM_PADDING = 140;
@@ -25,6 +30,7 @@ export const screenLayoutStyles = StyleSheet.create({
     paddingBottom: SCREEN_LIST_BOTTOM_PADDING,
   },
   sectionLabel: withAppFont({
+    ...screenGutterStyles.sectionLabel,
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 16,
@@ -75,6 +81,7 @@ export const screenLayoutStyles = StyleSheet.create({
     marginRight: 4,
   }),
   listSectionHeader: withAppFont({
+    ...screenGutterStyles.sectionLabel,
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 16,

@@ -33,6 +33,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               bottom: 0,
               height: androidTabBarHeight,
               paddingBottom: insetsBottom,
+              paddingHorizontal: horizontalInset,
               backgroundColor: Colors.card,
               borderTopWidth: StyleSheet.hairlineWidth,
               borderTopColor: 'rgba(255,255,255,0.05)',

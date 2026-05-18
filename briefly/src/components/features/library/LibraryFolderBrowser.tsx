@@ -21,6 +21,7 @@ import { useUserFolderStore } from '@/context/useUserFolderStore';
 import { useFolderListLayoutStore } from '@/context/useFolderListLayoutStore';
 import { LibraryHeader } from './LibraryHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
+import { screenGutterStyles } from '@/components/navigation/screenGutter';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { computeLibraryFolderCounts } from '@/utils/folders/folderCounts';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
@@ -652,11 +653,14 @@ export function LibraryFolderBrowser({
   const renderSectionHeaderContent = useCallback(
     (section: Section) => (
       <View style={[styles.sectionHeaderRow, styles.sectionHeaderRowList]}>
-        <Text style={styles.sectionLabel}>{section.title}</Text>
+        <Text style={[styles.sectionLabel, screenGutterStyles.sectionLabel]}>
+          {section.title}
+        </Text>
         {section.showSeeAll && section.seeAllFilter ? (
           <TouchableOpacity
             onPress={() => openSeeAll(section.seeAllFilter!)}
             hitSlop={12}
+            style={screenGutterStyles.sectionTrailing}
             accessibilityRole="button"
             accessibilityLabel="See all folders"
             accessibilityHint={

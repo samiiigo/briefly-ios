@@ -38,11 +38,14 @@ export function RecordingDetailHeader({
             onPress={onBack}
             style={headerStyles.backButton}
           />
-          <Text style={headerStyles.folderLabel} numberOfLines={1}>
+          <Text
+            style={[headerStyles.folderLabel, screenGutterStyles.headerTitle]}
+            numberOfLines={1}
+          >
             {folderLabel}
           </Text>
         </View>
-        <View style={headerStyles.actions}>
+        <View style={[headerStyles.actions, screenGutterStyles.headerActions]}>
           <CircularIconButton
             icon={shareDisabled ? 'hourglass-outline' : 'share-outline'}
             accessibilityLabel="Share"

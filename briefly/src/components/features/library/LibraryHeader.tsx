@@ -37,11 +37,11 @@ export function LibraryHeader({
               style={styles.backButton}
             />
           ) : null}
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, screenGutterStyles.headerTitle]} numberOfLines={1}>
             {title}
           </Text>
         </View>
-        <View style={styles.actions}>
+        <View style={[styles.actions, screenGutterStyles.headerActions]}>
           <CircularIconButton
             icon="add"
             accessibilityLabel="New folder"

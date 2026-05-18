@@ -51,13 +51,19 @@ export function StackScreenHeader({
               />
             ) : null)}
           <Text
-            style={[styles.title, shouldCenterTitle && styles.titleCentered]}
+            style={[
+              styles.title,
+              !shouldCenterTitle && screenGutterStyles.headerTitle,
+              shouldCenterTitle && styles.titleCentered,
+            ]}
             numberOfLines={1}
           >
             {title}
           </Text>
         </View>
-        {hasTrailing ? <View style={styles.trailing}>{trailing}</View> : null}
+        {hasTrailing ? (
+          <View style={[styles.trailing, screenGutterStyles.headerActions]}>{trailing}</View>
+        ) : null}
       </View>
     </TopChromeOverlay>
   );

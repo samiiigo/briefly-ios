@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { screenGutterStyles } from '@/components/navigation/screenGutter';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
 /** Matches {@link SearchField} leading icon + trailing gap for row alignment. */
@@ -25,14 +26,14 @@ export function RecentSearchCard({ query, onPress, onRemove }: Props) {
         <View style={styles.leadingSlot}>
           <Ionicons name="time-outline" size={LEADING_ICON_SIZE} color={Colors.subtext} />
         </View>
-        <Text style={styles.label} numberOfLines={1}>
+        <Text style={[styles.label, screenGutterStyles.sectionLabel]} numberOfLines={1}>
           {query}
         </Text>
       </Pressable>
       <Pressable
         onPress={onRemove}
         hitSlop={10}
-        style={styles.removeButton}
+        style={[styles.removeButton, screenGutterStyles.sectionTrailing]}
         accessibilityRole="button"
         accessibilityLabel={`Remove ${query} from recent searches`}
       >

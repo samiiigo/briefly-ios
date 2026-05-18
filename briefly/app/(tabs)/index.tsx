@@ -20,6 +20,7 @@ import {
   formatRecentsGroupLabel,
 } from '@/utils';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
+import { screenGutterStyles } from '@/components/navigation/screenGutter';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
 const LIST_BOTTOM_PADDING = 140;
@@ -171,6 +172,7 @@ const styles = StyleSheet.create({
     paddingBottom: LIST_BOTTOM_PADDING,
   },
   sectionHeader: withAppFont({
+    ...screenGutterStyles.sectionLabel,
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 16,

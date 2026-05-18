@@ -18,8 +18,8 @@ export function RecentsHeader() {
   return (
     <TopChromeOverlay>
       <View style={styles.header}>
-        <Text style={styles.title}>Briefly</Text>
-        <View style={styles.actions}>
+        <Text style={[styles.title, screenGutterStyles.headerTitle]}>Briefly</Text>
+        <View style={[styles.actions, screenGutterStyles.headerActions]}>
           <CircularIconButton
             icon="settings-outline"
             accessibilityLabel="Settings"

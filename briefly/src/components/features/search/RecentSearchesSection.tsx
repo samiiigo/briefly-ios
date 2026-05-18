@@ -2,10 +2,8 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { RECORDING_LIST_HEADER_GAP } from '@/utils/list/flattenRecordingSections';
 import { RecentSearchCard } from './RecentSearchCard';
+import { screenGutterStyles } from '@/components/navigation/screenGutter';
 import { Colors, Spacing, withAppFont } from '@/theme';
-
-/** Extra inset for section titles and trailing actions. */
-const CHROME_LABEL_OFFSET = Spacing.xs;
 
 interface Props {
   queries: string[];
@@ -25,11 +23,13 @@ export function RecentSearchesSection({
   return (
     <View style={styles.section}>
       <View style={styles.headerRow}>
-        <Text style={styles.sectionHeader}>Recent Searches</Text>
+        <Text style={[styles.sectionHeader, screenGutterStyles.sectionLabel]}>
+          Recent Searches
+        </Text>
         <Pressable
           onPress={onClearAll}
           hitSlop={8}
-          style={styles.clearAllButton}
+          style={screenGutterStyles.sectionTrailing}
           accessibilityRole="button"
         >
           <Text style={styles.clearAll}>Clear All</Text>

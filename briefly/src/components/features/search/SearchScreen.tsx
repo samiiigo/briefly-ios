@@ -17,6 +17,7 @@ import {
   SCREEN_LIST_BOTTOM_PADDING,
   screenLayoutStyles,
 } from '@/components/navigation/screenLayout';
+import { screenGutterStyles } from '@/components/navigation/screenGutter';
 import { Recording } from '@/types';
 import { RECORDING_LIST_ITEM_GAP } from '@/utils/list/flattenRecordingSections';
 import { SearchTopChrome } from './SearchTopChrome';
@@ -41,12 +42,12 @@ const LIST_KEYBOARD_DISMISS_MODE = Platform.select({
 });
 
 const sectionHeaderStyle = withAppFont({
+  ...screenGutterStyles.sectionLabel,
   fontSize: 14,
   fontWeight: '500',
   lineHeight: 16,
   color: Colors.subtext,
   marginBottom: 0,
-  marginLeft: Spacing.xs,
 });
 
 export function SearchScreen() {
