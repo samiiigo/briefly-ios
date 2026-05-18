@@ -1,6 +1,7 @@
 export * from './SearchScreen';
 export * from './SearchBar';
 export * from './SearchFilterPills';
+export * from './ScrollRevealSearchFilters';
 export * from './RecentSearchesSection';
 export * from './SearchFolderCard';
 export * from './SearchResultItem';

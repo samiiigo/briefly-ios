@@ -6,10 +6,16 @@ import { Colors, Spacing, withAppFont } from '@/theme';
 interface Props {
   queries: string[];
   onSelect: (query: string) => void;
+  onRemove: (query: string) => void;
   onClearAll: () => void;
 }
 
-export function RecentSearchesSection({ queries, onSelect, onClearAll }: Props) {
+export function RecentSearchesSection({
+  queries,
+  onSelect,
+  onRemove,
+  onClearAll,
+}: Props) {
   if (queries.length === 0) return null;
 
   return (
@@ -21,19 +27,28 @@ export function RecentSearchesSection({ queries, onSelect, onClearAll }: Props) 
         </Pressable>
       </View>
       {queries.map((query) => (
-        <Pressable
-          key={query}
-          style={styles.row}
-          onPress={() => onSelect(query)}
-          accessibilityRole="button"
-          accessibilityLabel={`Search for ${query}`}
-        >
-          <Ionicons name="time-outline" size={18} color={Colors.subtext} />
-          <Text style={styles.term} numberOfLines={1}>
-            {query}
-          </Text>
-          <Ionicons name="arrow-up-outline" size={16} color={Colors.textTertiary} />
-        </Pressable>
+        <View key={query} style={styles.row}>
+          <Pressable
+            style={styles.rowMain}
+            onPress={() => onSelect(query)}
+            accessibilityRole="button"
+            accessibilityLabel={`Search for ${query}`}
+          >
+            <Ionicons name="time-outline" size={18} color={Colors.subtext} />
+            <Text style={styles.term} numberOfLines={1}>
+              {query}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onRemove(query)}
+            hitSlop={10}
+            style={styles.removeButton}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${query} from recent searches`}
+          >
+            <Ionicons name="close" size={18} color={Colors.subtext} />
+          </Pressable>
+        </View>
       ))}
     </View>
   );
@@ -64,13 +79,24 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: 12,
+    paddingVertical: 4,
     paddingHorizontal: Spacing.sm,
+  },
+  rowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: 8,
+    minWidth: 0,
   },
   term: withAppFont({
     flex: 1,
     fontSize: 17,
     color: Colors.textPrimary,
   }),
+  removeButton: {
+    padding: 8,
+    marginLeft: Spacing.xs,
+  },
 });

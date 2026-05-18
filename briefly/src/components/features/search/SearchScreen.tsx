@@ -1,4 +1,4 @@
-import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,13 @@ import {
   useWindowDimensions,
   KeyboardAvoidingView,
   Platform,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
-import { FlashList, type ListRenderItem } from '@shopify/flash-list';
+import { FlashList, type FlashListRef, type ListRenderItem } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSharedValue, withTiming } from 'react-native-reanimated';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useUserFolderStore } from '@/context/useUserFolderStore';
 import { useSearchStore } from '@/context/useSearchStore';
@@ -18,14 +21,17 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
   DEFAULT_SEARCH_FILTER,
   SEARCH_DEBOUNCE_MS,
-  SEARCH_RECENT_SAVE_MS,
   SearchFilterId,
 } from '@/constants/search';
 import { buildSearchCatalog, runIndexedSearch } from '@/utils/search/searchIndex';
 import { normalizeSearchQuery } from '@/utils/search/searchEngine';
 import { Recording } from '@/types';
 import { SearchBar } from './SearchBar';
-import { SearchFilterPills } from './SearchFilterPills';
+import {
+  ScrollRevealSearchFilters,
+  HIDE_THRESHOLD,
+  REVEAL_THRESHOLD,
+} from './ScrollRevealSearchFilters';
 import { RecentSearchesSection } from './RecentSearchesSection';
 import { SearchFolderCard } from './SearchFolderCard';
 import { SearchResultItem } from './SearchResultItem';
@@ -41,6 +47,7 @@ export function SearchScreen() {
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const folderCardWidth = (windowWidth - 2 * Spacing.md) * FOLDER_CARD_WIDTH_RATIO;
+  const listRef = useRef<FlashListRef<Recording>>(null);
 
   const recordings = useRecordingStore((s) => s.recordings);
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);
@@ -48,14 +55,31 @@ export function SearchScreen() {
   const loadFolders = useUserFolderStore((s) => s.loadFolders);
 
   const recentQueries = useSearchStore((s) => s.recentQueries);
-  const addRecentQuery = useSearchStore((s) => s.addRecentQuery);
+  const removeRecentQuery = useSearchStore((s) => s.removeRecentQuery);
   const clearRecentQueries = useSearchStore((s) => s.clearRecentQueries);
 
   const [query, setQuery] = useState('');
+  const queryRef = useRef(query);
+  queryRef.current = query;
+
   const [filterId, setFilterId] = useState<SearchFilterId>(DEFAULT_SEARCH_FILTER);
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
   const deferredQuery = useDeferredValue(debouncedQuery);
-  const queryForRecentSave = useDebouncedValue(debouncedQuery.trim(), SEARCH_RECENT_SAVE_MS);
+  const filterReveal = useSharedValue(0);
+
+  /** Only for keyboard Search / Enter — never wired to onChangeText. */
+  const handleSearchSubmit = useCallback(() => {
+    useSearchStore.getState().commitRecentQuery(queryRef.current);
+  }, []);
+
+  /** Only when the user opens a folder or recording from results. */
+  const persistQueryOnResultTap = useCallback(() => {
+    useSearchStore.getState().commitRecentQuery(queryRef.current);
+  }, []);
+
+  const handleQueryChange = useCallback((text: string) => {
+    setQuery(text);
+  }, []);
 
   useEffect(() => {
     void loadRecordings();
@@ -76,11 +100,30 @@ export function SearchScreen() {
   const hasResults = results.folders.length > 0 || results.recordings.length > 0;
   const isStaleResults = debouncedQuery !== deferredQuery;
 
+  const collapseFilters = useCallback(() => {
+    filterReveal.value = withTiming(0, { duration: 180 });
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [filterReveal]);
+
   useEffect(() => {
-    if (queryForRecentSave) {
-      addRecentQuery(queryForRecentSave);
-    }
-  }, [queryForRecentSave, addRecentQuery]);
+    collapseFilters();
+  }, [isActiveSearch, collapseFilters]);
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const y = event.nativeEvent.contentOffset.y;
+      if (y > REVEAL_THRESHOLD) {
+        if (filterReveal.value < 1) {
+          filterReveal.value = withTiming(1, { duration: 200 });
+        }
+      } else if (y < HIDE_THRESHOLD) {
+        if (filterReveal.value > 0) {
+          filterReveal.value = withTiming(0, { duration: 180 });
+        }
+      }
+    },
+    [filterReveal]
+  );
 
   const handleCancel = useCallback(() => {
     router.back();
@@ -88,29 +131,26 @@ export function SearchScreen() {
 
   const openFolder = useCallback(
     (folderId: string, folderName: string, folderType: 'built-in' | 'user') => {
-      const trimmed = debouncedQuery.trim();
-      if (trimmed) addRecentQuery(trimmed);
+      persistQueryOnResultTap();
       router.push({
         pathname: `/folder/${folderId}` as any,
         params: { folderName, folderType },
       });
     },
-    [router, debouncedQuery, addRecentQuery]
+    [router, persistQueryOnResultTap]
   );
 
   const openRecording = useCallback(
     (id: string) => {
-      const trimmed = debouncedQuery.trim();
-      if (trimmed) addRecentQuery(trimmed);
+      persistQueryOnResultTap();
       router.push(`/recording/${id}`);
     },
-    [router, debouncedQuery, addRecentQuery]
+    [router, persistQueryOnResultTap]
   );
 
   const handleRecentSelect = useCallback((term: string) => {
     setQuery(term);
-    addRecentQuery(term);
-  }, [addRecentQuery]);
+  }, []);
 
   const folderHeader = useMemo(() => {
     if (!isActiveSearch || results.folders.length === 0) return null;
@@ -166,6 +206,7 @@ export function SearchScreen() {
         <RecentSearchesSection
           queries={recentQueries}
           onSelect={handleRecentSelect}
+          onRemove={removeRecentQuery}
           onClearAll={clearRecentQueries}
         />
       );
@@ -181,6 +222,7 @@ export function SearchScreen() {
     isStaleResults,
     recentQueries,
     handleRecentSelect,
+    removeRecentQuery,
     clearRecentQueries,
     deferredQuery,
   ]);
@@ -191,11 +233,21 @@ export function SearchScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={[styles.chrome, { paddingTop: insets.top }]}>
-        <SearchBar value={query} onChangeText={setQuery} onCancel={handleCancel} />
-        <SearchFilterPills selected={filterId} onSelect={setFilterId} />
+        <SearchBar
+          value={query}
+          onChangeText={handleQueryChange}
+          onCancel={handleCancel}
+          onSubmit={handleSearchSubmit}
+        />
+        <ScrollRevealSearchFilters
+          progress={filterReveal}
+          selected={filterId}
+          onSelect={setFilterId}
+        />
       </View>
 
       <FlashList
+        ref={listRef}
         style={styles.list}
         data={isActiveSearch ? results.recordings : []}
         renderItem={renderRecording}
@@ -211,6 +263,8 @@ export function SearchScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         drawDistance={320}
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
       />
     </KeyboardAvoidingView>
   );

@@ -6,12 +6,21 @@ import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
 
 interface Props {
   value: string;
+  /** Updates draft query only — must not persist to recent searches. */
   onChangeText: (text: string) => void;
   onCancel: () => void;
+  /** Keyboard Search / Enter — sole text-input trigger for saving recents. */
+  onSubmit?: () => void;
   autoFocus?: boolean;
 }
 
-export function SearchBar({ value, onChangeText, onCancel, autoFocus = true }: Props) {
+export function SearchBar({
+  value,
+  onChangeText,
+  onCancel,
+  onSubmit,
+  autoFocus = true,
+}: Props) {
   const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -32,6 +41,8 @@ export function SearchBar({ value, onChangeText, onCancel, autoFocus = true }: P
           placeholder={SEARCH_PLACEHOLDER}
           placeholderTextColor={Colors.textSecondary}
           returnKeyType="search"
+          onSubmitEditing={() => onSubmit?.()}
+          blurOnSubmit
           autoCorrect={false}
           autoCapitalize="none"
           clearButtonMode="while-editing"

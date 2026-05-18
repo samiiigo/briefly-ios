@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { Recording, UserFolder } from '@/types';
-import { runSearch } from './searchEngine';
+import { runSearch } from './searchIndex';
 
 function mkRecording(id: string, overrides: Partial<Recording> = {}): Recording {
   return {

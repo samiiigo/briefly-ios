@@ -103,3 +103,13 @@ export function runIndexedSearch(
     recordings: matchingRecordings,
   };
 }
+
+/** Convenience wrapper for tests; production should cache {@link SearchCatalog}. */
+export function runSearch(
+  query: string,
+  filterId: SearchFilterId,
+  recordings: Recording[],
+  userFolders: UserFolder[] = []
+): SearchResults {
+  return runIndexedSearch(query, filterId, buildSearchCatalog(userFolders, recordings));
+}

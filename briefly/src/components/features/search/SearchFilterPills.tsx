@@ -6,14 +6,16 @@ import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
 interface Props {
   selected: SearchFilterId;
   onSelect: (id: SearchFilterId) => void;
+  /** Tighter bottom padding when used inside scroll-reveal chrome. */
+  compact?: boolean;
 }
 
-export function SearchFilterPills({ selected, onSelect }: Props) {
+export function SearchFilterPills({ selected, onSelect, compact = false }: Props) {
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, compact && styles.contentCompact]}
       style={styles.scroll}
     >
       {SEARCH_FILTER_PILLS.map((pill) => {
@@ -45,6 +47,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     gap: Spacing.sm,
     paddingBottom: Spacing.md,
+  },
+  contentCompact: {
+    paddingBottom: Spacing.sm,
   },
   pill: {
     paddingHorizontal: 16,

@@ -2,10 +2,8 @@ import {
   BUILT_IN_LIBRARY_FOLDERS,
   type BuiltInFolderDef,
 } from '@/constants/builtInFolders';
-import { SearchFilterId } from '@/constants/search';
 import { Recording, UserFolder } from '@/types';
 import { computeLibraryFolderCounts } from '@/utils/folders/folderCounts';
-import { buildSearchCatalog, runIndexedSearch } from './searchIndex';
 
 export interface SearchFolderResult {
   id: string;
@@ -69,14 +67,4 @@ export function buildSearchableFolders(
     count: counts.byUserFolderId.get(f.id) ?? 0,
   }));
   return [...builtIn, ...user];
-}
-
-/** Convenience wrapper for tests; production should cache {@link SearchCatalog}. */
-export function runSearch(
-  query: string,
-  filterId: SearchFilterId,
-  recordings: Recording[],
-  userFolders: UserFolder[] = []
-): SearchResults {
-  return runIndexedSearch(query, filterId, buildSearchCatalog(userFolders, recordings));
 }
