@@ -4,9 +4,9 @@ import { Colors, BorderRadius } from '@/theme';
 
 type Size = 'md' | 'lg';
 
-const SIZE_CONFIG: Record<Size, { dim: number; fontSize: number; lineHeight: number }> = {
-  lg: { dim: 56, fontSize: 24, lineHeight: 32 },
-  md: { dim: 48, fontSize: 22, lineHeight: 28 },
+const SIZE_CONFIG: Record<Size, { dim: number; fontSize: number }> = {
+  lg: { dim: 56, fontSize: 24 },
+  md: { dim: 48, fontSize: 22 },
 };
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
 
 /** Circular emoji badge (Figma: Background+Border, 56×56). */
 export function RecordingEmojiCircle({ emoji, size = 'lg', style }: Props) {
-  const { dim, fontSize, lineHeight } = SIZE_CONFIG[size];
+  const { dim, fontSize } = SIZE_CONFIG[size];
 
   return (
     <View
@@ -27,7 +27,19 @@ export function RecordingEmojiCircle({ emoji, size = 'lg', style }: Props) {
         style,
       ]}
     >
-      <Text style={[styles.emoji, { fontSize, lineHeight }]}>{emoji}</Text>
+      <Text
+        style={[
+          styles.emoji,
+          {
+            width: dim,
+            fontSize,
+            lineHeight: dim,
+          },
+        ]}
+        allowFontScaling={true}
+      >
+        {emoji}
+      </Text>
     </View>
   );
 }
@@ -45,6 +57,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     ...Platform.select({
       ios: { fontFamily: 'Apple Color Emoji' },
+      android: {
+        includeFontPadding: false,
+        textAlignVertical: 'center',
+      },
       default: {},
     }),
   },
