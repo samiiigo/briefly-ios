@@ -46,7 +46,6 @@ const sectionHeaderStyle = withAppFont({
   lineHeight: 16,
   color: Colors.subtext,
   marginBottom: 0,
-  paddingHorizontal: Spacing.sm,
 });
 
 export function SearchScreen() {
@@ -120,7 +119,6 @@ export function SearchScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.folderRow}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           onScrollBeginDrag={dismissKeyboard}
@@ -256,9 +254,6 @@ const styles = StyleSheet.create({
   folderBlock: {
     marginBottom: Spacing.sm,
     gap: 7,
-  },
-  folderRow: {
-    paddingHorizontal: Spacing.sm,
   },
   itemsSectionHeader: {
     marginTop: Spacing.sm,

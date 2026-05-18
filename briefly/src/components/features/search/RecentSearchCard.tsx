@@ -41,7 +41,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
     minHeight: 44,
   },
   labelPressable: {

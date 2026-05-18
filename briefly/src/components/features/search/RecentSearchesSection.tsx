@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { RECORDING_LIST_HEADER_GAP } from '@/utils/list/flattenRecordingSections';
 import { RecentSearchCard } from './RecentSearchCard';
-import { Colors, Spacing, withAppFont } from '@/theme';
+import { Colors, withAppFont } from '@/theme';
 
 interface Props {
   queries: string[];
@@ -49,7 +49,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.sm,
   },
   sectionHeader: withAppFont({
     fontSize: 14,
