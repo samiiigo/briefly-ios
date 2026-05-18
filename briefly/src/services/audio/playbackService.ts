@@ -10,7 +10,7 @@ import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
 import { logger } from '@/utils/logging/logger';
 import { PlaybackControls, PlaybackStatusUpdate } from './contracts';
-import { configurePlaybackAudioSession } from './playbackSession';
+import { configurePlaybackAudioSession, releasePlaybackAudioSession } from './playbackSession';
 
 class PlaybackServiceClass implements PlaybackControls {
   private player: AudioPlayer | null = null;
@@ -114,6 +114,7 @@ class PlaybackServiceClass implements PlaybackControls {
       this.player = null;
       logger.info('AUDIO', 'Playback stopped');
     }
+    await releasePlaybackAudioSession();
   }
 
   async setSpeed(rate: number): Promise<void> {

@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import { useEffect } from 'react';
 import { View, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
 import * as SystemUI from 'expo-system-ui';
 import * as NavigationBar from 'expo-navigation-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -11,14 +12,24 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { installRealtimeTerminalLogs, logger } from '@/utils/logging/logger';
 import { checkEnvironment } from '@/utils/environment/environmentCheck';
-import { Colors, installAppFonts } from '@/theme';
-
-installAppFonts();
+import { Colors } from '@/theme';
+import { iconFonts } from '@/theme/iconFonts';
 
 export default function RootLayout() {
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);
+  const [iconFontsLoaded, iconFontError] = useFonts(iconFonts);
 
   useEffect(() => {
+    if (iconFontError) {
+      logger.error('SYSTEM', 'Failed to load Ionicons font', {
+        message: iconFontError.message,
+      });
+    }
+  }, [iconFontError]);
+
+  useEffect(() => {
+    if (!iconFontsLoaded) return;
+
     void SystemUI.setBackgroundColorAsync(Colors.background);
     if (Platform.OS === 'android') {
       void NavigationBar.setBackgroundColorAsync(Colors.background);
@@ -48,7 +59,11 @@ export default function RootLayout() {
       const unsub = useSettingsStore.persist.onFinishHydration(runEnvCheck);
       return unsub;
     }
-  }, [loadRecordings]);
+  }, [iconFontsLoaded, loadRecordings]);
+
+  if (!iconFontsLoaded) {
+    return <View style={rootStyles.root} />;
+  }
 
   return (
     <GestureHandlerRootView style={rootStyles.root}>

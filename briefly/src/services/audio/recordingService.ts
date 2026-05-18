@@ -6,7 +6,7 @@
  * intrinsically coupled to the recording lifecycle.
  */
 
-import { AudioModule, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
+import { AudioModule, requestRecordingPermissionsAsync } from 'expo-audio';
 import type { AudioRecorder, RecordingOptions } from 'expo-audio';
 import { getInfoAsync } from 'expo-file-system/legacy';
 import { AudioRecordingResult } from './types';
@@ -14,7 +14,13 @@ import { assemblyAIRecordingOptions } from './recordingOptions';
 import { normalizeDbMetering } from './audioMetering';
 import { logger } from '@/utils/logging/logger';
 import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
-import { configureRecordingStoppedAudioSession } from './playbackSession';
+import { PlaybackService } from './playbackService';
+import {
+  configureRecordingAudioSession,
+  configureRecordingStoppedAudioSession,
+  prepareRecorderAsync,
+  reapplyRecordingAudioMode,
+} from './playbackSession';
 
 class RecordingServiceClass {
   private recorder: AudioRecorder | null = null;
@@ -41,16 +47,14 @@ class RecordingServiceClass {
 
     logger.info('AUDIO', 'Starting local recording');
     await ensureMicrophonePermission();
-    await setAudioModeAsync({
-      allowsRecording: true,
-      playsInSilentMode: true,
-    });
+    await PlaybackService.stop();
+    await configureRecordingAudioSession();
 
     const AudioRecorderCtor = (AudioModule as any)['AudioRecorder'] as new (
       options: Partial<RecordingOptions>
     ) => AudioRecorder;
     const recorder = new AudioRecorderCtor(assemblyAIRecordingOptions);
-    await recorder.prepareToRecordAsync();
+    await prepareRecorderAsync(recorder);
     recorder.record();
 
     this.recorder = recorder;
@@ -69,10 +73,7 @@ class RecordingServiceClass {
 
   async resume(): Promise<void> {
     if (!this.recorder) return;
-    await setAudioModeAsync({
-      allowsRecording: true,
-      playsInSilentMode: true,
-    });
+    await reapplyRecordingAudioMode();
     this.recorder.record();
     this._recordingPaused = false;
     logger.info('AUDIO', 'Local recording resumed');

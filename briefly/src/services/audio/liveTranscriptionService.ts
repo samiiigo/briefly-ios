@@ -28,6 +28,8 @@ import { AssemblyAIWebSocketService } from './assemblyAIWebSocketService';
 import { NativeAudioCapture } from './nativeAudioCapture';
 import { ExpoAudioStreamingCapture } from './expoAudioStreamingCapture';
 import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
+import { PlaybackService } from './playbackService';
+import { configureRecordingAudioSession } from './playbackSession';
 
 export interface LiveTranscriptionCallbacks {
   onPartial: (text: string) => void;
@@ -60,6 +62,8 @@ class LiveTranscriptionServiceClass {
   ): Promise<void> {
     this.stopActive();
     await ensureMicrophonePermission();
+    await PlaybackService.stop();
+    await configureRecordingAudioSession();
 
     if (mode === 'on-device') {
       // On-device path stays in Swift (iOS Speech framework).

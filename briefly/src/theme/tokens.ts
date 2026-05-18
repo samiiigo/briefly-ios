@@ -7,7 +7,7 @@
  */
 
 import { Platform, type ViewStyle, type TextStyle } from 'react-native';
-import { Colors, Spacing, BorderRadius } from './index';
+import { Colors, Spacing, BorderRadius } from './constants';
 
 // ─── Font Stacks ────────────────────────────────────────────────────────
 export const FontStack = Platform.select({

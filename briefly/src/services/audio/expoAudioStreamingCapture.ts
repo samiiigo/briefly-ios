@@ -10,16 +10,14 @@
  * file polling (~250–500 ms) is acceptable for speech transcription.
  */
 
-import {
-  AudioModule,
-  setAudioModeAsync,
-  requestRecordingPermissionsAsync,
-} from 'expo-audio';
+import { AudioModule, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
 import type { AudioRecorder, RecordingOptions } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import { assemblyAIRecordingOptions, WAV_HEADER_BYTES } from './recordingOptions';
 import { normalizeDbMetering, pcmBufferToLevel, smoothMeteringLevel } from './audioMetering';
+import { PlaybackService } from './playbackService';
+import { prepareRecorderAsync } from './playbackSession';
 
 const POLL_INTERVAL_MS = 250;
 
@@ -56,6 +54,7 @@ export class ExpoAudioStreamingCapture {
       throw new Error('Microphone permission denied.');
     }
 
+    await PlaybackService.stop();
     await setAudioModeAsync({
       allowsRecording: true,
       playsInSilentMode: true,
@@ -73,7 +72,7 @@ export class ExpoAudioStreamingCapture {
       options: Partial<RecordingOptions>
     ) => AudioRecorder;
     const recorder = new AudioRecorderCtor(assemblyAIRecordingOptions);
-    await recorder.prepareToRecordAsync();
+    await prepareRecorderAsync(recorder);
     recorder.record();
     this.recorder = recorder;
 
