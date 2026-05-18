@@ -22,19 +22,13 @@ import {
   finalizeActiveRecorderStop,
   reapplyActiveRecordingSession,
 } from './recordingSession';
+import { base64ToArrayBuffer } from '@/utils/binary/base64ToArrayBuffer';
 import { PlaybackService } from './playbackService';
 import { prepareRecorderAsync } from './playbackSession';
 
 const POLL_INTERVAL_MS = 250;
-
-function base64ToArrayBuffer(b64: string): ArrayBuffer {
-  const binaryString = atob(b64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
+/** Caps per-tick decode/send work when the WAV grows faster than the poll interval. */
+const MAX_READ_BYTES_PER_POLL = 16_384;
 
 export class ExpoAudioStreamingCapture {
   /** Always available — expo-audio ships with the Expo managed runtime. */
@@ -164,13 +158,15 @@ export class ExpoAudioStreamingCapture {
       const totalBytes: number = (info as { size?: number }).size ?? 0;
       // Skip the 44-byte WAV header on the very first read.
       const readFrom = this.sentBytes === 0 ? WAV_HEADER_BYTES : this.sentBytes;
-      const newByteCount = totalBytes - readFrom;
-      if (newByteCount <= 0) return;
+      const pendingBytes = totalBytes - readFrom;
+      if (pendingBytes <= 0) return;
+
+      const readLength = Math.min(pendingBytes, MAX_READ_BYTES_PER_POLL);
 
       const b64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
         position: readFrom,
-        length: newByteCount,
+        length: readLength,
       });
 
       const buffer = base64ToArrayBuffer(b64);
@@ -197,7 +193,7 @@ export class ExpoAudioStreamingCapture {
       }
 
       this.onChunk?.(buffer);
-      this.sentBytes = totalBytes;
+      this.sentBytes = readFrom + readLength;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.onCaptureError?.(`Audio poll failed: ${message}`);

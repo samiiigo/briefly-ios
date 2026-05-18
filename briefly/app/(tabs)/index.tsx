@@ -1,10 +1,5 @@
 import React, { useEffect, useCallback, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SectionList,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
@@ -18,6 +13,7 @@ import {
 } from '@/components/navigation/useFloatingTabBarLayout';
 import { RecentsEntryCard } from '@/components/features/recents/RecentsEntryCard';
 import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
+import { RecordingSectionFlashList } from '@/components/features/recording/RecordingSectionFlashList';
 import { Recording } from '@/types';
 import {
   ensureUniqueTitle,
@@ -85,6 +81,24 @@ export default function HomeScreen() {
     useActiveSwipeableStore.getState().closeActive();
   }, []);
 
+  const renderRecording = useCallback(
+    (item: Recording) => (
+      <RecordingSwipeableRow
+        recording={item}
+        onPress={() => router.push(`/recording/${item.id}`)}
+        onDelete={() => deleteRecording(item.id)}
+      >
+        <RecentsEntryCard
+          recording={item}
+          onPress={() => router.push(`/recording/${item.id}`)}
+          onDelete={() => deleteRecording(item.id)}
+          onRename={(newTitle) => handleRename(item, newTitle)}
+        />
+      </RecordingSwipeableRow>
+    ),
+    [router, deleteRecording, handleRename],
+  );
+
   useFocusEffect(
     useCallback(() => {
       return () => closeOpenSwipe();
@@ -137,33 +151,13 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <SectionList
+      <RecordingSectionFlashList
         sections={sections}
-        keyExtractor={(item) => item.id}
+        renderRecording={renderRecording}
+        sectionHeaderStyle={styles.sectionHeader}
         contentContainerStyle={[styles.listContent, { paddingTop: scrollPaddingTop }]}
-        stickySectionHeadersEnabled={false}
-        showsVerticalScrollIndicator={false}
         onScrollBeginDrag={closeOpenSwipe}
         onMomentumScrollBegin={closeOpenSwipe}
-        ItemSeparatorComponent={() => <View style={styles.itemGap} />}
-        SectionSeparatorComponent={() => <View style={styles.sectionGap} />}
-        renderSectionHeader={({ section }) => (
-          <Text style={styles.sectionHeader}>{section.title}</Text>
-        )}
-        renderItem={({ item }) => (
-          <RecordingSwipeableRow
-            recording={item}
-            onPress={() => router.push(`/recording/${item.id}`)}
-            onDelete={() => deleteRecording(item.id)}
-          >
-            <RecentsEntryCard
-              recording={item}
-              onPress={() => router.push(`/recording/${item.id}`)}
-              onDelete={() => deleteRecording(item.id)}
-              onRename={(newTitle) => handleRename(item, newTitle)}
-            />
-          </RecordingSwipeableRow>
-        )}
       />
 
       <TopBlurFade />
@@ -198,12 +192,6 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     paddingHorizontal: Spacing.sm,
   }),
-  itemGap: {
-    height: 12,
-  },
-  sectionGap: {
-    height: 8,
-  },
   emptyState: {
     flex: 1,
     alignItems: 'center',

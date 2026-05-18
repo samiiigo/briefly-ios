@@ -111,8 +111,12 @@ class LiveTranscriptionServiceClass {
         (msg) => callbacks.onError?.(msg),
       );
       this.active = { kind: 'native-js', capture, ws };
-      logger.info('AUDIO', 'Live transcription started (native audio + JS WebSocket)');
+      logger.info('AUDIO', 'Live transcription started (native PCM stream + JS WebSocket)');
     } else {
+      logger.info(
+        'AUDIO',
+        'Native PCM capture unavailable; using expo-audio file polling (higher latency)',
+      );
       const capture = new ExpoAudioStreamingCapture();
       await capture.start(
         (chunk) => ws.sendPCM(chunk),

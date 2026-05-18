@@ -11,44 +11,20 @@ type GradientStops = {
   locations: readonly [number, number, ...number[]];
 };
 
-/** Mirror a vertical gradient so the bottom edge matches the top (inverted). */
-function mirrorGradient({ colors, locations }: GradientStops): GradientStops {
-  const newColors = [...colors].reverse() as unknown as [string, string, ...string[]];
-  const newLocations = [...locations].map((location) => 1 - location).reverse() as unknown as [number, number, ...number[]];
-  return {
-    colors: newColors,
-    locations: newLocations,
-  };
-}
-
-const TOP_MASK: GradientStops = {
-  colors: ['#000000', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.25)', 'transparent'],
-  locations: [0, 0.28, 0.65, 1],
+/** Canonical fade (strongest at the screen edge). Top uses the same layers, flipped vertically. */
+const FADE_MASK: GradientStops = {
+  colors: ['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.7)', '#000000'],
+  locations: [0, 0.35, 0.72, 1],
 };
 
-const TOP_TINT: GradientStops = {
-  colors: ['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.35)', 'transparent'],
-  locations: [0, 0.45, 1],
+const FADE_TINT: GradientStops = {
+  colors: ['transparent', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.65)'],
+  locations: [0, 0.55, 1],
 };
 
-const TOP_ANDROID_GRADIENT: GradientStops = {
-  colors: ['rgba(0,0,0,0.98)', 'rgba(0,0,0,0.82)', 'rgba(0,0,0,0.5)', 'transparent'],
-  locations: [0, 0.28, 0.65, 1],
-};
-
-const MASK: Record<Edge, GradientStops> = {
-  top: TOP_MASK,
-  bottom: mirrorGradient(TOP_MASK),
-};
-
-const TINT: Record<Edge, GradientStops> = {
-  top: TOP_TINT,
-  bottom: mirrorGradient(TOP_TINT),
-};
-
-const ANDROID_GRADIENT: Record<Edge, GradientStops> = {
-  top: TOP_ANDROID_GRADIENT,
-  bottom: mirrorGradient(TOP_ANDROID_GRADIENT),
+const FADE_ANDROID: GradientStops = {
+  colors: ['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.82)', 'rgba(0,0,0,0.98)'],
+  locations: [0, 0.35, 0.72, 1],
 };
 
 interface EdgeBlurFadeProps {
@@ -58,10 +34,8 @@ interface EdgeBlurFadeProps {
 }
 
 export function EdgeBlurFade({ edge, height, style }: EdgeBlurFadeProps) {
-  const mask = MASK[edge];
-  const tint = TINT[edge];
-  const android = ANDROID_GRADIENT[edge];
   const positionStyle = edge === 'bottom' ? styles.bottom : styles.top;
+  const flipForTop = edge === 'top';
 
   return (
     <View
@@ -70,14 +44,19 @@ export function EdgeBlurFade({ edge, height, style }: EdgeBlurFadeProps) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      {Platform.OS === 'ios' ? (
-        <MaskedView style={StyleSheet.absoluteFill} maskElement={<LinearGradient {...mask} style={StyleSheet.absoluteFill} />}>
-          <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
-        </MaskedView>
-      ) : (
-        <LinearGradient {...android} style={StyleSheet.absoluteFill} />
-      )}
-      <LinearGradient {...tint} style={StyleSheet.absoluteFill} pointerEvents="none" />
+      <View style={[styles.fadeLayers, flipForTop && styles.flipVertical]}>
+        {Platform.OS === 'ios' ? (
+          <MaskedView
+            style={StyleSheet.absoluteFill}
+            maskElement={<LinearGradient {...FADE_MASK} style={StyleSheet.absoluteFill} />}
+          >
+            <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
+          </MaskedView>
+        ) : (
+          <LinearGradient {...FADE_ANDROID} style={StyleSheet.absoluteFill} />
+        )}
+        <LinearGradient {...FADE_TINT} style={StyleSheet.absoluteFill} pointerEvents="none" />
+      </View>
     </View>
   );
 }
@@ -90,6 +69,12 @@ const styles = StyleSheet.create({
     zIndex: 5,
     overflow: 'hidden',
     backgroundColor: 'transparent',
+  },
+  fadeLayers: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  flipVertical: {
+    transform: [{ scaleY: -1 }],
   },
   top: {
     top: 0,

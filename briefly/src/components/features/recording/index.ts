@@ -4,5 +4,7 @@ export * from './RecordingAvatar';
 export * from './RecordButton';
 export * from './RecordingCard';
 export * from './RecordingSwipeableRow';
+export * from './RecordingSectionFlashList';
+export * from './RecordingGridFlashList';
 export * from './TranscriptSegmentView';
 export * from './WaveformVisualizer';

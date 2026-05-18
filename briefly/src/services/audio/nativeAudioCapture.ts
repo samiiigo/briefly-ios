@@ -10,18 +10,10 @@
  */
 
 import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
+import { base64ToArrayBuffer } from '@/utils/binary/base64ToArrayBuffer';
 import { pcmBufferToLevel, smoothMeteringLevel } from './audioMetering';
 
 const { BrieflyTranscriber } = NativeModules;
-
-function base64ToArrayBuffer(b64: string): ArrayBuffer {
-  const binaryString = atob(b64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
 
 export class NativeAudioCapture {
   /** True when the native module is present (dev client / native build). */
