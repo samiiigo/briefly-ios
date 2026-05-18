@@ -14,11 +14,13 @@ interface Props {
   onChangeText: (text: string) => void;
   onClear: () => void;
   onSubmit?: () => void;
+  /** Fires when the field loses focus (keyboard minimized, tap outside, etc.). */
+  onBlur?: () => void;
   autoFocus?: boolean;
 }
 
 export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchField(
-  { value, onChangeText, onClear, onSubmit, autoFocus = true },
+  { value, onChangeText, onClear, onSubmit, onBlur, autoFocus = true },
   ref
 ) {
   const inputRef = useRef<TextInput>(null);
@@ -48,6 +50,7 @@ export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchF
         placeholderTextColor={Colors.textSecondary}
         returnKeyType="search"
         onSubmitEditing={() => onSubmit?.()}
+        onBlur={() => onBlur?.()}
         blurOnSubmit
         autoCorrect={false}
         autoCapitalize="none"

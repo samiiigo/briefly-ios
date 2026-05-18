@@ -11,6 +11,7 @@ interface Props {
   onChangeText: (text: string) => void;
   onClearQuery: () => void;
   onSubmit: () => void;
+  onBlur?: () => void;
   onClose: () => void;
   fieldRef?: React.RefObject<SearchFieldHandle | null>;
 }
@@ -20,6 +21,7 @@ export function SearchTopChrome({
   onChangeText,
   onClearQuery,
   onSubmit,
+  onBlur,
   onClose,
   fieldRef,
 }: Props) {
@@ -33,6 +35,7 @@ export function SearchTopChrome({
             onChangeText={onChangeText}
             onClear={onClearQuery}
             onSubmit={onSubmit}
+            onBlur={onBlur}
           />
           <CircularIconButton
             icon="close"

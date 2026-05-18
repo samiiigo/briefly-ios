@@ -86,8 +86,9 @@ export function SearchScreen() {
   }, [deferredQuery, isActiveSearch]);
 
   const dismissKeyboard = useCallback(() => {
+    handleSearchSubmit();
     Keyboard.dismiss();
-  }, []);
+  }, [handleSearchSubmit]);
 
   const dismissKeyboardOnMoveCapture = useMemo(
     () =>
@@ -226,6 +227,7 @@ export function SearchScreen() {
         onChangeText={handleQueryChange}
         onClearQuery={handleClearQuery}
         onSubmit={handleSubmit}
+        onBlur={handleSearchSubmit}
         onClose={handleClose}
       />
     </View>
