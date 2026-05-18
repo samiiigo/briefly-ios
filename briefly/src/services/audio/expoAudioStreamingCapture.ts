@@ -10,27 +10,25 @@
  * file polling (~250–500 ms) is acceptable for speech transcription.
  */
 
-import {
-  AudioModule,
-  setAudioModeAsync,
-  requestRecordingPermissionsAsync,
-} from 'expo-audio';
+import { AudioModule, requestRecordingPermissionsAsync } from 'expo-audio';
 import type { AudioRecorder, RecordingOptions } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import { assemblyAIRecordingOptions, WAV_HEADER_BYTES } from './recordingOptions';
 import { normalizeDbMetering, pcmBufferToLevel, smoothMeteringLevel } from './audioMetering';
+import {
+  attachActiveRecordingControls,
+  configureActiveRecordingSession,
+  finalizeActiveRecorderStop,
+  reapplyActiveRecordingSession,
+} from './recordingSession';
+import { base64ToArrayBuffer } from '@/utils/binary/base64ToArrayBuffer';
+import { PlaybackService } from './playbackService';
+import { prepareRecorderAsync } from './playbackSession';
 
 const POLL_INTERVAL_MS = 250;
-
-function base64ToArrayBuffer(b64: string): ArrayBuffer {
-  const binaryString = atob(b64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
+/** Caps per-tick decode/send work when the WAV grows faster than the poll interval. */
+const MAX_READ_BYTES_PER_POLL = 16_384;
 
 export class ExpoAudioStreamingCapture {
   /** Always available — expo-audio ships with the Expo managed runtime. */
@@ -46,6 +44,7 @@ export class ExpoAudioStreamingCapture {
   private startTime = 0;
   private isPaused = false;
   private meteringLevel = 0;
+  private pollInFlight = false;
 
   async start(
     onChunk: (data: ArrayBuffer) => void,
@@ -56,11 +55,8 @@ export class ExpoAudioStreamingCapture {
       throw new Error('Microphone permission denied.');
     }
 
-    await setAudioModeAsync({
-      allowsRecording: true,
-      playsInSilentMode: true,
-      interruptionMode: 'duckOthers',
-    });
+    await PlaybackService.stop();
+    await configureActiveRecordingSession();
 
     this.onChunk = onChunk;
     this.onCaptureError = onError;
@@ -73,9 +69,10 @@ export class ExpoAudioStreamingCapture {
       options: Partial<RecordingOptions>
     ) => AudioRecorder;
     const recorder = new AudioRecorderCtor(assemblyAIRecordingOptions);
-    await recorder.prepareToRecordAsync();
+    await prepareRecorderAsync(recorder);
     recorder.record();
     this.recorder = recorder;
+    attachActiveRecordingControls(recorder);
 
     this.startPolling();
   }
@@ -102,6 +99,7 @@ export class ExpoAudioStreamingCapture {
 
   async resume(): Promise<void> {
     this.isPaused = false;
+    await reapplyActiveRecordingSession();
     this.recorder?.record();
     this.startPolling();
   }
@@ -109,11 +107,23 @@ export class ExpoAudioStreamingCapture {
   async stop(): Promise<{ uri: string; duration: number }> {
     this.stopPolling();
 
-    const uri = this.recorder?.uri ?? '';
-    const duration = (Date.now() - this.startTime) / 1000;
+    const fallbackDuration = (Date.now() - this.startTime) / 1000;
+    let uri = this.recorder?.uri ?? '';
+    let duration = fallbackDuration;
 
     if (this.recorder) {
-      await this.recorder.stop();
+      const recorder = this.recorder;
+      let alreadyStopped = false;
+      try {
+        const status = recorder.getStatus();
+        alreadyStopped = !status.isRecording && !status.canRecord;
+        if (status.url) uri = status.url;
+        if (status.durationMillis > 0) duration = status.durationMillis / 1000;
+      } catch {
+        // Proceed with native stop.
+      }
+
+      await finalizeActiveRecorderStop(recorder, alreadyStopped);
       this.recorder = null;
     }
 
@@ -136,36 +146,59 @@ export class ExpoAudioStreamingCapture {
   }
 
   private async pollFile(): Promise<void> {
+    if (this.pollInFlight || this.isPaused) return;
     const uri = this.recorder?.uri;
-    if (!uri || this.isPaused) return;
+    if (!uri) return;
 
+    this.pollInFlight = true;
     try {
       const info = await FileSystem.getInfoAsync(uri);
       if (!info.exists) return;
 
-      const totalBytes: number = (info as any).size ?? 0;
+      const totalBytes: number = (info as { size?: number }).size ?? 0;
       // Skip the 44-byte WAV header on the very first read.
       const readFrom = this.sentBytes === 0 ? WAV_HEADER_BYTES : this.sentBytes;
-      const newByteCount = totalBytes - readFrom;
-      if (newByteCount <= 0) return;
+      const pendingBytes = totalBytes - readFrom;
+      if (pendingBytes <= 0) return;
+
+      const readLength = Math.min(pendingBytes, MAX_READ_BYTES_PER_POLL);
 
       const b64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
         position: readFrom,
-        length: newByteCount,
+        length: readLength,
       });
 
       const buffer = base64ToArrayBuffer(b64);
-      if (buffer.byteLength > 0) {
+      if (buffer.byteLength === 0) return;
+
+      const recorder = this.recorder;
+      let usedNativeMetering = false;
+      if (recorder) {
+        try {
+          const status = recorder.getStatus();
+          if (status.isRecording && status.metering !== undefined) {
+            const level = normalizeDbMetering(status.metering);
+            this.meteringLevel = smoothMeteringLevel(this.meteringLevel, level);
+            usedNativeMetering = true;
+          }
+        } catch {
+          // Fall back to PCM-derived metering.
+        }
+      }
+
+      if (!usedNativeMetering) {
         const instant = pcmBufferToLevel(buffer);
         this.meteringLevel = smoothMeteringLevel(this.meteringLevel, instant);
-        this.onChunk?.(buffer);
-        this.sentBytes = totalBytes;
       }
-    } catch (err: any) {
-      this.onCaptureError?.(
-        `Audio poll failed: ${err?.message ?? String(err)}`,
-      );
+
+      this.onChunk?.(buffer);
+      this.sentBytes = readFrom + readLength;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.onCaptureError?.(`Audio poll failed: ${message}`);
+    } finally {
+      this.pollInFlight = false;
     }
   }
 }

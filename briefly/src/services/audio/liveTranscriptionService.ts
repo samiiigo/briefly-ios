@@ -28,6 +28,8 @@ import { AssemblyAIWebSocketService } from './assemblyAIWebSocketService';
 import { NativeAudioCapture } from './nativeAudioCapture';
 import { ExpoAudioStreamingCapture } from './expoAudioStreamingCapture';
 import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
+import { PlaybackService } from './playbackService';
+import { configureActiveRecordingSession } from './recordingSession';
 
 export interface LiveTranscriptionCallbacks {
   onPartial: (text: string) => void;
@@ -60,6 +62,8 @@ class LiveTranscriptionServiceClass {
   ): Promise<void> {
     this.stopActive();
     await ensureMicrophonePermission();
+    await PlaybackService.stop();
+    await configureActiveRecordingSession();
 
     if (mode === 'on-device') {
       // On-device path stays in Swift (iOS Speech framework).
@@ -107,8 +111,12 @@ class LiveTranscriptionServiceClass {
         (msg) => callbacks.onError?.(msg),
       );
       this.active = { kind: 'native-js', capture, ws };
-      logger.info('AUDIO', 'Live transcription started (native audio + JS WebSocket)');
+      logger.info('AUDIO', 'Live transcription started (native PCM stream + JS WebSocket)');
     } else {
+      logger.info(
+        'AUDIO',
+        'Native PCM capture unavailable; using expo-audio file polling (higher latency)',
+      );
       const capture = new ExpoAudioStreamingCapture();
       await capture.start(
         (chunk) => ws.sendPCM(chunk),

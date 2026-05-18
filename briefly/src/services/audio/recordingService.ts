@@ -6,7 +6,7 @@
  * intrinsically coupled to the recording lifecycle.
  */
 
-import { AudioModule, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
+import { AudioModule, requestRecordingPermissionsAsync } from 'expo-audio';
 import type { AudioRecorder, RecordingOptions } from 'expo-audio';
 import { getInfoAsync } from 'expo-file-system/legacy';
 import { AudioRecordingResult } from './types';
@@ -14,12 +14,58 @@ import { assemblyAIRecordingOptions } from './recordingOptions';
 import { normalizeDbMetering } from './audioMetering';
 import { logger } from '@/utils/logging/logger';
 import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
-import { configureRecordingStoppedAudioSession } from './playbackSession';
+import { PlaybackService } from './playbackService';
+import {
+  attachActiveRecordingControls,
+  configureActiveRecordingSession,
+  finalizeActiveRecorderStop,
+  reapplyActiveRecordingSession,
+} from './recordingSession';
+import {
+  configureRecordingStoppedAudioSession,
+  prepareRecorderAsync,
+} from './playbackSession';
 
 class RecordingServiceClass {
   private recorder: AudioRecorder | null = null;
   private _recordingPaused = false;
   private startTime: number = 0;
+
+  private async buildResultFromRecorder(
+    recorder: AudioRecorder,
+    fallbackDurationSec: number,
+  ): Promise<AudioRecordingResult> {
+    let durationMillis = Math.round(fallbackDurationSec * 1000);
+    let uri = recorder.uri || '';
+    try {
+      const status = recorder.getStatus();
+      if (status.durationMillis > 0) {
+        durationMillis = status.durationMillis;
+      }
+      if (status.url) {
+        uri = status.url;
+      }
+    } catch (error: unknown) {
+      logger.warn('AUDIO', 'Failed to read recorder status after stop', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    let fileSize = 0;
+    if (uri) {
+      try {
+        const info = await getInfoAsync(uri);
+        fileSize = info.exists ? ((info as { size?: number }).size ?? 0) : 0;
+      } catch (error: unknown) {
+        logger.warn('AUDIO', 'Failed to read local recording file metadata', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    const duration = durationMillis / 1000;
+    return { uri, duration, fileSize };
+  }
 
   async requestPermissions(): Promise<boolean> {
     const { granted } = await requestRecordingPermissionsAsync();
@@ -41,21 +87,20 @@ class RecordingServiceClass {
 
     logger.info('AUDIO', 'Starting local recording');
     await ensureMicrophonePermission();
-    await setAudioModeAsync({
-      allowsRecording: true,
-      playsInSilentMode: true,
-    });
+    await PlaybackService.stop();
+    await configureActiveRecordingSession();
 
     const AudioRecorderCtor = (AudioModule as any)['AudioRecorder'] as new (
       options: Partial<RecordingOptions>
     ) => AudioRecorder;
     const recorder = new AudioRecorderCtor(assemblyAIRecordingOptions);
-    await recorder.prepareToRecordAsync();
+    await prepareRecorderAsync(recorder);
     recorder.record();
 
     this.recorder = recorder;
     this._recordingPaused = false;
     this.startTime = Date.now();
+    attachActiveRecordingControls(recorder);
     logger.info('AUDIO', 'Local recording started');
   }
 
@@ -69,10 +114,7 @@ class RecordingServiceClass {
 
   async resume(): Promise<void> {
     if (!this.recorder) return;
-    await setAudioModeAsync({
-      allowsRecording: true,
-      playsInSilentMode: true,
-    });
+    await reapplyActiveRecordingSession();
     this.recorder.record();
     this._recordingPaused = false;
     logger.info('AUDIO', 'Local recording resumed');
@@ -85,44 +127,36 @@ class RecordingServiceClass {
     }
 
     const recorder = this.recorder;
-    let durationMillis = 0;
+    const fallbackDurationSec = (Date.now() - this.startTime) / 1000;
+    let alreadyStopped = false;
+
     try {
-      durationMillis = recorder.getStatus().durationMillis;
-    } catch (error: any) {
-      logger.warn('AUDIO', 'Failed to read recorder status before stop', {
-        error: error?.message ?? String(error),
-      });
+      const status = recorder.getStatus();
+      alreadyStopped = !status.isRecording && !status.canRecord;
+    } catch {
+      // Proceed with native stop.
     }
 
-    const uri = recorder.uri || '';
     try {
-      await recorder.stop();
-    } catch (error: any) {
+      await finalizeActiveRecorderStop(recorder, alreadyStopped);
+    } catch (error: unknown) {
       logger.error('AUDIO', 'Failed to stop recorder', {
-        error: error?.message ?? String(error),
+        error: error instanceof Error ? error.message : String(error),
       });
     }
 
-    let fileSize = 0;
-    if (uri) {
-      try {
-        const info = await getInfoAsync(uri);
-        fileSize = info.exists ? ((info as any).size ?? 0) : 0;
-      } catch (error: any) {
-        logger.warn('AUDIO', 'Failed to read local recording file metadata', {
-          error: error?.message ?? String(error),
-        });
-      }
-    }
-
-    const duration = durationMillis / 1000;
+    const result = await this.buildResultFromRecorder(recorder, fallbackDurationSec);
     this.recorder = null;
     this._recordingPaused = false;
 
     await configureRecordingStoppedAudioSession();
 
-    logger.info('AUDIO', 'Local recording stopped', { uri, durationSec: duration, fileSize });
-    return { uri, duration, fileSize };
+    logger.info('AUDIO', 'Local recording stopped', {
+      uri: result.uri,
+      durationSec: result.duration,
+      fileSize: result.fileSize,
+    });
+    return result;
   }
 
   getMetering(): number {

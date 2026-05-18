@@ -8,7 +8,6 @@ import {
   useFolderListLayoutStore,
 } from '@/context/useFolderListLayoutStore';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import {
   modePickerStyles as mp,
@@ -19,7 +18,7 @@ const LAYOUT_OPTIONS: FolderListLayoutMode[] = ['list', 'grid'];
 
 export default function FolderLayoutPickerScreen() {
   const router = useRouter();
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const layout = useFolderListLayoutStore((s) => s.layout);
   const setLayout = useFolderListLayoutStore((s) => s.setLayout);
 
@@ -60,14 +59,11 @@ export default function FolderLayoutPickerScreen() {
         </View>
       </ScrollView>
 
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader
-          title="Folder layout"
-          showBack
-          onBack={() => router.back()}
-        />
-      </View>
+      <StackScreenHeader
+        title="Folder layout"
+        showBack
+        onBack={() => router.back()}
+      />
     </View>
   );
 }

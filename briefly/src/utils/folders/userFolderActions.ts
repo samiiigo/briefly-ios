@@ -6,10 +6,15 @@ export interface UserFolderActionHandlers {
   onTogglePin: () => void | Promise<void>;
 }
 
+/**
+ * Shows a folder action menu. On iOS, rename uses Alert.prompt inline.
+ * On Android, calls `onPromptRename` so the caller can render a TextInputDialog.
+ */
 export function showUserFolderActions(
   folderName: string,
   pinned: boolean,
-  handlers: UserFolderActionHandlers
+  handlers: UserFolderActionHandlers,
+  onPromptRename?: () => void,
 ): void {
   const buttons: {
     text: string;
@@ -30,8 +35,8 @@ export function showUserFolderActions(
             'plain-text',
             folderName
           );
-        } else {
-          Alert.alert('Rename', 'Folder rename is available on iOS.');
+        } else if (onPromptRename) {
+          onPromptRename();
         }
       },
     },

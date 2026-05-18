@@ -1,12 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SectionList,
-  FlatList,
-  ListRenderItem,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useShallow } from 'zustand/react/shallow';
 import { RecordingService } from '@/services/audio';
@@ -23,11 +16,12 @@ import { ensureUniqueTitle } from '@/utils';
 import { RecentsEntryCard } from '@/components/features/recents/RecentsEntryCard';
 import { RecordingCard } from '@/components/features/recording/RecordingCard';
 import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
+import { RecordingSectionFlashList } from '@/components/features/recording/RecordingSectionFlashList';
+import { RecordingGridFlashList } from '@/components/features/recording/RecordingGridFlashList';
 import { RecordButton } from '@/components/features/recording/RecordButton';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { FolderViewOptionsSheet } from '@/components/features/library/FolderViewOptionsSheet';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { Recording } from '@/types';
@@ -37,7 +31,7 @@ import { Colors, Spacing, withAppFont } from '@/theme';
 const LIST_BOTTOM_PADDING = 140;
 
 export default function FolderRecordingsScreen() {
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; folderName?: string; folderType?: string }>();
   const folderId = params.id!;
@@ -198,9 +192,9 @@ export default function FolderRecordingsScreen() {
     [router, isRecentlyDeleted, permanentDelete, deleteRecording, restoreRecording]
   );
 
-  const renderGridItem: ListRenderItem<Recording> = useCallback(
-    ({ item }) => <View style={styles.gridCell}>{renderGridCard(item, true)}</View>,
-    [renderGridCard]
+  const renderGridItem = useCallback(
+    (item: Recording) => renderGridCard(item, true),
+    [renderGridCard],
   );
 
   const closeOpenSwipe = useCallback(() => {
@@ -220,35 +214,21 @@ export default function FolderRecordingsScreen() {
           <Text style={styles.emptyText}>No recordings match this view.</Text>
         </View>
       ) : effectiveLayout === 'grid' ? (
-        <FlatList
-          key={`grid-${folderKey}`}
+        <RecordingGridFlashList
           data={flatData}
-          numColumns={2}
-          keyExtractor={(item) => item.id}
-          columnWrapperStyle={styles.gridRow}
-          contentContainerStyle={[styles.listContent, { paddingTop: scrollPaddingTop }]}
           renderItem={renderGridItem}
-          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.listContent, { paddingTop: scrollPaddingTop }]}
           onScrollBeginDrag={closeOpenSwipe}
           onMomentumScrollBegin={closeOpenSwipe}
         />
       ) : (
-        <SectionList
+        <RecordingSectionFlashList
           sections={sections}
-          keyExtractor={(item) => item.id}
+          renderRecording={renderListCard}
+          sectionHeaderStyle={sl.listSectionHeader}
           contentContainerStyle={[styles.listContent, { paddingTop: scrollPaddingTop }]}
-          stickySectionHeadersEnabled={false}
-          showsVerticalScrollIndicator={false}
           onScrollBeginDrag={closeOpenSwipe}
           onMomentumScrollBegin={closeOpenSwipe}
-          ItemSeparatorComponent={() => <View style={sl.listItemGap} />}
-          SectionSeparatorComponent={() => <View style={sl.listSectionGap} />}
-          renderSectionHeader={({ section }) =>
-            section.title ? (
-              <Text style={sl.listSectionHeader}>{section.title}</Text>
-            ) : null
-          }
-          renderItem={({ item }) => renderListCard(item)}
         />
       )}
 
@@ -262,24 +242,21 @@ export default function FolderRecordingsScreen() {
         onClose={() => setViewSheetVisible(false)}
       />
 
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader
-          title={folderName}
-          showBack
-          onBack={() => {
-            closeOpenSwipe();
-            router.back();
-          }}
-          trailing={
-            <CircularIconButton
-              icon="funnel-outline"
-              accessibilityLabel="Filters"
-              onPress={() => setViewSheetVisible(true)}
-            />
-          }
-        />
-      </View>
+      <StackScreenHeader
+        title={folderName}
+        showBack
+        onBack={() => {
+          closeOpenSwipe();
+          router.back();
+        }}
+        trailing={
+          <CircularIconButton
+            icon="funnel-outline"
+            accessibilityLabel="Filters"
+            onPress={() => setViewSheetVisible(true)}
+          />
+        }
+      />
     </View>
   );
 }
@@ -289,16 +266,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: Spacing.md,
     paddingBottom: LIST_BOTTOM_PADDING,
-  },
-  gridRow: {
-    gap: 12,
-    marginBottom: 12,
-    justifyContent: 'space-between',
-  },
-  gridCell: {
-    flex: 1,
-    maxWidth: '50%',
-    paddingHorizontal: 4,
   },
   emptyWrap: {
     flex: 1,

@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  BackHandler,
+  Pressable,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { AnchoredOverflowMenu } from '@/components/ui/AnchoredOverflowMenu';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -38,19 +40,26 @@ import { openAppSettings } from '@/utils/recording/recordingPermissions';
 import { useTimer } from '@/hooks/useTimer';
 import { useLiveTranscript } from '@/hooks/useLiveTranscript';
 import { useAppInterruptGuard } from '@/hooks/useAppInterruptGuard';
+import {
+  onAndroidRecordingEnteredBackground,
+  onAndroidRecordingReturnedForeground,
+  registerAndroidRecordingStoppedHandler,
+  shouldPauseRecordingWhenAppBackgrounds,
+} from '@/services/audio/recordingSession';
+import { isAndroid } from '@/utils/platform';
 function isPermissionError(message: string): boolean {
   return /microphone|permission|speech recognition/i.test(message);
 }
 
 export default function NewRecordingScreen() {
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{
     targetFolder?: string;
     targetUserFolderId?: string;
     markImported?: string;
   }>();
-  const { setLiveTranscript } = useRecordingStore();
+  const setLiveTranscript = useRecordingStore((s) => s.setLiveTranscript);
   const { transcriptionMode: settingsTranscriptionMode } = useSettingsStore();
   const { elapsed, elapsedRef, start: startTimer, stop: stopTimer } = useTimer();
   const live = useLiveTranscript(setLiveTranscript, elapsedRef);
@@ -105,14 +114,34 @@ export default function NewRecordingScreen() {
   );
 
   const handlePauseRef = useRef<() => Promise<void>>(async () => {});
+  const executeStopAndSaveRef = useRef<() => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    if (!isAndroid) return;
+
+    registerAndroidRecordingStoppedHandler(() => {
+      void executeStopAndSaveRef.current();
+    });
+    return () => registerAndroidRecordingStoppedHandler(null);
+  }, []);
 
   useAppInterruptGuard({
     enabled: isStarted && !startFailed && !isStopped.current,
     onBackground: () => {
-      setInterruptHint('Recording paused while the app was in the background.');
-      void handlePauseRef.current();
+      if (shouldPauseRecordingWhenAppBackgrounds()) {
+        setInterruptHint('Recording paused while the app was in the background.');
+        void handlePauseRef.current();
+        return;
+      }
+      void (async () => {
+        const hint = await onAndroidRecordingEnteredBackground();
+        if (hint) setInterruptHint(hint);
+      })();
     },
     onForeground: () => {
+      if (!shouldPauseRecordingWhenAppBackgrounds()) {
+        void onAndroidRecordingReturnedForeground();
+      }
       setInterruptHint(null);
     },
   });
@@ -232,6 +261,23 @@ export default function NewRecordingScreen() {
     ]);
   }, [cleanup, isStarted, router, startFailed, stopTimer, teardownCapture]);
 
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isStarted && !isStopped.current && !startFailed) {
+        handleDiscard();
+        return true; // Prevent default behavior
+      }
+      return false; // Let default behavior happen (e.g., if failed to start)
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => backHandler.remove();
+  }, [isStarted, startFailed, handleDiscard]);
+
   const pauseIfRecording = useCallback(async (): Promise<boolean> => {
     if (!isStarted || startFailed || isPausedRef.current) return true;
     await pauseRecording();
@@ -344,6 +390,8 @@ export default function NewRecordingScreen() {
     stopTimer,
   ]);
 
+  executeStopAndSaveRef.current = executeStopAndSave;
+
   const handleStop = async () => {
     if (isStopped.current || isStopping || startFailed) return;
 
@@ -452,20 +500,21 @@ export default function NewRecordingScreen() {
               <Ionicons name="document-text" size={14} color={Colors.primary} />
               <Text style={s.lpLbl}>Live transcript</Text>
               {isLocalLive ? (
-                <TouchableOpacity
-                  style={s.streamToggle}
+                <Pressable
+                  style={({ pressed }) => [s.streamToggle, pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
                   onPress={() => setLiveStreamVisible((v) => !v)}
                   accessibilityLabel={
                     liveStreamVisible ? 'Hide live transcript' : 'Show live transcript'
                   }
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  android_ripple={{ color: 'rgba(0,0,0,0.1)', borderless: true, radius: 16 }}
                 >
                   <Ionicons
                     name={liveStreamVisible ? 'eye-off-outline' : 'eye-outline'}
                     size={20}
                     color={Colors.textSecondary}
                   />
-                </TouchableOpacity>
+                </Pressable>
               ) : null}
             </View>
             {showLiveStream ? (
@@ -506,23 +555,25 @@ export default function NewRecordingScreen() {
 
         <View style={s.ctrls}>
           <View style={s.ctrlItem}>
-            <TouchableOpacity
-              style={s.pauseBtn}
+            <Pressable
+              style={({ pressed }) => [s.pauseBtn, pressed && Platform.OS === 'ios' && { opacity: 0.75 }]}
               onPress={handlePause}
               disabled={!isStarted || startFailed || isStopping}
+              android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: false, radius: 32 }}
             >
               <Ionicons name={isPaused ? 'play' : 'pause'} size={26} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            </Pressable>
             <Text style={s.ctrlLbl}>{isPaused ? 'RESUME' : 'PAUSE'}</Text>
           </View>
           <View style={s.ctrlItem}>
-            <TouchableOpacity
-              style={s.stopBtn}
+            <Pressable
+              style={({ pressed }) => [s.stopBtn, pressed && Platform.OS === 'ios' && { opacity: 0.75 }]}
               onPress={handleStop}
               disabled={!isStarted || startFailed || isStopping}
+              android_ripple={{ color: 'rgba(0,0,0,0.2)', borderless: false, radius: 32 }}
             >
               <View style={s.stopSq} />
-            </TouchableOpacity>
+            </Pressable>
             <Text style={[s.ctrlLbl, { color: Colors.recordButton }]}>
               {isStopping ? 'STOPPING…' : 'STOP'}
             </Text>
@@ -530,26 +581,23 @@ export default function NewRecordingScreen() {
         </View>
       </View>
 
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader
-          title="New Recording"
-          leading={
-            <AnchoredOverflowMenu
-              align="leading"
-              items={[{ label: 'Discard', onPress: handleDiscard }]}
-              renderTrigger={(open) => (
-                <CircularIconButton
-                  icon="arrow-back"
-                  accessibilityLabel="Recording options"
-                  onPress={open}
-                  style={{ marginRight: Spacing.sm }}
-                />
-              )}
-            />
-          }
-        />
-      </View>
+      <StackScreenHeader
+        title="New Recording"
+        leading={
+          <AnchoredOverflowMenu
+            align="leading"
+            items={[{ label: 'Discard', onPress: handleDiscard }]}
+            renderTrigger={(open) => (
+              <CircularIconButton
+                icon="arrow-back"
+                accessibilityLabel="Recording options"
+                onPress={open}
+                style={{ marginRight: Spacing.sm }}
+              />
+            )}
+          />
+        }
+      />
     </View>
   );
 }

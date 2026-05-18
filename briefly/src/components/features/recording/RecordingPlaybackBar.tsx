@@ -17,6 +17,7 @@ import { BlurView } from 'expo-blur';
 import { usePlayback } from '@/hooks/usePlayback';
 import { Recording } from '@/types';
 import { formatDuration } from '@/utils';
+import { BottomChromeOverlay } from '@/components/navigation/BottomChromeOverlay';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -105,7 +106,7 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
   );
 
   return (
-    <>
+    <BottomChromeOverlay variant="playback">
       {expanded ? (
         <Pressable
           style={styles.dismissBackdrop}
@@ -150,24 +151,20 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
           )}
         </View>
       </View>
-    </>
+    </BottomChromeOverlay>
   );
 }
 
 const styles = StyleSheet.create({
   dismissBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 11,
-    elevation: 11,
+    zIndex: 1,
+    elevation: 1,
   },
   wrapper: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     alignItems: 'flex-end',
-    zIndex: 12,
-    elevation: 12,
+    zIndex: 2,
+    elevation: 2,
     paddingHorizontal: Spacing.screenHorizontal,
   },
   pill: {

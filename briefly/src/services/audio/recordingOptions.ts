@@ -1,7 +1,10 @@
 /**
  * Recording options tuned for speech transcription (AssemblyAI).
- * Linear PCM WAV at 16 kHz mono avoids M4A containers that can finalize
- * without decodable audio in Expo Go.
+ *
+ * iOS:     Linear PCM WAV at 16 kHz mono — avoids M4A containers that can
+ *          finalize without decodable audio in Expo Go.
+ * Android: AAC in MPEG_4 container at 16 kHz mono — well-supported across
+ *          Android versions with good speech quality.
  */
 
 import { IOSOutputFormat, AudioQuality } from 'expo-audio';
@@ -26,8 +29,8 @@ export const assemblyAIRecordingOptions: RecordingOptions = {
     linearPCMIsFloat: false,
   },
   android: {
-    outputFormat: 'default' as const,
-    audioEncoder: 'default' as const,
+    outputFormat: 'mpeg4',
+    audioEncoder: 'aac',
   },
   web: {},
 };

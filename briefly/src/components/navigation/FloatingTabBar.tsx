@@ -19,25 +19,40 @@ const TAB_CONFIG: Record<string, TabConfig> = {
 };
 
 export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
-  const { bottomOffset, horizontalInset } = useFloatingTabBarLayout();
-  const currentRoute = state.routes[state.index];
-
-  if (currentRoute.name === 'settings') {
-    return null;
-  }
+  const { bottomOffset, horizontalInset, androidTabBarHeight, insetsBottom } = useFloatingTabBarLayout();
+  const isAndroid = Platform.OS === 'android';
 
   const visibleRoutes = state.routes.filter((r) => TAB_CHROME_MAIN_ROUTES.has(r.name));
 
   return (
     <View
-      style={[styles.wrapper, { bottom: bottomOffset, paddingLeft: horizontalInset }]}
-      pointerEvents="box-none"
+      style={[
+        styles.wrapper,
+        isAndroid
+          ? {
+              bottom: 0,
+              height: androidTabBarHeight,
+              paddingBottom: insetsBottom,
+              backgroundColor: Colors.card,
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: 'rgba(255,255,255,0.05)',
+              justifyContent: 'space-around',
+              alignItems: 'center',
+            }
+          : {
+              bottom: bottomOffset,
+              paddingLeft: horizontalInset,
+              justifyContent: 'flex-start',
+              alignItems: 'flex-end',
+            },
+      ]}
+      pointerEvents={isAndroid ? 'auto' : 'box-none'}
     >
-      <View style={styles.pill}>
-        {Platform.OS === 'ios' && (
+      <View style={isAndroid ? styles.androidPill : styles.pill}>
+        {!isAndroid && Platform.OS === 'ios' && (
           <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
         )}
-        <View style={[StyleSheet.absoluteFill, styles.pillOverlay]} />
+        {!isAndroid && <View style={[StyleSheet.absoluteFill, styles.pillOverlay]} />}
         {visibleRoutes.map((route) => {
           const routeIndex = state.routes.findIndex((r) => r.key === route.key);
           const isFocused = state.index === routeIndex;
@@ -58,7 +73,10 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
           return (
             <TouchableOpacity
               key={route.key}
-              style={[styles.tab, isFocused && styles.tabActive]}
+              style={[
+                isAndroid ? styles.androidTab : styles.tab,
+                isFocused && !isAndroid && styles.tabActive
+              ]}
               onPress={onPress}
               activeOpacity={0.8}
               accessibilityRole="button"
@@ -67,10 +85,10 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
             >
               <Ionicons
                 name={isFocused ? config.iconFocused : config.icon}
-                size={24}
-                color={isFocused ? Colors.primary : Colors.subtext}
+                size={isAndroid ? 24 : 24}
+                color={isFocused ? (isAndroid ? Colors.primary : Colors.primary) : Colors.subtext}
               />
-              <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
+              <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive, isAndroid && { marginTop: 4, fontSize: 11 }]}>
                 {config.label}
               </Text>
             </TouchableOpacity>
@@ -87,8 +105,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end',
     zIndex: 10,
     elevation: 10,
   },
@@ -109,6 +125,13 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 12,
   },
+  androidPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 16,
+  },
   pillOverlay: {
     backgroundColor: 'rgba(28,28,30,0.9)',
   },
@@ -118,6 +141,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 6,
     borderRadius: 9999,
+  },
+  androidTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
   },
   tabActive: {
     backgroundColor: Colors.surfaceElevated,

@@ -1,5 +1,6 @@
 import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
+import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
 import { TabBarPropsReporter } from '@/components/navigation/TabBarPropsReporter';
 import { TabChromeOverlay } from '@/components/navigation/TabChromeOverlay';
 import { Colors } from '@/theme';
@@ -18,14 +19,8 @@ export default function TabsLayout() {
       >
         <Tabs.Screen name="index" options={{ title: 'Recents' }} />
         <Tabs.Screen name="history" options={{ title: 'Library' }} />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: 'Settings',
-            href: null,
-          }}
-        />
       </Tabs>
+      <NavigatorBottomBlur scope="tabs" />
       <TabChromeOverlay />
     </View>
   );

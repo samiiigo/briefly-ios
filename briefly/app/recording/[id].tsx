@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -20,11 +20,10 @@ import { SummaryMarkdownSection } from '@/components/features/recording/SummaryM
 import { RecordingDetailHeader } from '@/components/features/recording/RecordingDetailChrome';
 import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { PlaybackBarBlurFade } from '@/components/navigation/PlaybackBarBlurFade';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
+import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { ensureUniqueTitle } from '@/utils';
 import { getNextSummarizationFallback } from '@/utils/processing/summarizationFallback';
@@ -33,7 +32,7 @@ import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 export default function TranscriptScreen() {
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const { paddingBottom: playbackBottom } = usePlaybackBarLayout();
   const router = useRouter();
   const { id: recordingId } = useLocalSearchParams<{ id: string }>();
@@ -42,6 +41,8 @@ export default function TranscriptScreen() {
   const folders = useUserFolderStore((s) => s.folders);
   const loadFolders = useUserFolderStore((s) => s.loadFolders);
   const { summarizationMode } = useSettingsStore();
+
+  const [renameDialogVisible, setRenameDialogVisible] = useState(false);
 
   useEffect(() => {
     void loadFolders();
@@ -63,7 +64,7 @@ export default function TranscriptScreen() {
     const existingTitles = recordings.filter((r) => r.id !== recording.id).map((r) => r.title);
     const save = (text: string) => { const t = text.trim(); if (t) updateRecording(recording.id, { title: ensureUniqueTitle(t, existingTitles) }); };
     if (Platform.OS === 'ios') { Alert.prompt('Rename Recording', undefined, save, 'plain-text', recording.title); }
-    else { Alert.alert('Rename', 'Long-press the recording card on the home screen to rename it.'); }
+    else { setRenameDialogVisible(true); }
   }, [recording, recordings, updateRecording]);
 
   const handleTranscriptionFallback = useCallback(async () => {
@@ -181,10 +182,7 @@ export default function TranscriptScreen() {
             <Text style={st.restoreButtonText}>Restore recording</Text>
           </TouchableOpacity>
         </View>
-        <TopBlurFade />
-        <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-          <StackScreenHeader title="Deleted" showBack onBack={() => router.back()} />
-        </View>
+        <StackScreenHeader title="Deleted" showBack onBack={() => router.back()} />
       </View>
     );
   }
@@ -267,17 +265,28 @@ export default function TranscriptScreen() {
         paddingBottom={playbackBottom}
       />
 
-      <PlaybackBarBlurFade />
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <RecordingDetailHeader
-          onBack={() => router.back()}
-          folderLabel={folderLabel}
-          onShare={openShareMenu}
-          shareDisabled={isExportingPdf}
-          menuItems={overflowMenuItems}
-        />
-      </View>
+      <RecordingDetailHeader
+        onBack={() => router.back()}
+        folderLabel={folderLabel}
+        onShare={openShareMenu}
+        shareDisabled={isExportingPdf}
+        menuItems={overflowMenuItems}
+      />
+      <TextInputDialog
+        visible={renameDialogVisible}
+        title="Rename Recording"
+        defaultValue={recording?.title ?? ''}
+        placeholder="Recording name"
+        submitLabel="Rename"
+        onSubmit={(text) => {
+          setRenameDialogVisible(false);
+          if (recording) {
+            const existingTitles = recordings.filter((r) => r.id !== recording.id).map((r) => r.title);
+            updateRecording(recording.id, { title: ensureUniqueTitle(text, existingTitles) });
+          }
+        }}
+        onCancel={() => setRenameDialogVisible(false)}
+      />
     </View>
   );
 }

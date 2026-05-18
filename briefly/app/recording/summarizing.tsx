@@ -18,7 +18,6 @@ import {
 } from '@/services/recording/recordingProcessingService';
 import { ProcessingMode } from '@/types';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import {
@@ -46,7 +45,7 @@ type FailurePhase = 'transcription' | 'summarization';
 const PROCESSING_TIMEOUT_MS = 12 * 60 * 1000;
 
 export default function SummarizingScreen() {
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const router = useRouter();
   const { recordingId, forceAudioFallback, retrySummarizationMode } = useLocalSearchParams<{
     recordingId: string;
@@ -594,15 +593,12 @@ export default function SummarizingScreen() {
         </TouchableOpacity>
       </View>
 
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader
-          title={headerTitle}
-          showBack
-          leadingIcon="close"
-          onBack={handleCancel}
-        />
-      </View>
+      <StackScreenHeader
+        title={headerTitle}
+        showBack
+        leadingIcon="close"
+        onBack={handleCancel}
+      />
     </View>
   );
 }

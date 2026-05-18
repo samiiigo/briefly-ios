@@ -1,9 +1,9 @@
 import React from 'react';
-import { EdgeBlurFade } from './EdgeBlurFade';
-import { useTopChromeLayout } from './useTopChromeLayout';
+import { ChromeBlurFade } from './ChromeBlurFade';
 
-/** Progressive blur + dark tint under the top header (strongest at the status bar). */
+/**
+ * @deprecated Use {@link ChromeOverlay} / {@link TopChromeOverlay} instead.
+ */
 export function TopBlurFade() {
-  const { blurFadeHeight } = useTopChromeLayout();
-  return <EdgeBlurFade edge="top" height={blurFadeHeight} />;
+  return <ChromeBlurFade edge="top" variant="header" />;
 }

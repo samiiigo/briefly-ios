@@ -1,16 +1,10 @@
 import React, { useEffect, useCallback, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SectionList,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { RecentsHeader } from '@/components/features/recents/RecentsHeader';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import {
   RECORD_BUTTON_SIZE,
@@ -18,6 +12,7 @@ import {
 } from '@/components/navigation/useFloatingTabBarLayout';
 import { RecentsEntryCard } from '@/components/features/recents/RecentsEntryCard';
 import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
+import { RecordingSectionFlashList } from '@/components/features/recording/RecordingSectionFlashList';
 import { Recording } from '@/types';
 import {
   ensureUniqueTitle,
@@ -30,7 +25,7 @@ import { Colors, Spacing, withAppFont } from '@/theme';
 const LIST_BOTTOM_PADDING = 140;
 
 export default function HomeScreen() {
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const { recordButtonBottom, horizontalInset } = useFloatingTabBarLayout();
   const router = useRouter();
   const recordings = useRecordingStore((s) => s.recordings);
@@ -85,6 +80,24 @@ export default function HomeScreen() {
     useActiveSwipeableStore.getState().closeActive();
   }, []);
 
+  const renderRecording = useCallback(
+    (item: Recording) => (
+      <RecordingSwipeableRow
+        recording={item}
+        onPress={() => router.push(`/recording/${item.id}`)}
+        onDelete={() => deleteRecording(item.id)}
+      >
+        <RecentsEntryCard
+          recording={item}
+          onPress={() => router.push(`/recording/${item.id}`)}
+          onDelete={() => deleteRecording(item.id)}
+          onRename={(newTitle) => handleRename(item, newTitle)}
+        />
+      </RecordingSwipeableRow>
+    ),
+    [router, deleteRecording, handleRename],
+  );
+
   useFocusEffect(
     useCallback(() => {
       return () => closeOpenSwipe();
@@ -127,49 +140,23 @@ export default function HomeScreen() {
           />
         </View>
 
-        <TopBlurFade />
-        <View style={[styles.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-          <RecentsHeader />
-        </View>
+        <RecentsHeader />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <SectionList
+      <RecordingSectionFlashList
         sections={sections}
-        keyExtractor={(item) => item.id}
+        renderRecording={renderRecording}
+        sectionHeaderStyle={styles.sectionHeader}
         contentContainerStyle={[styles.listContent, { paddingTop: scrollPaddingTop }]}
-        stickySectionHeadersEnabled={false}
-        showsVerticalScrollIndicator={false}
         onScrollBeginDrag={closeOpenSwipe}
         onMomentumScrollBegin={closeOpenSwipe}
-        ItemSeparatorComponent={() => <View style={styles.itemGap} />}
-        SectionSeparatorComponent={() => <View style={styles.sectionGap} />}
-        renderSectionHeader={({ section }) => (
-          <Text style={styles.sectionHeader}>{section.title}</Text>
-        )}
-        renderItem={({ item }) => (
-          <RecordingSwipeableRow
-            recording={item}
-            onPress={() => router.push(`/recording/${item.id}`)}
-            onDelete={() => deleteRecording(item.id)}
-          >
-            <RecentsEntryCard
-              recording={item}
-              onPress={() => router.push(`/recording/${item.id}`)}
-              onDelete={() => deleteRecording(item.id)}
-              onRename={(newTitle) => handleRename(item, newTitle)}
-            />
-          </RecordingSwipeableRow>
-        )}
       />
 
-      <TopBlurFade />
-      <View style={[styles.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <RecentsHeader />
-      </View>
+      <RecentsHeader />
     </View>
   );
 }
@@ -178,13 +165,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  headerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
   },
   listContent: {
     paddingHorizontal: Spacing.md,
@@ -198,12 +178,6 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     paddingHorizontal: Spacing.sm,
   }),
-  itemGap: {
-    height: 12,
-  },
-  sectionGap: {
-    height: 8,
-  },
   emptyState: {
     flex: 1,
     alignItems: 'center',

@@ -6,6 +6,7 @@ import {
   TOP_HEADER_PADDING_BOTTOM,
   TOP_HEADER_PADDING_TOP,
 } from '@/components/navigation/topHeaderMetrics';
+import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
 interface Props {
@@ -36,26 +37,28 @@ export function StackScreenHeader({
   const shouldCenterTitle = centerTitle && !hasLeading && !hasTrailing;
 
   return (
-    <View style={[styles.header, shouldCenterTitle && styles.headerCentered]}>
-      <View style={[styles.titleRow, shouldCenterTitle && styles.titleRowCentered]}>
-        {leading ??
-          (showBack && onBack ? (
-            <CircularIconButton
-              icon={leadingIcon}
-              accessibilityLabel={leadingIcon === 'close' ? 'Close' : 'Back'}
-              onPress={onBack}
-              style={styles.backButton}
-            />
-          ) : null)}
-        <Text
-          style={[styles.title, shouldCenterTitle && styles.titleCentered]}
-          numberOfLines={1}
-        >
-          {title}
-        </Text>
+    <TopChromeOverlay>
+      <View style={[styles.header, shouldCenterTitle && styles.headerCentered]}>
+        <View style={[styles.titleRow, shouldCenterTitle && styles.titleRowCentered]}>
+          {leading ??
+            (showBack && onBack ? (
+              <CircularIconButton
+                icon={leadingIcon}
+                accessibilityLabel={leadingIcon === 'close' ? 'Close' : 'Back'}
+                onPress={onBack}
+                style={styles.backButton}
+              />
+            ) : null)}
+          <Text
+            style={[styles.title, shouldCenterTitle && styles.titleCentered]}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+        </View>
+        {hasTrailing ? <View style={styles.trailing}>{trailing}</View> : null}
       </View>
-      {hasTrailing ? <View style={styles.trailing}>{trailing}</View> : null}
-    </View>
+    </TopChromeOverlay>
   );
 }
 

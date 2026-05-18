@@ -83,6 +83,7 @@ export function AnchoredOverflowMenu({
                   disabled={item.disabled}
                   accessibilityRole="menuitem"
                   accessibilityState={{ disabled: item.disabled }}
+                  android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
                 >
                   <Text style={[styles.label, item.disabled && styles.labelDisabled]}>{item.label}</Text>
                 </Pressable>

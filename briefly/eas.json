@@ -18,11 +18,18 @@
       "distribution": "internal",
       "ios": {
         "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
       }
     },
     "production": {
       "ios": {
-        "simulator": false
+        "simulator": false,
+        "distribution": "store"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   },
@@ -31,6 +38,10 @@
       "ios": {
         "appleId": "YOUR_APPLE_ID@example.com",
         "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-services.json",
+        "track": "internal"
       }
     }
   }

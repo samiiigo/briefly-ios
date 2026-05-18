@@ -19,6 +19,29 @@ interface UsePlaybackOptions {
   playbackService?: PlaybackControls;
 }
 
+/** Assumes segments are sorted by `startTime` (typical transcript order). */
+function findActiveTranscriptSegment(
+  segments: TranscriptSegment[],
+  position: number,
+): TranscriptSegment | undefined {
+  if (segments.length === 0) return undefined;
+
+  let lo = 0;
+  let hi = segments.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const seg = segments[mid];
+    if (position < seg.startTime) {
+      hi = mid - 1;
+    } else if (position >= seg.endTime) {
+      lo = mid + 1;
+    } else {
+      return seg;
+    }
+  }
+  return undefined;
+}
+
 export function usePlayback({
   filePath,
   transcript,
@@ -70,9 +93,7 @@ export function usePlayback({
         setIsPlaying(false);
       }
       if (transcript) {
-        const active = transcript.find(
-          (s) => status.position >= s.startTime && status.position < s.endTime,
-        );
+        const active = findActiveTranscriptSegment(transcript, status.position);
         setActiveSegmentId(active?.id ?? null);
       }
     },

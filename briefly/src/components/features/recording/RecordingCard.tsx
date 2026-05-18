@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { formatDuration, formatDate } from '@/utils';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
+import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 interface Props {
@@ -40,6 +41,8 @@ export function RecordingCard({
   const folder = resolveRecordingFolder(recording);
   const isRecentlyDeleted = folder === 'recently-deleted';
 
+  const [renameDialogVisible, setRenameDialogVisible] = useState(false);
+
   const promptRename = () => {
     if (!onRename) return;
     if (Platform.OS === 'ios') {
@@ -53,7 +56,7 @@ export function RecordingCard({
         recording.title
       );
     } else {
-      Alert.alert('Rename', 'Open the recording to rename it from the detail screen.');
+      setRenameDialogVisible(true);
     }
   };
 
@@ -122,56 +125,77 @@ export function RecordingCard({
     </View>
   );
 
+  const renameDialog = (
+    <TextInputDialog
+      visible={renameDialogVisible}
+      title="Rename Recording"
+      defaultValue={recording.title}
+      placeholder="Recording name"
+      submitLabel="Rename"
+      onSubmit={(text) => {
+        setRenameDialogVisible(false);
+        onRename?.(text);
+      }}
+      onCancel={() => setRenameDialogVisible(false)}
+    />
+  );
+
   if (compact) {
     return (
-      <TouchableOpacity
-        style={[styles.card, styles.cardCompact]}
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-        activeOpacity={0.7}
-      >
-        <RecordingAvatar recording={recording} size="compact" />
+      <>
+        <TouchableOpacity
+          style={[styles.card, styles.cardCompact]}
+          onPress={handlePress}
+          onLongPress={handleLongPress}
+          activeOpacity={0.7}
+        >
+          <RecordingAvatar recording={recording} size="compact" />
 
-        <View style={styles.contentCompactInner}>
-          <View style={styles.titleRowCompact}>
-            <Text style={styles.titleCompact} numberOfLines={2}>
-              {recording.title}
-            </Text>
-            {(isFailed || isProcessing || (isFavorite && !isRecentlyDeleted)) && (
-              <View style={styles.compactTitleIcons}>{topRightIcons}</View>
-            )}
+          <View style={styles.contentCompactInner}>
+            <View style={styles.titleRowCompact}>
+              <Text style={styles.titleCompact} numberOfLines={2}>
+                {recording.title}
+              </Text>
+              {(isFailed || isProcessing || (isFavorite && !isRecentlyDeleted)) && (
+                <View style={styles.compactTitleIcons}>{topRightIcons}</View>
+              )}
+            </View>
+            <Text style={styles.dateCompact}>{dateText}</Text>
+            <View style={styles.durationRowCompact}>
+              <Text style={styles.durationCompact}>{formatDuration(recording.duration)}</Text>
+            </View>
           </View>
-          <Text style={styles.dateCompact}>{dateText}</Text>
-          <View style={styles.durationRowCompact}>
-            <Text style={styles.durationCompact}>{formatDuration(recording.duration)}</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+        {renameDialog}
+      </>
     );
   }
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={handlePress}
-      onLongPress={handleLongPress}
-      activeOpacity={0.7}
-    >
-      <RecordingAvatar recording={recording} />
+    <>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+        activeOpacity={0.7}
+      >
+        <RecordingAvatar recording={recording} />
 
-      <View style={styles.content}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title} numberOfLines={2}>
-            {recording.title}
-          </Text>
-          {(isFailed || isProcessing || (isFavorite && !isRecentlyDeleted)) && topRightIcons}
+        <View style={styles.content}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={2}>
+              {recording.title}
+            </Text>
+            {(isFailed || isProcessing || (isFavorite && !isRecentlyDeleted)) && topRightIcons}
+          </View>
+          <Text style={styles.date}>{dateText}</Text>
+          <View style={styles.durationRow}>
+            <Text style={styles.duration}>{formatDuration(recording.duration)}</Text>
+          </View>
         </View>
-        <Text style={styles.date}>{dateText}</Text>
-        <View style={styles.durationRow}>
-          <Text style={styles.duration}>{formatDuration(recording.duration)}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+      {renameDialog}
+    </>
   );
 }
 

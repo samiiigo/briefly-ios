@@ -1,9 +1,9 @@
 import React from 'react';
-import { EdgeBlurFade } from './EdgeBlurFade';
-import { usePlaybackBarLayout } from './usePlaybackBarLayout';
+import { ChromeBlurFade } from './ChromeBlurFade';
 
-/** Progressive blur from the screen bottom up to the playback pill. */
+/**
+ * @deprecated Use {@link ChromeOverlay} / {@link BottomChromeOverlay} instead.
+ */
 export function PlaybackBarBlurFade() {
-  const { blurFadeHeight } = usePlaybackBarLayout();
-  return <EdgeBlurFade edge="bottom" height={blurFadeHeight} />;
+  return <ChromeBlurFade edge="bottom" variant="playback" />;
 }

@@ -17,8 +17,8 @@ export interface BuildRecordingReadyOptions {
 export function buildRecordingReadyFromSummarization(
   result: SummarizationRecordingFields,
   options?: BuildRecordingReadyOptions,
-): Pick<Recording, 'summary' | 'keyInsights' | 'mainEmoji' | 'title'> {
-  const updates: Pick<Recording, 'summary' | 'keyInsights' | 'mainEmoji' | 'title'> = {
+): Partial<Pick<Recording, 'summary' | 'keyInsights' | 'mainEmoji' | 'title'>> {
+  const updates: Partial<Pick<Recording, 'summary' | 'keyInsights' | 'mainEmoji' | 'title'>> = {
     summary: result.summary,
     keyInsights: result.keyInsights,
     mainEmoji: result.mainEmoji,

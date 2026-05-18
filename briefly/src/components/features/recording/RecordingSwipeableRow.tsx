@@ -18,7 +18,7 @@ import {
   FlatList,
   TouchableWithoutFeedback,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { triggerHaptic } from '@/utils/haptics';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import type { Recording } from '@/types';
@@ -85,7 +85,7 @@ export function RecordingSwipeableRow({
 
   const handleSwipeableOpen = useCallback(() => {
     useActiveSwipeableStore.getState().open(recording.id, closeThisRow);
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    triggerHaptic();
   }, [closeThisRow, recording.id]);
 
   const handleSwipeableClose = useCallback(() => {

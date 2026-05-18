@@ -6,6 +6,7 @@ import {
   TOP_HEADER_PADDING_BOTTOM,
   TOP_HEADER_PADDING_TOP,
 } from '@/components/navigation/topHeaderMetrics';
+import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
 interface Props {
@@ -22,29 +23,31 @@ export function LibraryHeader({
   onAddFolder,
 }: Props) {
   return (
-    <View style={styles.header}>
-      <View style={styles.titleRow}>
-        {showBack ? (
+    <TopChromeOverlay>
+      <View style={styles.header}>
+        <View style={styles.titleRow}>
+          {showBack ? (
+            <CircularIconButton
+              icon="arrow-back"
+              accessibilityLabel="Back"
+              onPress={onBack}
+              style={styles.backButton}
+            />
+          ) : null}
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
+        </View>
+        <View style={styles.actions}>
           <CircularIconButton
-            icon="arrow-back"
-            accessibilityLabel="Back"
-            onPress={onBack}
-            style={styles.backButton}
+            icon="add"
+            accessibilityLabel="New folder"
+            onPress={onAddFolder}
           />
-        ) : null}
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
+          <CircularIconButton icon="search" accessibilityLabel="Search" />
+        </View>
       </View>
-      <View style={styles.actions}>
-        <CircularIconButton
-          icon="add"
-          accessibilityLabel="New folder"
-          onPress={onAddFolder}
-        />
-        <CircularIconButton icon="search" accessibilityLabel="Search" />
-      </View>
-    </View>
+    </TopChromeOverlay>
   );
 }
 

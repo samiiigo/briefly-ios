@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import {
   modePickerStyles as mp,
@@ -24,7 +23,7 @@ const TRANSCRIPTION_MODES: TranscriptionMode[] = [
 
 export default function TranscriptionModePickerScreen() {
   const router = useRouter();
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const { transcriptionMode, setTranscriptionMode } = useSettingsStore();
   const selectedMode = normalizeTranscriptionMode(transcriptionMode);
 
@@ -65,14 +64,11 @@ export default function TranscriptionModePickerScreen() {
         </View>
       </ScrollView>
 
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader
-          title="Transcription"
-          showBack
-          onBack={() => router.back()}
-        />
-      </View>
+      <StackScreenHeader
+        title="Transcription"
+        showBack
+        onBack={() => router.back()}
+      />
     </View>
   );
 }
