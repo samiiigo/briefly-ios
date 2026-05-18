@@ -35,4 +35,11 @@ describe('filterRecentQueriesForFilter', () => {
     const filtered = filterRecentQueriesForFilter(['design', 'zzz'], 'all', withFolders);
     assert.deepEqual(filtered, ['design']);
   });
+
+  it('returns all terms when filter scoping is deferred', () => {
+    const filtered = filterRecentQueriesForFilter(['alpha', 'zzz'], 'all', catalog, {
+      scopeRecents: false,
+    });
+    assert.deepEqual(filtered, ['alpha', 'zzz']);
+  });
 });

@@ -17,6 +17,7 @@ export function useSearchScreen() {
   const router = useRouter();
 
   const recordings = useRecordingStore((s) => s.recordings);
+  const recordingsLoaded = useRecordingStore((s) => s.hasLoaded);
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);
   const folders = useUserFolderStore((s) => s.folders);
   const loadFolders = useUserFolderStore((s) => s.loadFolders);
@@ -53,8 +54,11 @@ export function useSearchScreen() {
   const isStaleResults = debouncedQuery !== deferredQuery;
 
   const scopedRecentQueries = useMemo(
-    () => filterRecentQueriesForFilter(recentQueries, filterId, catalog),
-    [recentQueries, filterId, catalog]
+    () =>
+      filterRecentQueriesForFilter(recentQueries, filterId, catalog, {
+        scopeRecents: recordingsLoaded,
+      }),
+    [recentQueries, filterId, catalog, recordingsLoaded]
   );
 
   const handleSearchSubmit = useCallback(() => {

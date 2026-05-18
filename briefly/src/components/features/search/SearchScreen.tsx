@@ -43,6 +43,7 @@ export function SearchScreen() {
   const folderCardWidth =
     (windowWidth - 2 * SEARCH_CHROME_HORIZONTAL_PADDING) * FOLDER_CARD_WIDTH_RATIO;
   const listRef = useRef<FlashListRef<Recording>>(null);
+  const pristineScrollRef = useRef<ScrollView>(null);
   const filterReveal = useSharedValue(0);
 
   const {
@@ -68,8 +69,12 @@ export function SearchScreen() {
 
   const collapseFilters = useCallback(() => {
     filterReveal.value = withTiming(0, { duration: 180 });
-    listRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [filterReveal]);
+    if (isActiveSearch) {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    } else {
+      pristineScrollRef.current?.scrollTo({ y: 0, animated: false });
+    }
+  }, [filterReveal, isActiveSearch]);
 
   useEffect(() => {
     collapseFilters();
@@ -141,31 +146,21 @@ export function SearchScreen() {
   const keyExtractor = useCallback((item: Recording) => item.id, []);
 
   const listEmpty = useMemo(() => {
-    if (!isActiveSearch) {
-      return (
-        <RecentSearchesSection
-          queries={scopedRecentQueries}
-          onSelect={handleRecentSelect}
-          onRemove={removeRecentQuery}
-          onClearAll={clearRecentQueries}
-        />
-      );
-    }
     if (hasResults) return null;
     if (!isStaleResults) {
       return <SearchEmptyState query={deferredQuery.trim()} />;
     }
     return null;
-  }, [
-    isActiveSearch,
-    hasResults,
-    isStaleResults,
-    scopedRecentQueries,
-    handleRecentSelect,
-    removeRecentQuery,
-    clearRecentQueries,
-    deferredQuery,
-  ]);
+  }, [hasResults, isStaleResults, deferredQuery]);
+
+  const pristineContent = (
+    <RecentSearchesSection
+      queries={scopedRecentQueries}
+      onSelect={handleRecentSelect}
+      onRemove={removeRecentQuery}
+      onClearAll={clearRecentQueries}
+    />
+  );
 
   return (
     <View style={styles.container}>
@@ -181,23 +176,38 @@ export function SearchScreen() {
         filterReveal={filterReveal}
       />
 
-      <FlashList
-        ref={listRef}
-        style={styles.list}
-        data={isActiveSearch ? results.recordings : []}
-        renderItem={renderRecording}
-        keyExtractor={keyExtractor}
-        ItemSeparatorComponent={ResultSeparator}
-        ListHeaderComponent={folderHeader}
-        ListEmptyComponent={listEmpty}
-        contentContainerStyle={styles.listContent}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="none"
-        showsVerticalScrollIndicator={false}
-        drawDistance={400}
-        scrollEventThrottle={16}
-        onScroll={handleScroll}
-      />
+      {isActiveSearch ? (
+        <FlashList
+          ref={listRef}
+          style={styles.list}
+          data={results.recordings}
+          renderItem={renderRecording}
+          keyExtractor={keyExtractor}
+          ItemSeparatorComponent={ResultSeparator}
+          ListHeaderComponent={folderHeader}
+          ListEmptyComponent={listEmpty}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="none"
+          showsVerticalScrollIndicator={false}
+          drawDistance={400}
+          scrollEventThrottle={16}
+          onScroll={handleScroll}
+        />
+      ) : (
+        <ScrollView
+          ref={pristineScrollRef}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="none"
+          showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+          onScroll={handleScroll}
+        >
+          {pristineContent}
+        </ScrollView>
+      )}
     </View>
   );
 }
