@@ -5,7 +5,6 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { RecentsHeader } from '@/components/features/recents/RecentsHeader';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import {
   RECORD_BUTTON_SIZE,
@@ -26,7 +25,7 @@ import { Colors, Spacing, withAppFont } from '@/theme';
 const LIST_BOTTOM_PADDING = 140;
 
 export default function HomeScreen() {
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const { recordButtonBottom, horizontalInset } = useFloatingTabBarLayout();
   const router = useRouter();
   const recordings = useRecordingStore((s) => s.recordings);
@@ -141,10 +140,7 @@ export default function HomeScreen() {
           />
         </View>
 
-        <TopBlurFade />
-        <View style={[styles.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-          <RecentsHeader />
-        </View>
+        <RecentsHeader />
       </View>
     );
   }
@@ -160,10 +156,7 @@ export default function HomeScreen() {
         onMomentumScrollBegin={closeOpenSwipe}
       />
 
-      <TopBlurFade />
-      <View style={[styles.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <RecentsHeader />
-      </View>
+      <RecentsHeader />
     </View>
   );
 }
@@ -172,13 +165,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  headerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
   },
   listContent: {
     paddingHorizontal: Spacing.md,

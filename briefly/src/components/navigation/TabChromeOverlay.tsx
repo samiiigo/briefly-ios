@@ -1,9 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { usePathname, useRouter } from 'expo-router';
-import { BottomTabBlurFade } from './BottomTabBlurFade';
+import { useRouter } from 'expo-router';
 import { FloatingTabBar } from './FloatingTabBar';
-import { Platform } from 'react-native';
 import { useTabBarProps } from './tabBarBridge';
 import { tabRouteShowsRecordButton } from './tabChromeRoutes';
 import { RecordButton } from '@/components/features/recording/RecordButton';
@@ -33,39 +31,20 @@ function TabRecordButton() {
 }
 
 export function TabChromeOverlay() {
-  const pathname = usePathname();
   const tabBarProps = useTabBarProps();
   const activeTabName = useActiveTabRouteName();
   const showsRecordButton = tabRouteShowsRecordButton(activeTabName);
 
-  if (pathname.includes('settings') || activeTabName === 'settings') {
-    return null;
-  }
-
   return (
     <View style={styles.overlay} pointerEvents="box-none">
-      {Platform.OS !== 'android' && (
-        <View style={styles.blurLayer} pointerEvents="none">
-          <BottomTabBlurFade />
-        </View>
-      )}
-      <View style={styles.chromeLayer} pointerEvents="box-none">
-        {tabBarProps ? <FloatingTabBar {...tabBarProps} /> : null}
-        {showsRecordButton ? <TabRecordButton /> : null}
-      </View>
+      {tabBarProps ? <FloatingTabBar {...tabBarProps} /> : null}
+      {showsRecordButton ? <TabRecordButton /> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  blurLayer: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
-  },
-  chromeLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 2,
   },

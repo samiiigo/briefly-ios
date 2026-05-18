@@ -8,6 +8,7 @@ import {
   TOP_HEADER_PADDING_BOTTOM,
   TOP_HEADER_PADDING_TOP,
 } from '@/components/navigation/topHeaderMetrics';
+import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
 import { Colors, Spacing, BorderRadius } from '@/theme';
 
 interface HeaderProps {
@@ -27,41 +28,43 @@ export function RecordingDetailHeader({
   menuItems,
 }: HeaderProps) {
   return (
-    <View style={headerStyles.header}>
-      <View style={headerStyles.leading}>
-        <CircularIconButton
-          icon="arrow-back"
-          accessibilityLabel="Back"
-          onPress={onBack}
-          style={headerStyles.backButton}
-        />
-        <Text style={headerStyles.folderLabel} numberOfLines={1}>
-          {folderLabel}
-        </Text>
+    <TopChromeOverlay>
+      <View style={headerStyles.header}>
+        <View style={headerStyles.leading}>
+          <CircularIconButton
+            icon="arrow-back"
+            accessibilityLabel="Back"
+            onPress={onBack}
+            style={headerStyles.backButton}
+          />
+          <Text style={headerStyles.folderLabel} numberOfLines={1}>
+            {folderLabel}
+          </Text>
+        </View>
+        <View style={headerStyles.actions}>
+          <CircularIconButton
+            icon={shareDisabled ? 'hourglass-outline' : 'share-outline'}
+            accessibilityLabel="Share"
+            onPress={shareDisabled ? undefined : onShare}
+            style={[
+              headerStyles.secondaryButton,
+              shareDisabled ? headerStyles.shareDisabled : undefined,
+            ]}
+          />
+          <AnchoredOverflowMenu
+            items={menuItems}
+            renderTrigger={(open) => (
+              <CircularIconButton
+                icon="ellipsis-horizontal"
+                accessibilityLabel="Recording options"
+                onPress={open}
+                style={headerStyles.secondaryButton}
+              />
+            )}
+          />
+        </View>
       </View>
-      <View style={headerStyles.actions}>
-        <CircularIconButton
-          icon={shareDisabled ? 'hourglass-outline' : 'share-outline'}
-          accessibilityLabel="Share"
-          onPress={shareDisabled ? undefined : onShare}
-          style={[
-            headerStyles.secondaryButton,
-            shareDisabled ? headerStyles.shareDisabled : undefined,
-          ]}
-        />
-        <AnchoredOverflowMenu
-          items={menuItems}
-          renderTrigger={(open) => (
-            <CircularIconButton
-              icon="ellipsis-horizontal"
-              accessibilityLabel="Recording options"
-              onPress={open}
-              style={headerStyles.secondaryButton}
-            />
-          )}
-        />
-      </View>
-    </View>
+    </TopChromeOverlay>
   );
 }
 

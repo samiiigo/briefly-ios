@@ -20,7 +20,6 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { useUserFolderStore } from '@/context/useUserFolderStore';
 import { useFolderListLayoutStore } from '@/context/useFolderListLayoutStore';
 import { LibraryHeader } from './LibraryHeader';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { computeLibraryFolderCounts } from '@/utils/folders/folderCounts';
@@ -108,7 +107,7 @@ export function LibraryFolderBrowser({
   folderListFilter,
 }: LibraryFolderBrowserProps) {
   const folderGridCardWidth = useFolderGridCardWidth();
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const router = useRouter();
   const recordings = useRecordingStore((s) => s.recordings);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
@@ -773,15 +772,12 @@ export function LibraryFolderBrowser({
         onCancel={() => setAddModalVisible(false)}
       />
 
-      <TopBlurFade />
-      <View style={[styles.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <LibraryHeader
-          title={pageTitle}
-          showBack={showBack}
-          onBack={() => router.back()}
-          onAddFolder={handleAddFolder}
-        />
-      </View>
+      <LibraryHeader
+        title={pageTitle}
+        showBack={showBack}
+        onBack={() => router.back()}
+        onAddFolder={handleAddFolder}
+      />
 
       <TextInputDialog
         visible={!!renameFolderTarget}
@@ -819,13 +815,6 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  headerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
   },
   scrollView: { flex: 1 },
   gridContent: {

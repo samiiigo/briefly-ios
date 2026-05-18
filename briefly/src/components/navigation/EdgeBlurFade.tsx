@@ -11,7 +11,7 @@ type GradientStops = {
   locations: readonly [number, number, ...number[]];
 };
 
-/** Canonical fade (strongest at the screen edge). Top uses the same layers, flipped vertically. */
+/** Bottom edge fade (strongest at the screen edge). */
 const FADE_MASK: GradientStops = {
   colors: ['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.7)', '#000000'],
   locations: [0, 0.35, 0.72, 1],
@@ -27,6 +27,22 @@ const FADE_ANDROID: GradientStops = {
   locations: [0, 0.35, 0.72, 1],
 };
 
+/** Top edge: stronger blur through the header title, then a short fade-out. */
+const TOP_FADE_MASK: GradientStops = {
+  colors: ['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.88)', '#000000'],
+  locations: [0, 0.32, 0.62, 1],
+};
+
+const TOP_FADE_TINT: GradientStops = {
+  colors: ['transparent', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.8)'],
+  locations: [0, 0.45, 1],
+};
+
+const TOP_FADE_ANDROID: GradientStops = {
+  colors: ['transparent', 'rgba(0,0,0,0.62)', 'rgba(0,0,0,0.9)', 'rgba(0,0,0,0.99)'],
+  locations: [0, 0.32, 0.62, 1],
+};
+
 interface EdgeBlurFadeProps {
   edge: Edge;
   height: number;
@@ -36,6 +52,10 @@ interface EdgeBlurFadeProps {
 export function EdgeBlurFade({ edge, height, style }: EdgeBlurFadeProps) {
   const positionStyle = edge === 'bottom' ? styles.bottom : styles.top;
   const flipForTop = edge === 'top';
+  const fadeMask = flipForTop ? TOP_FADE_MASK : FADE_MASK;
+  const fadeTint = flipForTop ? TOP_FADE_TINT : FADE_TINT;
+  const fadeAndroid = flipForTop ? TOP_FADE_ANDROID : FADE_ANDROID;
+  const blurIntensity = flipForTop ? 100 : 90;
 
   return (
     <View
@@ -48,14 +68,14 @@ export function EdgeBlurFade({ edge, height, style }: EdgeBlurFadeProps) {
         {Platform.OS === 'ios' ? (
           <MaskedView
             style={StyleSheet.absoluteFill}
-            maskElement={<LinearGradient {...FADE_MASK} style={StyleSheet.absoluteFill} />}
+            maskElement={<LinearGradient {...fadeMask} style={StyleSheet.absoluteFill} />}
           >
-            <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={blurIntensity} tint="dark" style={StyleSheet.absoluteFill} />
           </MaskedView>
         ) : (
-          <LinearGradient {...FADE_ANDROID} style={StyleSheet.absoluteFill} />
+          <LinearGradient {...fadeAndroid} style={StyleSheet.absoluteFill} />
         )}
-        <LinearGradient {...FADE_TINT} style={StyleSheet.absoluteFill} pointerEvents="none" />
+        <LinearGradient {...fadeTint} style={StyleSheet.absoluteFill} pointerEvents="none" />
       </View>
     </View>
   );

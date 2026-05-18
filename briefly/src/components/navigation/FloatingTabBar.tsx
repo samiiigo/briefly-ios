@@ -20,12 +20,7 @@ const TAB_CONFIG: Record<string, TabConfig> = {
 
 export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const { bottomOffset, horizontalInset, androidTabBarHeight, insetsBottom } = useFloatingTabBarLayout();
-  const currentRoute = state.routes[state.index];
   const isAndroid = Platform.OS === 'android';
-
-  if (currentRoute.name === 'settings') {
-    return null;
-  }
 
   const visibleRoutes = state.routes.filter((r) => TAB_CHROME_MAIN_ROUTES.has(r.name));
 

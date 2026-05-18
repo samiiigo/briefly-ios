@@ -12,6 +12,7 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { installRealtimeTerminalLogs, logger } from '@/utils/logging/logger';
 import { checkEnvironment } from '@/utils/environment/environmentCheck';
+import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
 import { Colors } from '@/theme';
 import { iconFonts } from '@/theme/iconFonts';
 
@@ -86,6 +87,7 @@ export default function RootLayout() {
             }}
           >
             <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+            <Stack.Screen name="settings" />
             <Stack.Screen name="recording" />
             <Stack.Screen name="folder" />
             <Stack.Screen name="transcription-mode" />
@@ -93,6 +95,7 @@ export default function RootLayout() {
             <Stack.Screen name="folder-layout" />
             <Stack.Screen name="+not-found" />
           </Stack>
+          <NavigatorBottomBlur scope="root" />
         </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>

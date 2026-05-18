@@ -8,26 +8,29 @@ import {
   TOP_HEADER_PADDING_BOTTOM,
   TOP_HEADER_PADDING_TOP,
 } from '@/components/navigation/topHeaderMetrics';
+import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
 export function RecentsHeader() {
   const router = useRouter();
 
   return (
-    <View style={styles.header}>
-      <Text style={styles.title}>Briefly</Text>
-      <View style={styles.actions}>
-        <CircularIconButton
-          icon="settings-outline"
-          accessibilityLabel="Settings"
-          onPress={() => {
-            useActiveSwipeableStore.getState().closeActive();
-            router.push('/(tabs)/settings');
-          }}
-        />
-        <CircularIconButton icon="search" accessibilityLabel="Search" />
+    <TopChromeOverlay>
+      <View style={styles.header}>
+        <Text style={styles.title}>Briefly</Text>
+        <View style={styles.actions}>
+          <CircularIconButton
+            icon="settings-outline"
+            accessibilityLabel="Settings"
+            onPress={() => {
+              useActiveSwipeableStore.getState().closeActive();
+              router.push('/settings');
+            }}
+          />
+          <CircularIconButton icon="search" accessibilityLabel="Search" />
+        </View>
       </View>
-    </View>
+    </TopChromeOverlay>
   );
 }
 

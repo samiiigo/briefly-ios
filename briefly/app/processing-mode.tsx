@@ -11,7 +11,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import {
   modePickerStyles as mp,
@@ -35,7 +34,7 @@ const PROCESSING_MODES: ProcessingMode[] = [
 
 export default function ProcessingModePickerScreen() {
   const router = useRouter();
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const {
     summarizationMode,
     setSummarizationMode,
@@ -151,14 +150,11 @@ export default function ProcessingModePickerScreen() {
         ) : null}
       </ScrollView>
 
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader
-          title="Summarization"
-          showBack
-          onBack={() => router.back()}
-        />
-      </View>
+      <StackScreenHeader
+        title="Summarization"
+        showBack
+        onBack={() => router.back()}
+      />
     </View>
   );
 }

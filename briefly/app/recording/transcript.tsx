@@ -6,15 +6,13 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
 import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { PlaybackBarBlurFade } from '@/components/navigation/PlaybackBarBlurFade';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { Colors, Spacing } from '@/theme';
 
 export default function RecordingTranscriptScreen() {
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const { paddingBottom: playbackBottom } = usePlaybackBarLayout();
   const router = useRouter();
   const { recordingId } = useLocalSearchParams<{ recordingId: string }>();
@@ -67,11 +65,7 @@ export default function RecordingTranscriptScreen() {
         paddingBottom={playbackBottom}
       />
 
-      <PlaybackBarBlurFade />
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader title="Transcript" showBack onBack={() => router.back()} />
-      </View>
+      <StackScreenHeader title="Transcript" showBack onBack={() => router.back()} />
     </View>
   );
 }

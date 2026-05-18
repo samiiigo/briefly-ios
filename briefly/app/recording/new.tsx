@@ -14,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { AnchoredOverflowMenu } from '@/components/ui/AnchoredOverflowMenu';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -53,7 +52,7 @@ function isPermissionError(message: string): boolean {
 }
 
 export default function NewRecordingScreen() {
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{
     targetFolder?: string;
@@ -582,26 +581,23 @@ export default function NewRecordingScreen() {
         </View>
       </View>
 
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader
-          title="New Recording"
-          leading={
-            <AnchoredOverflowMenu
-              align="leading"
-              items={[{ label: 'Discard', onPress: handleDiscard }]}
-              renderTrigger={(open) => (
-                <CircularIconButton
-                  icon="arrow-back"
-                  accessibilityLabel="Recording options"
-                  onPress={open}
-                  style={{ marginRight: Spacing.sm }}
-                />
-              )}
-            />
-          }
-        />
-      </View>
+      <StackScreenHeader
+        title="New Recording"
+        leading={
+          <AnchoredOverflowMenu
+            align="leading"
+            items={[{ label: 'Discard', onPress: handleDiscard }]}
+            renderTrigger={(open) => (
+              <CircularIconButton
+                icon="arrow-back"
+                accessibilityLabel="Recording options"
+                onPress={open}
+                style={{ marginRight: Spacing.sm }}
+              />
+            )}
+          />
+        }
+      />
     </View>
   );
 }

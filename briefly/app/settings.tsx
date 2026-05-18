@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Alert,
 } from 'react-native';
 import Constants from 'expo-constants';
@@ -16,7 +15,6 @@ import {
   useFolderListLayoutStore,
 } from '@/context/useFolderListLayoutStore';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { transcriptionModeTitle } from '@/utils/processing/transcriptionMode';
@@ -25,16 +23,13 @@ import { Colors, Spacing } from '@/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const { summarizationMode, transcriptionMode } = useSettingsStore();
   const folderLayout = useFolderListLayoutStore((s) => s.layout);
 
   return (
     <View style={sl.container}>
-      <ScrollView
-        contentContainerStyle={[sl.scrollContent, { paddingTop: scrollPaddingTop }]}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={[sl.scrollContent, styles.content, { paddingTop: scrollPaddingTop }]}>
         <Text style={[sl.sectionLabel, styles.firstSectionLabel]}>Transcription</Text>
         <View style={sl.card}>
           <TouchableOpacity
@@ -170,27 +165,27 @@ export default function SettingsScreen() {
           {Constants.expoConfig?.name ?? 'Briefly'}{' '}
           {Constants.expoConfig?.version ?? '1.0.0'}
         </Text>
-      </ScrollView>
-
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader
-          title="Settings"
-          showBack
-          onBack={() => router.back()}
-        />
       </View>
 
+      <StackScreenHeader
+        title="Settings"
+        showBack
+        onBack={() => router.back()}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+  },
   firstSectionLabel: {
     marginTop: 0,
   },
   versionText: {
     ...sl.versionText,
-    marginTop: Spacing.xl,
+    marginTop: 'auto',
+    paddingTop: Spacing.xl,
   },
 });

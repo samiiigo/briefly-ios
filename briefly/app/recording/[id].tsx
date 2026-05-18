@@ -20,8 +20,6 @@ import { SummaryMarkdownSection } from '@/components/features/recording/SummaryM
 import { RecordingDetailHeader } from '@/components/features/recording/RecordingDetailChrome';
 import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { PlaybackBarBlurFade } from '@/components/navigation/PlaybackBarBlurFade';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
@@ -34,7 +32,7 @@ import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 export default function TranscriptScreen() {
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const { paddingBottom: playbackBottom } = usePlaybackBarLayout();
   const router = useRouter();
   const { id: recordingId } = useLocalSearchParams<{ id: string }>();
@@ -184,10 +182,7 @@ export default function TranscriptScreen() {
             <Text style={st.restoreButtonText}>Restore recording</Text>
           </TouchableOpacity>
         </View>
-        <TopBlurFade />
-        <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-          <StackScreenHeader title="Deleted" showBack onBack={() => router.back()} />
-        </View>
+        <StackScreenHeader title="Deleted" showBack onBack={() => router.back()} />
       </View>
     );
   }
@@ -270,17 +265,13 @@ export default function TranscriptScreen() {
         paddingBottom={playbackBottom}
       />
 
-      <PlaybackBarBlurFade />
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <RecordingDetailHeader
-          onBack={() => router.back()}
-          folderLabel={folderLabel}
-          onShare={openShareMenu}
-          shareDisabled={isExportingPdf}
-          menuItems={overflowMenuItems}
-        />
-      </View>
+      <RecordingDetailHeader
+        onBack={() => router.back()}
+        folderLabel={folderLabel}
+        onShare={openShareMenu}
+        shareDisabled={isExportingPdf}
+        menuItems={overflowMenuItems}
+      />
       <TextInputDialog
         visible={renameDialogVisible}
         title="Rename Recording"

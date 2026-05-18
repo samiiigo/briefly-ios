@@ -22,7 +22,6 @@ import { RecordButton } from '@/components/features/recording/RecordButton';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { FolderViewOptionsSheet } from '@/components/features/library/FolderViewOptionsSheet';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { TopBlurFade } from '@/components/navigation/TopBlurFade';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { Recording } from '@/types';
@@ -32,7 +31,7 @@ import { Colors, Spacing, withAppFont } from '@/theme';
 const LIST_BOTTOM_PADDING = 140;
 
 export default function FolderRecordingsScreen() {
-  const { scrollPaddingTop, topInset } = useTopChromeLayout();
+  const { scrollPaddingTop } = useTopChromeLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; folderName?: string; folderType?: string }>();
   const folderId = params.id!;
@@ -243,24 +242,21 @@ export default function FolderRecordingsScreen() {
         onClose={() => setViewSheetVisible(false)}
       />
 
-      <TopBlurFade />
-      <View style={[sl.headerOverlay, { paddingTop: topInset }]} pointerEvents="box-none">
-        <StackScreenHeader
-          title={folderName}
-          showBack
-          onBack={() => {
-            closeOpenSwipe();
-            router.back();
-          }}
-          trailing={
-            <CircularIconButton
-              icon="funnel-outline"
-              accessibilityLabel="Filters"
-              onPress={() => setViewSheetVisible(true)}
-            />
-          }
-        />
-      </View>
+      <StackScreenHeader
+        title={folderName}
+        showBack
+        onBack={() => {
+          closeOpenSwipe();
+          router.back();
+        }}
+        trailing={
+          <CircularIconButton
+            icon="funnel-outline"
+            accessibilityLabel="Filters"
+            onPress={() => setViewSheetVisible(true)}
+          />
+        }
+      />
     </View>
   );
 }
