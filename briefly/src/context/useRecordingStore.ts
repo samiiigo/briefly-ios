@@ -48,6 +48,30 @@ function purgeExpiredRecentlyDeleted(
   return { kept, removedCount: recordings.length - kept.length };
 }
 
+/** Prefer in-memory state when a background load finishes after local edits. */
+function mergeRecordingsFromPersistence(
+  memory: Recording[],
+  persisted: Recording[],
+): Recording[] {
+  const memoryById = new Map(memory.map((r) => [r.id, r]));
+  const persistedById = new Map(persisted.map((r) => [r.id, r]));
+  const ids = new Set([...memoryById.keys(), ...persistedById.keys()]);
+
+  const merged = Array.from(ids, (id) => {
+    const inMemory = memoryById.get(id);
+    const fromDisk = persistedById.get(id);
+    if (!inMemory) return fromDisk!;
+    if (!fromDisk) return inMemory;
+    // In-memory wins when both exist — e.g. re-transcribe replaces many live
+    // segments with fewer AssemblyAI segments; disk may still be stale.
+    return inMemory;
+  });
+
+  return merged.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+let mutationEpoch = 0;
+
 export const useRecordingStore = create<RecordingStore>((set, get) => ({
   recordings: [],
   activeRecordingId: null,
@@ -60,6 +84,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
     if (!force && (hasLoaded || isLoading)) {
       return;
     }
+    const epochAtStart = mutationEpoch;
     set({ isLoading: true });
     const start = Date.now();
     try {
@@ -69,6 +94,7 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
         RECENTLY_DELETED_RETENTION_MS
       );
       if (removedCount > 0) {
+        mutationEpoch += 1;
         await recordingRepository.saveAll(kept);
         recordings = kept;
       }
@@ -81,7 +107,14 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
         count: recordings.length,
         elapsedMs: Date.now() - start,
       });
-      set({ recordings, hasLoaded: true, isLoading: false });
+      set((state) => ({
+        recordings:
+          epochAtStart === mutationEpoch
+            ? recordings
+            : mergeRecordingsFromPersistence(state.recordings, recordings),
+        hasLoaded: true,
+        isLoading: false,
+      }));
     } catch (error: any) {
       logger.error('useRecordingStore', 'Failed to load recordings', {
         error: error?.message ?? String(error),
@@ -91,27 +124,48 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   },
 
   addRecording: async (recording) => {
+    mutationEpoch += 1;
     logger.info('useRecordingStore', 'Recording added', {
       id: recording.id,
       title: recording.title,
       durationSec: recording.duration,
       fileSize: recording.fileSize,
     });
-    await recordingRepository.save(recording);
     set((state) => ({ recordings: [recording, ...state.recordings] }));
+    try {
+      await recordingRepository.save(recording);
+    } catch (error) {
+      set((state) => ({
+        recordings: state.recordings.filter((r) => r.id !== recording.id),
+      }));
+      throw error;
+    }
   },
 
   updateRecording: async (id, updates) => {
+    mutationEpoch += 1;
     logger.info('useRecordingStore', 'Recording updated', {
       id,
       fields: Object.keys(updates),
     });
-    await recordingRepository.update(id, updates);
+    const previous = get().recordings.find((r) => r.id === id);
     set((state) => ({
       recordings: state.recordings.map((r) =>
         r.id === id ? { ...r, ...updates } : r
       ),
     }));
+    const next = get().recordings.find((r) => r.id === id);
+    if (!next) return;
+    try {
+      await recordingRepository.save(next);
+    } catch (error) {
+      if (previous) {
+        set((state) => ({
+          recordings: state.recordings.map((r) => (r.id === id ? previous : r)),
+        }));
+      }
+      throw error;
+    }
   },
 
   deleteRecording: async (id) => {

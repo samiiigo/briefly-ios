@@ -73,7 +73,7 @@ export async function createTranscriptJob(uploadUrl: string, apiKey: string): Pr
       punctuate: true,
       format_text: true,
       language_detection: true,
-      speech_models: [AssemblyAIConfig.asyncModel],
+      speech_models: [AssemblyAIConfig.asyncModel, 'universal-2'],
     }),
   });
 
