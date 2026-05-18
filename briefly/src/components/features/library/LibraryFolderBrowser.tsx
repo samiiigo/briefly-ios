@@ -54,6 +54,10 @@ function folderItemCountLabel(count: number, variant: 'grid' | 'list'): string {
   return `${count} ${count === 1 ? 'recording' : 'recordings'}`;
 }
 
+function userFolderCountLabel(count: number): string {
+  return `${count} ${count === 1 ? 'folder' : 'folders'}`;
+}
+
 interface FolderTile {
   id: string;
   name: string;
@@ -66,6 +70,8 @@ interface FolderTile {
 }
 
 const UTILITIES_SECTION_TITLE = 'Utilities';
+/** Extra space between the pinned folder row and the Your folders header. */
+const PINNED_TO_YOUR_FOLDERS_GAP = Spacing.md-4;
 
 type Section = {
   title: string;
@@ -239,7 +245,11 @@ export function LibraryFolderBrowser({
           ];
     }
 
-    const s: Section[] = [{ title: 'Built-in', data: builtInTiles, hideHeader: true }];
+    const systemSection: Section = {
+      title: userFolderCountLabel(userTiles.length),
+      data: builtInTiles,
+    };
+    const s: Section[] = [systemSection];
 
     if (maxPinnedFolders != null) {
       const pinnedTiles = userTiles.filter((t) => t.pinned);
@@ -640,10 +650,8 @@ export function LibraryFolderBrowser({
     [renderNoFoldersPlaceholder, renderPinnedRow]
   );
 
-  const renderSectionHeader = useCallback(
-    ({ section }: { section: Section }) => {
-      if (section.hideHeader) return null;
-      return (
+  const renderSectionHeaderContent = useCallback(
+    (section: Section) => (
       <View style={[styles.sectionHeaderRow, styles.sectionHeaderRowList]}>
         <Text style={styles.sectionLabel}>{section.title}</Text>
         {section.showSeeAll && section.seeAllFilter ? (
@@ -662,9 +670,16 @@ export function LibraryFolderBrowser({
           </TouchableOpacity>
         ) : null}
       </View>
-      );
+    ),
+    [openSeeAll],
+  );
+
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: Section }) => {
+      if (section.hideHeader) return null;
+      return renderSectionHeaderContent(section);
     },
-    [openSeeAll]
+    [renderSectionHeaderContent],
   );
 
   const pageTitle = useMemo(() => {
@@ -694,7 +709,15 @@ export function LibraryFolderBrowser({
             }
             return <View style={styles.itemGap} />;
           }}
-          SectionSeparatorComponent={() => <View style={styles.sectionGap} />}
+          SectionSeparatorComponent={({ leadingSection }) => (
+            <View
+              style={
+                leadingSection?.variant === 'pinned-row'
+                  ? styles.pinnedToYourFoldersGap
+                  : styles.sectionGap
+              }
+            />
+          )}
         />
       ) : (
         <ScrollView
@@ -703,27 +726,14 @@ export function LibraryFolderBrowser({
           showsVerticalScrollIndicator={false}
         >
           {sections.map((section) => (
-            <View key={section.title} style={styles.sectionBlock}>
-              {!section.hideHeader ? (
-                <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionLabel}>{section.title}</Text>
-                  {section.showSeeAll && section.seeAllFilter ? (
-                    <TouchableOpacity
-                      onPress={() => openSeeAll(section.seeAllFilter!)}
-                      hitSlop={12}
-                      accessibilityRole="button"
-                      accessibilityLabel="See all folders"
-                      accessibilityHint={
-                        section.seeAllFilter === 'pinned'
-                          ? 'Opens all pinned folders'
-                          : 'Opens all your folders'
-                      }
-                    >
-                      <Text style={styles.seeAll}>See all</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              ) : null}
+            <View
+              key={section.title}
+              style={[
+                styles.sectionBlock,
+                section.variant === 'pinned-row' && styles.sectionBlockAfterPinned,
+              ]}
+            >
+              {!section.hideHeader ? renderSectionHeaderContent(section) : null}
               {section.variant === 'pinned-row' && section.pinnedRowData ? (
                 renderPinnedRow(section.pinnedRowData)
               ) : section.variant === 'empty-user-folders' ? (
@@ -832,11 +842,17 @@ const styles = StyleSheet.create({
     height: 12,
   },
   sectionGap: {
-    height: 8,
+    height: Spacing.sm,
+  },
+  pinnedToYourFoldersGap: {
+    height: PINNED_TO_YOUR_FOLDERS_GAP,
   },
   sectionBlock: {
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
+    gap: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
+  sectionBlockAfterPinned: {
+    marginBottom: PINNED_TO_YOUR_FOLDERS_GAP,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -845,7 +861,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
   },
   sectionHeaderRowList: {
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   sectionLabel: withAppFont({
     fontSize: 14,
