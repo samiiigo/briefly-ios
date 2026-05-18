@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { BottomTabBlurFade } from './BottomTabBlurFade';
 import { FloatingTabBar } from './FloatingTabBar';
+import { Platform } from 'react-native';
 import { useTabBarProps } from './tabBarBridge';
 import { tabRouteShowsRecordButton } from './tabChromeRoutes';
 import { RecordButton } from '@/components/features/recording/RecordButton';
@@ -38,9 +39,11 @@ export function TabChromeOverlay() {
 
   return (
     <View style={styles.overlay} pointerEvents="box-none">
-      <View style={styles.blurLayer} pointerEvents="none">
-        <BottomTabBlurFade />
-      </View>
+      {Platform.OS !== 'android' && (
+        <View style={styles.blurLayer} pointerEvents="none">
+          <BottomTabBlurFade />
+        </View>
+      )}
       <View style={styles.chromeLayer} pointerEvents="box-none">
         {tabBarProps ? <FloatingTabBar {...tabBarProps} /> : null}
         {showsRecordButton ? <TabRecordButton /> : null}

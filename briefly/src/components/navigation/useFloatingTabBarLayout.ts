@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Spacing } from '@/theme';
 
@@ -15,11 +16,21 @@ export const BOTTOM_CHROME_EXTRA = 4;
 
 export function useFloatingTabBarLayout() {
   const insets = useSafeAreaInsets();
+  const isAndroid = Platform.OS === 'android';
+
   const bottomOffset = Math.max(insets.bottom, 8) + BOTTOM_CHROME_EXTRA;
   const horizontalInset = Spacing.lg;
-  const blurFadeHeight = bottomOffset + TAB_PILL_HEIGHT + BLUR_FADE_EXTENSION;
-  const recordButtonBottom =
-    bottomOffset + (TAB_PILL_HEIGHT - RECORD_BUTTON_SIZE) / 2;
+
+  // On Android, the tab bar sits flush at the bottom
+  const androidTabBarHeight = 60 + insets.bottom;
+
+  const blurFadeHeight = isAndroid
+    ? androidTabBarHeight + BLUR_FADE_EXTENSION
+    : bottomOffset + TAB_PILL_HEIGHT + BLUR_FADE_EXTENSION;
+
+  const recordButtonBottom = isAndroid
+    ? androidTabBarHeight + Spacing.md
+    : bottomOffset + (TAB_PILL_HEIGHT - RECORD_BUTTON_SIZE) / 2;
 
   return {
     bottomOffset,
@@ -27,5 +38,7 @@ export function useFloatingTabBarLayout() {
     pillHeight: TAB_PILL_HEIGHT,
     blurFadeHeight,
     recordButtonBottom,
+    androidTabBarHeight,
+    insetsBottom: insets.bottom,
   };
 }

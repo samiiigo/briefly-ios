@@ -9,7 +9,10 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#000000",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -47,7 +50,9 @@
     "plugins": [
       "expo-sqlite",
       "expo-audio",
-      "expo-router"
+      "expo-router",
+      "expo-font",
+      "expo-asset"
     ],
     "extra": {
       "assemblyAiApiKey": "",
