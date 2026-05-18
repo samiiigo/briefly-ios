@@ -25,6 +25,10 @@ import {
   configureRecordingStoppedAudioSession,
   prepareRecorderAsync,
 } from './playbackSession';
+import {
+  startRecordingLiveActivity,
+  stopRecordingLiveActivity,
+} from './recordingLiveActivity';
 
 class RecordingServiceClass {
   private recorder: AudioRecorder | null = null;
@@ -101,6 +105,7 @@ class RecordingServiceClass {
     this._recordingPaused = false;
     this.startTime = Date.now();
     attachActiveRecordingControls(recorder);
+    startRecordingLiveActivity();
     logger.info('AUDIO', 'Local recording started');
   }
 
@@ -123,6 +128,7 @@ class RecordingServiceClass {
   async stop(): Promise<AudioRecordingResult> {
     if (!this.recorder) {
       logger.warn('AUDIO', 'Stop called without active recorder, returning empty result');
+      stopRecordingLiveActivity();
       return { uri: '', duration: 0, fileSize: 0 };
     }
 
@@ -149,6 +155,7 @@ class RecordingServiceClass {
     this.recorder = null;
     this._recordingPaused = false;
 
+    stopRecordingLiveActivity(result.duration);
     await configureRecordingStoppedAudioSession();
 
     logger.info('AUDIO', 'Local recording stopped', {

@@ -68,7 +68,8 @@
           ]
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-live-activity"
     ],
     "extra": {
       "assemblyAiApiKey": "",
