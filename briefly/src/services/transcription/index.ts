@@ -12,7 +12,7 @@
  * not on low-level HTTP or parsing details (DIP).
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
+import { getPathInfo } from '@/utils/fileSystem/pathInfo';
 import { TranscriptSegment, TranscriptionMode } from '@/types';
 import { requireAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
 import { normalizeTranscriptionMode } from '@/utils/processing/transcriptionMode';
@@ -51,8 +51,8 @@ function createDefaultDependencies(): TranscriptionDependencies {
   return {
     getApiKey: requireAssemblyAISharedApiKey,
     getFileInfo: async (audioUri) => {
-      const info = await FileSystem.getInfoAsync(audioUri);
-      return { exists: info.exists, size: (info as any).size };
+      const info = getPathInfo(audioUri);
+      return { exists: info.exists, size: info.size };
     },
     client: {
       uploadAudio,

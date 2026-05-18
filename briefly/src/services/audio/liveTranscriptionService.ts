@@ -17,7 +17,7 @@
  */
 
 import { NativeModules } from 'react-native';
-import { getInfoAsync } from 'expo-file-system/legacy';
+import { getPathInfo } from '@/utils/fileSystem/pathInfo';
 import { normalizeDbMetering } from './audioMetering';
 import { AssemblyAIConfig, requireAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
 import { AudioRecordingResult } from './types';
@@ -224,8 +224,8 @@ class LiveTranscriptionServiceClass {
   private async toRecordingResult(uri: string, duration: number): Promise<AudioRecordingResult> {
     let fileSize = 0;
     try {
-      const info = await getInfoAsync(uri);
-      fileSize = info.exists ? ((info as any).size ?? 0) : 0;
+      const info = getPathInfo(uri);
+      fileSize = info.exists ? info.size : 0;
     } catch {
       // non-critical
     }

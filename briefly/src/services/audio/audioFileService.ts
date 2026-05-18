@@ -5,13 +5,13 @@
  * Separated from recording/playback concerns.
  */
 
-import { deleteAsync, copyAsync, documentDirectory } from 'expo-file-system/legacy';
+import { copyToDocumentDirectory, deletePath } from '@/utils/fileSystem/pathInfo';
 import { logger } from '@/utils/logging/logger';
 
 class AudioFileServiceClass {
   async deleteFile(uri: string): Promise<void> {
     try {
-      await deleteAsync(uri, { idempotent: true });
+      deletePath(uri);
       logger.info('AUDIO', 'Audio file deleted', { uri });
     } catch (error: any) {
       logger.warn('AUDIO', 'Failed to delete audio file', {
@@ -22,8 +22,7 @@ class AudioFileServiceClass {
   }
 
   async copyToDocuments(uri: string, filename: string): Promise<string> {
-    const dest = documentDirectory + filename;
-    await copyAsync({ from: uri, to: dest });
+    const dest = copyToDocumentDirectory(uri, filename);
     logger.info('AUDIO', 'Audio file copied to documents', { from: uri, to: dest });
     return dest;
   }

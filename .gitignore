@@ -5,7 +5,10 @@ node_modules/
 .env
 .env*.local
 briefly/.env
+!briefly/.env.example
 google-service-account.json
+briefly/play-store-service-account.json
+play-store-service-account.json
 
 # Expo
 .expo/

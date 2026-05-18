@@ -1,6 +1,5 @@
 import Constants from 'expo-constants';
 
-const STATIC_SHARED_ASSEMBLYAI_API_KEY = '';
 const ASSEMBLYAI_STREAM_SAMPLE_RATE = 16000;
 const ASSEMBLYAI_STREAM_MODEL = 'u3-rt-pro';
 const ASSEMBLYAI_ASYNC_MODEL = 'universal-3-pro';
@@ -19,11 +18,7 @@ function readExpoExtraKey(): string | undefined {
 }
 
 export function getAssemblyAISharedApiKey(): string | undefined {
-  return (
-    normalize(process.env.EXPO_PUBLIC_ASSEMBLYAI_API_KEY) ??
-    readExpoExtraKey() ??
-    normalize(STATIC_SHARED_ASSEMBLYAI_API_KEY)
-  );
+  return normalize(process.env.EXPO_PUBLIC_ASSEMBLYAI_API_KEY) ?? readExpoExtraKey();
 }
 
 export function requireAssemblyAISharedApiKey(): string {

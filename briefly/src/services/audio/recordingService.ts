@@ -8,7 +8,7 @@
 
 import { AudioModule, requestRecordingPermissionsAsync } from 'expo-audio';
 import type { AudioRecorder, RecordingOptions } from 'expo-audio';
-import { getInfoAsync } from 'expo-file-system/legacy';
+import { getPathInfo } from '@/utils/fileSystem/pathInfo';
 import { AudioRecordingResult } from './types';
 import { assemblyAIRecordingOptions } from './recordingOptions';
 import { normalizeDbMetering } from './audioMetering';
@@ -58,8 +58,8 @@ class RecordingServiceClass {
     let fileSize = 0;
     if (uri) {
       try {
-        const info = await getInfoAsync(uri);
-        fileSize = info.exists ? ((info as { size?: number }).size ?? 0) : 0;
+        const info = getPathInfo(uri);
+        fileSize = info.exists ? info.size : 0;
       } catch (error: unknown) {
         logger.warn('AUDIO', 'Failed to read local recording file metadata', {
           error: error instanceof Error ? error.message : String(error),

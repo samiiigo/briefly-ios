@@ -8,7 +8,11 @@
  * so the HTTP layer can change independently.
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
+import {
+  uploadAsync,
+  FileSystemUploadType,
+  FileSystemSessionType,
+} from '@/utils/fileSystem/legacyUpload';
 import { AssemblyAIConfig } from '@/constants/api/assemblyAI';
 import { logger } from '@/utils/logging/logger';
 
@@ -32,13 +36,13 @@ export interface AssemblyAITranscriptPayload {
 export async function uploadAudio(audioUri: string, apiKey: string): Promise<string> {
   logger.info('TranscriptionService', 'Uploading audio to AssemblyAI', { audioUri });
   const contentType = uploadContentType(audioUri);
-  const upload = await FileSystem.uploadAsync(`${API_BASE_URL}/upload`, audioUri, {
-    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+  const upload = await uploadAsync(`${API_BASE_URL}/upload`, audioUri, {
+    uploadType: FileSystemUploadType.BINARY_CONTENT,
     headers: {
       Authorization: apiKey,
       'Content-Type': contentType,
     },
-    sessionType: FileSystem.FileSystemSessionType.BACKGROUND,
+    sessionType: FileSystemSessionType.BACKGROUND,
     httpMethod: 'POST',
   });
 

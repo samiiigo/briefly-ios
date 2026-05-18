@@ -29,7 +29,6 @@ export default function HomeScreen() {
   const { recordButtonBottom, horizontalInset } = useFloatingTabBarLayout();
   const router = useRouter();
   const recordings = useRecordingStore((s) => s.recordings);
-  const loadRecordings = useRecordingStore((s) => s.loadRecordings);
   const deleteRecording = useRecordingStore((s) => s.deleteRecording);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
 
@@ -58,10 +57,6 @@ export default function HomeScreen() {
     },
     [recordings, updateRecording]
   );
-
-  useEffect(() => {
-    loadRecordings();
-  }, [loadRecordings]);
 
   const visibleRecordings = useMemo(
     () =>

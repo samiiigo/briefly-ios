@@ -1,6 +1,5 @@
 import Constants from 'expo-constants';
 
-const STATIC_SHARED_OPENROUTER_API_KEY = '';
 const OPENROUTER_DEFAULT_MODEL = 'openai/gpt-4.1-mini';
 const OPENROUTER_API_BASE_URL = 'https://openrouter.ai/api/v1';
 
@@ -18,11 +17,7 @@ function readExpoExtraKey(): string | undefined {
 }
 
 export function getOpenRouterSharedApiKey(): string | undefined {
-  return (
-    normalize(process.env.EXPO_PUBLIC_OPENROUTER_API_KEY) ??
-    readExpoExtraKey() ??
-    normalize(STATIC_SHARED_OPENROUTER_API_KEY)
-  );
+  return normalize(process.env.EXPO_PUBLIC_OPENROUTER_API_KEY) ?? readExpoExtraKey();
 }
 
 export function requireOpenRouterSharedApiKey(): string {

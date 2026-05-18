@@ -4,6 +4,9 @@
     "slug": "briefly",
     "scheme": "briefly",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "newArchEnabled": true,
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,23 +25,34 @@
       "supportsTablet": true,
       "backgroundColor": "#000000",
       "bundleIdentifier": "com.briefly.app",
+      "buildNumber": "1",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Briefly needs microphone access to record audio for transcription.",
         "NSSpeechRecognitionUsageDescription": "Briefly uses on-device speech recognition to transcribe your recordings privately.",
-        "NSMicrophoneUsageDescriptionAlways": "Briefly needs microphone access to record audio.",
-        "ASSEMBLYAI_API_KEY": ""
+        "UIBackgroundModes": [
+          "audio",
+          "audio"
+        ],
+        "NSSupportsLiveActivities": true,
+        "NSSupportsLiveActivitiesFrequentUpdates": false
       },
       "config": {
         "usesNonExemptEncryption": false
-      }
+      },
+      "entitlements": {}
     },
     "android": {
       "package": "com.briefly.app",
+      "versionCode": 2,
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.INTERNET",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.INTERNET",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.FOREGROUND_SERVICE",
@@ -51,7 +65,6 @@
       }
     },
     "plugins": [
-      "expo-sqlite",
       [
         "expo-audio",
         {
@@ -72,13 +85,14 @@
       "expo-live-activity"
     ],
     "extra": {
-      "assemblyAiApiKey": "",
-      "openRouterSharedApiKey": "",
       "router": {},
       "eas": {
         "projectId": "a76ad650-f9a8-479c-ad81-a666f586a7dc"
       }
     },
-    "owner": "samiiigo"
+    "owner": "samiiigo",
+    "updates": {
+      "url": "https://u.expo.dev/a76ad650-f9a8-479c-ad81-a666f586a7dc"
+    }
   }
 }
