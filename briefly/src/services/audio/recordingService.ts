@@ -16,7 +16,10 @@ import { logger } from '@/utils/logging/logger';
 import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
 import { PlaybackService } from './playbackService';
 import {
+  attachAndroidRecordingNotificationControls,
   configureAndroidBackgroundRecordingSession,
+  detachAndroidRecordingNotificationControls,
+  markAndroidRecordingStopFromApp,
   supportsAndroidBackgroundRecording,
 } from './androidBackgroundRecording';
 import {
@@ -30,6 +33,42 @@ class RecordingServiceClass {
   private recorder: AudioRecorder | null = null;
   private _recordingPaused = false;
   private startTime: number = 0;
+
+  private async buildResultFromRecorder(
+    recorder: AudioRecorder,
+    fallbackDurationSec: number,
+  ): Promise<AudioRecordingResult> {
+    let durationMillis = Math.round(fallbackDurationSec * 1000);
+    let uri = recorder.uri || '';
+    try {
+      const status = recorder.getStatus();
+      if (status.durationMillis > 0) {
+        durationMillis = status.durationMillis;
+      }
+      if (status.url) {
+        uri = status.url;
+      }
+    } catch (error: unknown) {
+      logger.warn('AUDIO', 'Failed to read recorder status after stop', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    let fileSize = 0;
+    if (uri) {
+      try {
+        const info = await getInfoAsync(uri);
+        fileSize = info.exists ? ((info as { size?: number }).size ?? 0) : 0;
+      } catch (error: unknown) {
+        logger.warn('AUDIO', 'Failed to read local recording file metadata', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    const duration = durationMillis / 1000;
+    return { uri, duration, fileSize };
+  }
 
   async requestPermissions(): Promise<boolean> {
     const { granted } = await requestRecordingPermissionsAsync();
@@ -68,6 +107,7 @@ class RecordingServiceClass {
     this.recorder = recorder;
     this._recordingPaused = false;
     this.startTime = Date.now();
+    attachAndroidRecordingNotificationControls(recorder);
     logger.info('AUDIO', 'Local recording started');
   }
 
@@ -98,44 +138,44 @@ class RecordingServiceClass {
     }
 
     const recorder = this.recorder;
-    let durationMillis = 0;
+    const fallbackDurationSec = (Date.now() - this.startTime) / 1000;
+    let alreadyStopped = false;
+
     try {
-      durationMillis = recorder.getStatus().durationMillis;
-    } catch (error: any) {
-      logger.warn('AUDIO', 'Failed to read recorder status before stop', {
-        error: error?.message ?? String(error),
-      });
+      const status = recorder.getStatus();
+      alreadyStopped = !status.isRecording && !status.canRecord;
+    } catch {
+      // Proceed with native stop.
     }
 
-    const uri = recorder.uri || '';
+    markAndroidRecordingStopFromApp(true);
     try {
-      await recorder.stop();
-    } catch (error: any) {
-      logger.error('AUDIO', 'Failed to stop recorder', {
-        error: error?.message ?? String(error),
-      });
-    }
-
-    let fileSize = 0;
-    if (uri) {
-      try {
-        const info = await getInfoAsync(uri);
-        fileSize = info.exists ? ((info as any).size ?? 0) : 0;
-      } catch (error: any) {
-        logger.warn('AUDIO', 'Failed to read local recording file metadata', {
-          error: error?.message ?? String(error),
-        });
+      if (!alreadyStopped) {
+        try {
+          await recorder.stop();
+        } catch (error: unknown) {
+          logger.error('AUDIO', 'Failed to stop recorder', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
+    } finally {
+      markAndroidRecordingStopFromApp(false);
+      detachAndroidRecordingNotificationControls();
     }
 
-    const duration = durationMillis / 1000;
+    const result = await this.buildResultFromRecorder(recorder, fallbackDurationSec);
     this.recorder = null;
     this._recordingPaused = false;
 
     await configureRecordingStoppedAudioSession();
 
-    logger.info('AUDIO', 'Local recording stopped', { uri, durationSec: duration, fileSize });
-    return { uri, duration, fileSize };
+    logger.info('AUDIO', 'Local recording stopped', {
+      uri: result.uri,
+      durationSec: result.duration,
+      fileSize: result.fileSize,
+    });
+    return result;
   }
 
   getMetering(): number {

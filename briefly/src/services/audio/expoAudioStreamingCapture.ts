@@ -17,7 +17,10 @@ import { Platform } from 'react-native';
 import { assemblyAIRecordingOptions, WAV_HEADER_BYTES } from './recordingOptions';
 import { normalizeDbMetering, pcmBufferToLevel, smoothMeteringLevel } from './audioMetering';
 import {
+  attachAndroidRecordingNotificationControls,
   configureAndroidBackgroundRecordingSession,
+  detachAndroidRecordingNotificationControls,
+  markAndroidRecordingStopFromApp,
   supportsAndroidBackgroundRecording,
 } from './androidBackgroundRecording';
 import { PlaybackService } from './playbackService';
@@ -79,6 +82,7 @@ export class ExpoAudioStreamingCapture {
     await prepareRecorderAsync(recorder);
     recorder.record();
     this.recorder = recorder;
+    attachAndroidRecordingNotificationControls(recorder);
 
     this.startPolling();
   }
@@ -112,11 +116,31 @@ export class ExpoAudioStreamingCapture {
   async stop(): Promise<{ uri: string; duration: number }> {
     this.stopPolling();
 
-    const uri = this.recorder?.uri ?? '';
-    const duration = (Date.now() - this.startTime) / 1000;
+    const fallbackDuration = (Date.now() - this.startTime) / 1000;
+    let uri = this.recorder?.uri ?? '';
+    let duration = fallbackDuration;
 
     if (this.recorder) {
-      await this.recorder.stop();
+      const recorder = this.recorder;
+      let alreadyStopped = false;
+      try {
+        const status = recorder.getStatus();
+        alreadyStopped = !status.isRecording && !status.canRecord;
+        if (status.url) uri = status.url;
+        if (status.durationMillis > 0) duration = status.durationMillis / 1000;
+      } catch {
+        // Proceed with native stop.
+      }
+
+      markAndroidRecordingStopFromApp(true);
+      try {
+        if (!alreadyStopped) {
+          await recorder.stop();
+        }
+      } finally {
+        markAndroidRecordingStopFromApp(false);
+        detachAndroidRecordingNotificationControls();
+      }
       this.recorder = null;
     }
 

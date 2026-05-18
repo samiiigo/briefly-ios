@@ -44,7 +44,9 @@ import { useAppInterruptGuard } from '@/hooks/useAppInterruptGuard';
 import {
   onAndroidRecordingEnteredBackground,
   onAndroidRecordingReturnedForeground,
+  registerAndroidRecordingStoppedHandler,
   shouldPauseRecordingWhenAppBackgrounds,
+  supportsAndroidBackgroundRecording,
 } from '@/services/audio/androidBackgroundRecording';
 function isPermissionError(message: string): boolean {
   return /microphone|permission|speech recognition/i.test(message);
@@ -113,6 +115,16 @@ export default function NewRecordingScreen() {
   );
 
   const handlePauseRef = useRef<() => Promise<void>>(async () => {});
+  const executeStopAndSaveRef = useRef<() => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    if (!supportsAndroidBackgroundRecording()) return;
+
+    registerAndroidRecordingStoppedHandler(() => {
+      void executeStopAndSaveRef.current();
+    });
+    return () => registerAndroidRecordingStoppedHandler(null);
+  }, []);
 
   useAppInterruptGuard({
     enabled: isStarted && !startFailed && !isStopped.current,
@@ -378,6 +390,8 @@ export default function NewRecordingScreen() {
     startTimer,
     stopTimer,
   ]);
+
+  executeStopAndSaveRef.current = executeStopAndSave;
 
   const handleStop = async () => {
     if (isStopped.current || isStopping || startFailed) return;
