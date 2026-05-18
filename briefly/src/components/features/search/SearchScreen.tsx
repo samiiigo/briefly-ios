@@ -46,6 +46,7 @@ const sectionHeaderStyle = withAppFont({
   lineHeight: 16,
   color: Colors.subtext,
   marginBottom: 0,
+  marginLeft: Spacing.xs,
 });
 
 export function SearchScreen() {

@@ -4,6 +4,9 @@ import { RECORDING_LIST_HEADER_GAP } from '@/utils/list/flattenRecordingSections
 import { RecentSearchCard } from './RecentSearchCard';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
+/** Extra inset for section titles and trailing actions. */
+const CHROME_LABEL_OFFSET = Spacing.xs;
+
 interface Props {
   queries: string[];
   onSelect: (query: string) => void;
@@ -23,7 +26,12 @@ export function RecentSearchesSection({
     <View style={styles.section}>
       <View style={styles.headerRow}>
         <Text style={styles.sectionHeader}>Recent Searches</Text>
-        <Pressable onPress={onClearAll} hitSlop={8} accessibilityRole="button">
+        <Pressable
+          onPress={onClearAll}
+          hitSlop={8}
+          style={styles.clearAllButton}
+          accessibilityRole="button"
+        >
           <Text style={styles.clearAll}>Clear All</Text>
         </Pressable>
       </View>
