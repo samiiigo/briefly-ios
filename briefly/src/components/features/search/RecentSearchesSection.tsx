@@ -44,6 +44,7 @@ export function RecentSearchesSection({
 const styles = StyleSheet.create({
   section: {
     gap: RECORDING_LIST_HEADER_GAP,
+    paddingLeft: 8,
   },
   headerRow: {
     flexDirection: 'row',

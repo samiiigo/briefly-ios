@@ -25,7 +25,7 @@ import { SearchFolderCard } from './SearchFolderCard';
 import { SearchResultItem } from './SearchResultItem';
 import { SearchEmptyState } from './SearchEmptyState';
 import {
-  SEARCH_CHROME_HORIZONTAL_PADDING,
+  SEARCH_LIST_HORIZONTAL_PADDING,
   getSearchScrollPaddingTop,
 } from './searchLayout';
 import { Colors, Spacing, withAppFont } from '@/theme';
@@ -48,12 +48,16 @@ const sectionHeaderStyle = withAppFont({
   marginBottom: 0,
 });
 
+function formatRecordingResultCount(count: number): string {
+  return count === 1 ? '1 result' : `${count} results`;
+}
+
 export function SearchScreen() {
   const insets = useSafeAreaInsets();
   const scrollPaddingTop = getSearchScrollPaddingTop(insets.top);
   const { width: windowWidth } = useWindowDimensions();
   const folderCardWidth =
-    (windowWidth - 2 * SEARCH_CHROME_HORIZONTAL_PADDING) * FOLDER_CARD_WIDTH_RATIO;
+    (windowWidth - 2 * SEARCH_LIST_HORIZONTAL_PADDING) * FOLDER_CARD_WIDTH_RATIO;
   const listRef = useRef<FlashListRef<Recording>>(null);
   const pristineScrollRef = useRef<ScrollView>(null);
 
@@ -110,31 +114,48 @@ export function SearchScreen() {
     dismissKeyboard();
   }, [handleSearchSubmit, dismissKeyboard]);
 
-  const folderHeader = useMemo(() => {
-    if (!isActiveSearch || results.folders.length === 0) return null;
+  const listHeader = useMemo(() => {
+    if (!isActiveSearch) return null;
+
+    const recordingCount = results.recordings.length;
+    const hasFolders = results.folders.length > 0;
+    const hasRecordings = recordingCount > 0;
+
+    if (!hasFolders && !hasRecordings) return null;
 
     return (
-      <View style={styles.folderBlock}>
-        <Text style={sectionHeaderStyle}>Folders</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          onScrollBeginDrag={dismissKeyboard}
-        >
-          {results.folders.map((folder) => (
-            <SearchFolderCard
-              key={`${folder.folderType}-${folder.id}`}
-              folder={folder}
-              query={deferredQuery}
-              width={folderCardWidth}
-              onPress={() => openFolder(folder.id, folder.name, folder.folderType)}
-            />
-          ))}
-        </ScrollView>
-        {results.recordings.length > 0 ? (
-          <Text style={[sectionHeaderStyle, styles.itemsSectionHeader]}>Items</Text>
+      <View style={styles.listHeader}>
+        {hasFolders ? (
+          <View style={styles.folderBlock}>
+            <Text style={sectionHeaderStyle}>Folders</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              onScrollBeginDrag={dismissKeyboard}
+            >
+              {results.folders.map((folder) => (
+                <SearchFolderCard
+                  key={`${folder.folderType}-${folder.id}`}
+                  folder={folder}
+                  query={deferredQuery}
+                  width={folderCardWidth}
+                  onPress={() => openFolder(folder.id, folder.name, folder.folderType)}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
+        {hasRecordings ? (
+          <Text
+            style={[
+              sectionHeaderStyle,
+              hasFolders ? styles.recordingsSectionHeader : null,
+            ]}
+          >
+            {formatRecordingResultCount(recordingCount)}
+          </Text>
         ) : null}
       </View>
     );
@@ -195,7 +216,7 @@ export function SearchScreen() {
               renderItem={renderRecording}
               keyExtractor={keyExtractor}
               ItemSeparatorComponent={ResultSeparator}
-              ListHeaderComponent={folderHeader}
+              ListHeaderComponent={listHeader}
               ListEmptyComponent={listEmpty}
               contentContainerStyle={listContentStyle}
               keyboardShouldPersistTaps="handled"
@@ -245,17 +266,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingHorizontal: SEARCH_CHROME_HORIZONTAL_PADDING,
+    paddingHorizontal: SEARCH_LIST_HORIZONTAL_PADDING,
     paddingBottom: SCREEN_LIST_BOTTOM_PADDING,
   },
   itemGap: {
     height: RECORDING_LIST_ITEM_GAP,
   },
-  folderBlock: {
+  listHeader: {
     marginBottom: Spacing.sm,
     gap: 7,
   },
-  itemsSectionHeader: {
+  folderBlock: {
+    gap: 7,
+  },
+  recordingsSectionHeader: {
     marginTop: Spacing.sm,
   },
 });

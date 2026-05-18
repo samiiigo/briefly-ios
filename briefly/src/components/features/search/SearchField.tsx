@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SEARCH_PLACEHOLDER } from '@/constants/search';
@@ -38,6 +38,12 @@ export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchF
 
   const showClear = value.length > 0;
 
+  const handleClearPress = useCallback(() => {
+    onClear();
+    // Tap targets the ×, not the field — refocus so the keyboard stays open.
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, [onClear]);
+
   return (
     <View style={styles.field}>
       <Ionicons name="search" size={18} color={Colors.subtext} style={styles.leadingIcon} />
@@ -59,7 +65,7 @@ export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchF
       />
       {showClear ? (
         <Pressable
-          onPress={onClear}
+          onPress={handleClearPress}
           hitSlop={8}
           style={styles.clearButton}
           accessibilityRole="button"

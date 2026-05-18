@@ -3,6 +3,12 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
+/** Matches {@link SearchField} leading icon + trailing gap for row alignment. */
+const LEADING_ICON_SIZE = 18;
+const LEADING_ICON_GAP = Spacing.sm;
+
+export const RECENT_SEARCH_LEADING_INSET = LEADING_ICON_SIZE + LEADING_ICON_GAP;
+
 interface Props {
   query: string;
   onPress: () => void;
@@ -18,6 +24,9 @@ export function RecentSearchCard({ query, onPress, onRemove }: Props) {
         accessibilityRole="button"
         accessibilityLabel={`Search for ${query}`}
       >
+        <View style={styles.leadingSlot}>
+          <Ionicons name="time-outline" size={LEADING_ICON_SIZE} color={Colors.subtext} />
+        </View>
         <Text style={styles.label} numberOfLines={1}>
           {query}
         </Text>
@@ -40,15 +49,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.sm,
     minHeight: 44,
   },
   labelPressable: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     minWidth: 0,
+    paddingVertical: Spacing.sm,
     marginRight: Spacing.sm,
   },
+  leadingSlot: {
+    width: LEADING_ICON_SIZE,
+    marginRight: LEADING_ICON_GAP,
+    alignItems: 'center',
+  },
   label: withAppFont({
+    flex: 1,
     fontSize: 17,
     fontWeight: '600',
     color: Colors.textPrimary,
