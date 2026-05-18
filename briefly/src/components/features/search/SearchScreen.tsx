@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { FlashList, type FlashListRef, type ListRenderItem } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
+import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useUserFolderStore } from '@/context/useUserFolderStore';
 import { useSearchStore } from '@/context/useSearchStore';
@@ -25,26 +25,35 @@ import {
 } from '@/constants/search';
 import { buildSearchCatalog, runIndexedSearch } from '@/utils/search/searchIndex';
 import { normalizeSearchQuery } from '@/utils/search/searchEngine';
+import { RECORDING_LIST_ITEM_GAP } from '@/utils/list/flattenRecordingSections';
 import { Recording } from '@/types';
-import { SearchBar } from './SearchBar';
-import {
-  ScrollRevealSearchFilters,
-  HIDE_THRESHOLD,
-  REVEAL_THRESHOLD,
-} from './ScrollRevealSearchFilters';
+import { SearchHeader } from './SearchHeader';
+import { HIDE_THRESHOLD, REVEAL_THRESHOLD } from './ScrollRevealSearchFilters';
 import { RecentSearchesSection } from './RecentSearchesSection';
 import { SearchFolderCard } from './SearchFolderCard';
 import { SearchResultItem } from './SearchResultItem';
 import { SearchEmptyState } from './SearchEmptyState';
+import {
+  getSearchScrollPaddingTop,
+  SEARCH_LIST_BOTTOM_PADDING,
+} from './searchLayout';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
 const FOLDER_CARD_WIDTH_RATIO = 0.42;
-const LIST_BOTTOM_PADDING = 48;
-const RESULT_ROW_GAP = 12;
+
+const sectionHeaderStyle = withAppFont({
+  fontSize: 14,
+  fontWeight: '500',
+  lineHeight: 16,
+  color: Colors.subtext,
+  marginBottom: 0,
+  paddingHorizontal: Spacing.sm,
+});
 
 export function SearchScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const { topInset } = useTopChromeLayout();
+  const searchScrollPaddingTop = getSearchScrollPaddingTop(topInset);
   const { width: windowWidth } = useWindowDimensions();
   const folderCardWidth = (windowWidth - 2 * Spacing.md) * FOLDER_CARD_WIDTH_RATIO;
   const listRef = useRef<FlashListRef<Recording>>(null);
@@ -67,12 +76,10 @@ export function SearchScreen() {
   const deferredQuery = useDeferredValue(debouncedQuery);
   const filterReveal = useSharedValue(0);
 
-  /** Only for keyboard Search / Enter — never wired to onChangeText. */
   const handleSearchSubmit = useCallback(() => {
     useSearchStore.getState().commitRecentQuery(queryRef.current);
   }, []);
 
-  /** Only when the user opens a folder or recording from results. */
   const persistQueryOnResultTap = useCallback(() => {
     useSearchStore.getState().commitRecentQuery(queryRef.current);
   }, []);
@@ -125,7 +132,7 @@ export function SearchScreen() {
     [filterReveal]
   );
 
-  const handleCancel = useCallback(() => {
+  const handleClose = useCallback(() => {
     router.back();
   }, [router]);
 
@@ -156,8 +163,8 @@ export function SearchScreen() {
     if (!isActiveSearch || results.folders.length === 0) return null;
 
     return (
-      <View style={styles.block}>
-        <Text style={styles.sectionTitle}>Folders</Text>
+      <View style={styles.folderBlock}>
+        <Text style={sectionHeaderStyle}>Folders</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -174,7 +181,7 @@ export function SearchScreen() {
           ))}
         </ScrollView>
         {results.recordings.length > 0 ? (
-          <Text style={[styles.sectionTitle, styles.itemsSectionTitle]}>Items</Text>
+          <Text style={[sectionHeaderStyle, styles.itemsSectionHeader]}>Items</Text>
         ) : null}
       </View>
     );
@@ -227,25 +234,22 @@ export function SearchScreen() {
     deferredQuery,
   ]);
 
+  const listContentStyle = useMemo(
+    () => [
+      styles.listContent,
+      {
+        paddingTop: searchScrollPaddingTop,
+        paddingBottom: SEARCH_LIST_BOTTOM_PADDING,
+      },
+    ],
+    [searchScrollPaddingTop]
+  );
+
   return (
     <KeyboardAvoidingView
-      style={styles.page}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={[styles.chrome, { paddingTop: insets.top }]}>
-        <SearchBar
-          value={query}
-          onChangeText={handleQueryChange}
-          onCancel={handleCancel}
-          onSubmit={handleSearchSubmit}
-        />
-        <ScrollRevealSearchFilters
-          progress={filterReveal}
-          selected={filterId}
-          onSelect={setFilterId}
-        />
-      </View>
-
       <FlashList
         ref={listRef}
         style={styles.list}
@@ -255,16 +259,22 @@ export function SearchScreen() {
         ItemSeparatorComponent={ResultSeparator}
         ListHeaderComponent={folderHeader}
         ListEmptyComponent={listEmpty}
-        contentContainerStyle={{
-          paddingTop: Spacing.sm,
-          paddingBottom: insets.bottom + LIST_BOTTOM_PADDING,
-          paddingHorizontal: isActiveSearch && results.recordings.length > 0 ? Spacing.md : 0,
-        }}
+        contentContainerStyle={listContentStyle}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        drawDistance={320}
+        drawDistance={400}
         scrollEventThrottle={16}
         onScroll={handleScroll}
+      />
+
+      <SearchHeader
+        query={query}
+        onChangeText={handleQueryChange}
+        onClose={handleClose}
+        onSubmit={handleSearchSubmit}
+        filterReveal={filterReveal}
+        filterId={filterId}
+        onFilterSelect={setFilterId}
       />
     </KeyboardAvoidingView>
   );
@@ -275,36 +285,27 @@ function ResultSeparator() {
 }
 
 const styles = StyleSheet.create({
-  page: {
+  container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
   list: {
     flex: 1,
   },
-  chrome: {
-    backgroundColor: Colors.background,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-  },
-  block: {
-    marginBottom: Spacing.lg,
-    marginHorizontal: -Spacing.md,
-  },
-  sectionTitle: withAppFont({
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.subtext,
-    marginBottom: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-  }),
-  itemsSectionTitle: {
-    marginTop: Spacing.sm,
-  },
-  folderRow: {
+  listContent: {
     paddingHorizontal: Spacing.md,
   },
   itemGap: {
-    height: RESULT_ROW_GAP,
+    height: RECORDING_LIST_ITEM_GAP,
+  },
+  folderBlock: {
+    marginBottom: Spacing.sm,
+    gap: 7,
+  },
+  folderRow: {
+    paddingHorizontal: Spacing.sm,
+  },
+  itemsSectionHeader: {
+    marginTop: Spacing.sm,
   },
 });

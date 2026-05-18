@@ -11,10 +11,13 @@ export function SearchEmptyState({ query }: Props) {
   return (
     <View style={styles.wrap}>
       <View style={styles.iconRing}>
-        <Ionicons name="search-outline" size={36} color={Colors.subtext} />
+        <View style={styles.iconInner}>
+          <Ionicons name="search-outline" size={40} color={Colors.subtext} />
+        </View>
       </View>
-      <Text style={styles.message}>
-        No results found for &apos;{query}&apos;
+      <Text style={styles.title}>No results found</Text>
+      <Text style={styles.subtitle}>
+        Nothing matched &apos;{query}&apos;. Try a different term or filter.
       </Text>
     </View>
   );
@@ -22,27 +25,41 @@ export function SearchEmptyState({ query }: Props) {
 
 const styles = StyleSheet.create({
   wrap: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.xxl,
-    minHeight: 280,
+    paddingBottom: Spacing.xl,
   },
   iconRing: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xl,
+  },
+  iconInner: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.lg,
   },
-  message: withAppFont({
-    fontSize: 17,
-    fontWeight: '500',
+  title: withAppFont({
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  }),
+  subtitle: withAppFont({
+    fontSize: 15,
     color: Colors.subtext,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
   }),
 });
