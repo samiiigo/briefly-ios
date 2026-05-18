@@ -1,9 +1,9 @@
 import React, { memo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '@/types';
-import { formatRecentsCardDate } from '@/utils';
-import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
+import { formatSearchResultDate } from '@/utils';
+import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { HighlightedText } from './HighlightedText';
 import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
 
@@ -11,6 +11,33 @@ interface Props {
   recording: Recording;
   query: string;
   onPress: () => void;
+}
+
+function SearchResultLeadingIcon({ recording }: { recording: Recording }) {
+  const processing = isRecordingProcessing(recording);
+  const failed = recording.status === 'error';
+
+  if (processing) {
+    return (
+      <View style={styles.iconCircle}>
+        <ActivityIndicator size="small" color={Colors.textPrimary} />
+      </View>
+    );
+  }
+
+  if (failed) {
+    return (
+      <View style={styles.iconCircle}>
+        <Ionicons name="close-circle" size={26} color={Colors.red} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.iconCircle}>
+      <Ionicons name="document-text-outline" size={22} color={Colors.subtext} />
+    </View>
+  );
 }
 
 function SearchResultItemComponent({ recording, query, onPress }: Props) {
@@ -22,7 +49,7 @@ function SearchResultItemComponent({ recording, query, onPress }: Props) {
       accessibilityRole="button"
     >
       <View style={styles.leading}>
-        <RecordingAvatar recording={recording} trailingSpacing={false} />
+        <SearchResultLeadingIcon recording={recording} />
         <View style={styles.textBlock}>
           <HighlightedText
             text={recording.title}
@@ -31,7 +58,7 @@ function SearchResultItemComponent({ recording, query, onPress }: Props) {
             numberOfLines={1}
           />
           <Text style={styles.subtitle} numberOfLines={1}>
-            {formatRecentsCardDate(recording.createdAt)}
+            {formatSearchResultDate(recording.createdAt)}
           </Text>
         </View>
       </View>
@@ -58,6 +85,15 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     minWidth: 0,
     marginRight: Spacing.sm,
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   textBlock: {
     flex: 1,

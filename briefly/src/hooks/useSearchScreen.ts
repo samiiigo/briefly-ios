@@ -50,8 +50,15 @@ export function useSearchScreen() {
   );
 
   const isActiveSearch = normalizeSearchQuery(deferredQuery).length > 0;
-  const hasResults = results.folders.length > 0 || results.recordings.length > 0;
+  const hasScopedResults = results.folders.length > 0 || results.recordings.length > 0;
   const isStaleResults = debouncedQuery !== deferredQuery;
+
+  const globalResults = useMemo(
+    () => runIndexedSearch(deferredQuery, DEFAULT_SEARCH_FILTER, catalog),
+    [deferredQuery, catalog]
+  );
+  const hasGlobalResults =
+    globalResults.folders.length > 0 || globalResults.recordings.length > 0;
 
   const scopedRecentQueries = useMemo(
     () =>
@@ -111,7 +118,8 @@ export function useSearchScreen() {
     setFilterId,
     results,
     isActiveSearch,
-    hasResults,
+    hasScopedResults,
+    hasGlobalResults,
     isStaleResults,
     scopedRecentQueries,
     handleQueryChange,

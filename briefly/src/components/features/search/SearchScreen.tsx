@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  useWindowDimensions,
 } from 'react-native';
 import { FlashList, type FlashListRef, type ListRenderItem } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +13,7 @@ import { Recording } from '@/types';
 import { RECORDING_LIST_ITEM_GAP } from '@/utils/list/flattenRecordingSections';
 import { SearchTopChrome } from './SearchTopChrome';
 import { RecentSearchesSection } from './RecentSearchesSection';
-import { SearchFolderCard } from './SearchFolderCard';
+import { SearchFolderChip } from './SearchFolderChip';
 import { SearchResultItem } from './SearchResultItem';
 import { SearchEmptyState } from './SearchEmptyState';
 import {
@@ -22,8 +21,6 @@ import {
   SEARCH_LIST_BOTTOM_PADDING,
 } from './searchLayout';
 import { Colors, Spacing, withAppFont } from '@/theme';
-
-const FOLDER_CARD_WIDTH_RATIO = 0.42;
 
 const sectionHeaderStyle = withAppFont({
   fontSize: 14,
@@ -36,9 +33,6 @@ const sectionHeaderStyle = withAppFont({
 
 export function SearchScreen() {
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
-  const folderCardWidth =
-    (windowWidth - 2 * SEARCH_CHROME_HORIZONTAL_PADDING) * FOLDER_CARD_WIDTH_RATIO;
   const listRef = useRef<FlashListRef<Recording>>(null);
   const pristineScrollRef = useRef<ScrollView>(null);
 
@@ -49,7 +43,8 @@ export function SearchScreen() {
     setFilterId,
     results,
     isActiveSearch,
-    hasResults,
+    hasScopedResults,
+    hasGlobalResults,
     isStaleResults,
     scopedRecentQueries,
     handleQueryChange,
@@ -63,11 +58,14 @@ export function SearchScreen() {
     clearRecentQueries,
   } = useSearchScreen();
 
-  const { filterReveal, collapseFilters, handleScroll } = useSearchFilterReveal({
-    isActiveSearch,
-    hasResults,
-    resetToken: deferredQuery,
-  });
+  const { filterReveal, collapseFilters, handleScroll, handleFilterSelect } =
+    useSearchFilterReveal({
+      isActiveSearch,
+      hasGlobalResults,
+      hasScopedResults,
+      resetToken: deferredQuery,
+      onFilterChange: setFilterId,
+    });
 
   useEffect(() => {
     collapseFilters();
@@ -91,11 +89,10 @@ export function SearchScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {results.folders.map((folder) => (
-            <SearchFolderCard
+            <SearchFolderChip
               key={`${folder.folderType}-${folder.id}`}
               folder={folder}
               query={deferredQuery}
-              width={folderCardWidth}
               onPress={() => openFolder(folder.id, folder.name, folder.folderType)}
             />
           ))}
@@ -105,14 +102,7 @@ export function SearchScreen() {
         ) : null}
       </View>
     );
-  }, [
-    isActiveSearch,
-    results.folders,
-    results.recordings.length,
-    deferredQuery,
-    folderCardWidth,
-    openFolder,
-  ]);
+  }, [isActiveSearch, results.folders, results.recordings.length, deferredQuery, openFolder]);
 
   const renderRecording: ListRenderItem<Recording> = useCallback(
     ({ item }) => (
@@ -128,12 +118,12 @@ export function SearchScreen() {
   const keyExtractor = useCallback((item: Recording) => item.id, []);
 
   const listEmpty = useMemo(() => {
-    if (hasResults) return null;
+    if (!isActiveSearch || hasScopedResults) return null;
     if (!isStaleResults) {
       return <SearchEmptyState query={deferredQuery.trim()} />;
     }
     return null;
-  }, [hasResults, isStaleResults, deferredQuery]);
+  }, [isActiveSearch, hasScopedResults, isStaleResults, deferredQuery]);
 
   const pristineContent = (
     <RecentSearchesSection
@@ -154,7 +144,7 @@ export function SearchScreen() {
         onSubmit={handleSearchSubmit}
         onClose={handleClose}
         filterId={filterId}
-        onFilterSelect={setFilterId}
+        onFilterSelect={handleFilterSelect}
         filterReveal={filterReveal}
       />
 
@@ -217,6 +207,8 @@ const styles = StyleSheet.create({
   },
   folderRow: {
     paddingHorizontal: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   itemsSectionHeader: {
     marginTop: Spacing.sm,

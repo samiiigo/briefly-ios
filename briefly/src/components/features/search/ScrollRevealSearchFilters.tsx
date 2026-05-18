@@ -27,7 +27,12 @@ export function ScrollRevealSearchFilters({ progress, selected, onSelect }: Prop
     opacity: interpolate(progress.value, [0, 0.45, 1], [0, 0, 1], Extrapolation.CLAMP),
     transform: [
       {
-        translateY: interpolate(progress.value, [0, 1], [-6, 0], Extrapolation.CLAMP),
+        translateY: interpolate(
+          progress.value,
+          [0, 1],
+          [-SEARCH_FILTER_ROW_HEIGHT, 0],
+          Extrapolation.CLAMP
+        ),
       },
     ],
   }));

@@ -9,6 +9,7 @@ export * from './ScrollRevealSearchFilters';
 export * from './RecentSearchesSection';
 export * from './RecentSearchCard';
 export * from './SearchFolderCard';
+export * from './SearchFolderChip';
 export * from './SearchResultItem';
 export * from './SearchEmptyState';
 export * from './HighlightedText';

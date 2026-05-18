@@ -119,6 +119,11 @@ export function formatRecentsCardDate(timestamp: number): string {
   return `${monthDay}, ${year} . ${time}`;
 }
 
+/** Search result subtitle, e.g. "May 18, 26 · 14:00". */
+export function formatSearchResultDate(timestamp: number): string {
+  return formatRecentsCardDate(timestamp).replace(' . ', ' · ');
+}
+
 /**
  * Section titles for the recents feed: Today → Yesterday → Past 30 days → month name.
  */
