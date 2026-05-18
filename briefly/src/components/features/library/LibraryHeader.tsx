@@ -14,6 +14,7 @@ interface Props {
   showBack?: boolean;
   onBack?: () => void;
   onAddFolder: () => void;
+  onSearch?: () => void;
 }
 
 export function LibraryHeader({
@@ -21,6 +22,7 @@ export function LibraryHeader({
   showBack = false,
   onBack,
   onAddFolder,
+  onSearch,
 }: Props) {
   return (
     <TopChromeOverlay>
@@ -44,7 +46,11 @@ export function LibraryHeader({
             accessibilityLabel="New folder"
             onPress={onAddFolder}
           />
-          <CircularIconButton icon="search" accessibilityLabel="Search" />
+          <CircularIconButton
+            icon="search"
+            accessibilityLabel="Search"
+            onPress={onSearch}
+          />
         </View>
       </View>
     </TopChromeOverlay>

@@ -777,6 +777,7 @@ export function LibraryFolderBrowser({
         showBack={showBack}
         onBack={() => router.back()}
         onAddFolder={handleAddFolder}
+        onSearch={() => router.push('/search')}
       />
 
       <TextInputDialog
