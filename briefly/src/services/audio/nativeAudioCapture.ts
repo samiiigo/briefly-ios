@@ -9,20 +9,24 @@
  * this class is only responsible for audio capture.
  */
 
-import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import {
+  addBrieflyTranscriberListener,
+  getBrieflyTranscriberModule,
+} from '../../../modules/briefly-transcriber';
 import { base64ToArrayBuffer } from '@/utils/binary/base64ToArrayBuffer';
 import { pcmBufferToLevel, smoothMeteringLevel } from './audioMetering';
-
-const { BrieflyTranscriber } = NativeModules;
 
 export class NativeAudioCapture {
   /** True when the native module is present (dev client / native build). */
   static get isSupported(): boolean {
-    return (Platform.OS === 'ios' || Platform.OS === 'android') &&
-      !!BrieflyTranscriber?.startAudioCapture;
+    const module = getBrieflyTranscriberModule();
+    return (
+      (Platform.OS === 'ios' || Platform.OS === 'android') &&
+      typeof module?.startAudioCapture === 'function'
+    );
   }
 
-  private emitter = new NativeEventEmitter(BrieflyTranscriber);
   private pcmSub: { remove: () => void } | null = null;
   private meteringLevel = 0;
   private isPaused = false;
@@ -37,7 +41,12 @@ export class NativeAudioCapture {
     this.meteringLevel = 0;
     this.isPaused = false;
 
-    this.pcmSub = this.emitter.addListener('onPCMChunk', (e: { data: string }) => {
+    const module = getBrieflyTranscriberModule();
+    if (!module) {
+      throw new Error('BrieflyTranscriber native module is not available.');
+    }
+
+    this.pcmSub = addBrieflyTranscriberListener('onPCMChunk', (e: { data: string }) => {
       try {
         const buffer = base64ToArrayBuffer(e.data);
         if (!this.isPaused) {
@@ -50,7 +59,7 @@ export class NativeAudioCapture {
       }
     });
 
-    await BrieflyTranscriber.startAudioCapture({ sampleRate });
+    await module.startAudioCapture({ sampleRate });
   }
 
   getMetering(): number {
@@ -60,12 +69,16 @@ export class NativeAudioCapture {
   async pause(): Promise<void> {
     this.isPaused = true;
     this.meteringLevel = 0;
-    await BrieflyTranscriber.pauseAudioCapture();
+    const module = getBrieflyTranscriberModule();
+    if (!module) return;
+    await module.pauseAudioCapture();
   }
 
   async resume(): Promise<void> {
     this.isPaused = false;
-    await BrieflyTranscriber.resumeAudioCapture();
+    const module = getBrieflyTranscriberModule();
+    if (!module) return;
+    await module.resumeAudioCapture();
   }
 
   async stop(): Promise<{ uri: string; duration: number }> {
@@ -73,7 +86,9 @@ export class NativeAudioCapture {
     this.pcmSub = null;
     this.meteringLevel = 0;
     this.isPaused = false;
-    const result = await BrieflyTranscriber.stopAudioCapture();
+    const module = getBrieflyTranscriberModule();
+    if (!module) return { uri: '', duration: 0 };
+    const result = await module.stopAudioCapture();
     return { uri: result?.uri ?? '', duration: result?.duration ?? 0 };
   }
 

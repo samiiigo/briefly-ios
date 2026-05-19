@@ -3,20 +3,19 @@
  * Used by environment checks and transcription routing.
  */
 
-import { NativeModules } from 'react-native';
+import { getBrieflyTranscriberModule } from '../../modules/briefly-transcriber';
 import { NativeAudioCapture } from '@/services/audio/nativeAudioCapture';
 import { ExpoAudioStreamingCapture } from '@/services/audio/expoAudioStreamingCapture';
 import { isIOS, isAndroid } from './platform';
 
-const { BrieflyTranscriber } = NativeModules;
-
 export function hasBrieflyTranscriberModule(): boolean {
-  return BrieflyTranscriber != null;
+  return getBrieflyTranscriberModule() != null;
 }
 
-/** iOS on-device Speech live transcription (BrieflyTranscriber native module). */
+/** iOS on-device Speech live transcription (BrieflyTranscriber Expo module). */
 export function supportsOnDeviceLiveTranscription(): boolean {
-  return isIOS && typeof BrieflyTranscriber?.startOnDeviceLiveTranscription === 'function';
+  const module = getBrieflyTranscriberModule();
+  return isIOS && typeof module?.startOnDeviceLiveTranscription === 'function';
 }
 
 /** Low-latency PCM capture via native module (dev client builds). */

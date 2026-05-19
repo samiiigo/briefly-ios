@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["BrieflyTranscriberModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.brieflytranscriber.BrieflyTranscriberModule"]
+  }
+}

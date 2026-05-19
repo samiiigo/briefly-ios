@@ -3,8 +3,8 @@
   "version": "3.6.0",
   "main": "expo-router/entry",
   "scripts": {
-    "start": "expo start --dev-client",
-    "start:clean": "expo start --dev-client -c",
+    "start": "cross-env NODE_OPTIONS=--max-old-space-size=8192 expo start --dev-client",
+    "start:clean": "cross-env NODE_OPTIONS=--max-old-space-size=8192 expo start --dev-client -c",
     "dev:android": "expo run:android",
     "dev:ios": "expo run:ios",
     "ios": "expo run:ios",
@@ -72,6 +72,7 @@
     "@types/node": "^25.3.5",
     "@types/react": "~19.1.10",
     "babel-preset-expo": "~54.0.10",
+    "cross-env": "^7.0.3",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~10.0.0",
     "tsx": "^4.21.0",
