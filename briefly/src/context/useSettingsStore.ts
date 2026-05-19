@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProcessingMode, TranscriptionMode, CloudProvider } from '@/types';
-import { deleteLocalGemmaModel } from '@/services/summarization/local/gemmaModelDownload';
+import { registerLocalLlmDownloadStateSetter } from '@/services/summarization/local/localLlmDownloadState';
 
 /**
  * Provider API key field mapping (OCP).
@@ -121,6 +121,9 @@ export const useSettingsStore = create<SettingsState>()(
       },
 
       deleteLocalLlmModel: async () => {
+        const { deleteLocalGemmaModel } = await import(
+          '@/services/summarization/local/gemmaModelDownload'
+        );
         await deleteLocalGemmaModel();
       },
     }),
@@ -129,4 +132,15 @@ export const useSettingsStore = create<SettingsState>()(
       storage: createJSONStorage(() => AsyncStorage),
     },
   ),
+);
+
+registerLocalLlmDownloadStateSetter(
+  (patch) => useSettingsStore.setState(patch),
+  () => {
+    const state = useSettingsStore.getState();
+    return {
+      localLlmDownloadStatus: state.localLlmDownloadStatus,
+      localLlmDownloadProgress: state.localLlmDownloadProgress,
+    };
+  },
 );

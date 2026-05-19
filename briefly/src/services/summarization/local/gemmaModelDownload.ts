@@ -2,7 +2,6 @@ import {
   createDownloadResumable,
   getFreeDiskStorageAsync,
 } from 'expo-file-system/legacy';
-import { useSettingsStore } from '@/context/useSettingsStore';
 import { LocalModelStorageService } from '@/services/storage/localModelStorageService';
 import { logger } from '@/utils/logging/logger';
 import {
@@ -14,6 +13,7 @@ import {
   applyLocalLlmDownloadState,
   markLocalLlmDownloadFailed,
   markLocalLlmDownloadReady,
+  getMirroredLocalLlmDownloadStatus,
   markLocalLlmDownloadStarting,
   resetLocalLlmDownloadStateToIdle,
 } from './localLlmDownloadState';
@@ -39,8 +39,7 @@ export function isPartialLocalGemmaModelOnDisk(): boolean {
 
 export function isLocalLlmDownloadInProgress(): boolean {
   if (activeDownload !== null || activeDownloadPromise !== null) return true;
-  const { localLlmDownloadStatus } = useSettingsStore.getState();
-  if (localLlmDownloadStatus === 'downloading') return true;
+  if (getMirroredLocalLlmDownloadStatus() === 'downloading') return true;
   return isPartialLocalGemmaModelOnDisk();
 }
 

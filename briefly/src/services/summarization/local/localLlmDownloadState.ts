@@ -1,5 +1,3 @@
-import { useSettingsStore } from '@/context/useSettingsStore';
-
 export type LocalLlmDownloadStatus = 'idle' | 'downloading' | 'ready' | 'error';
 
 export type LocalLlmDownloadStatePatch = Partial<{
@@ -9,9 +7,50 @@ export type LocalLlmDownloadStatePatch = Partial<{
   localLlmDownloadError: string | undefined;
 }>;
 
+type LocalLlmDownloadStateSnapshot = {
+  localLlmDownloadStatus: LocalLlmDownloadStatus;
+  localLlmDownloadProgress: number | null;
+};
+
+type StateSetter = (patch: LocalLlmDownloadStatePatch) => void;
+
+let setLocalLlmDownloadState: StateSetter | null = null;
+let mirroredDownloadStatus: LocalLlmDownloadStatus = 'idle';
+let mirroredDownloadProgress: number | null = null;
+
+/**
+ * Wires download-state helpers to the settings store without importing it here
+ * (avoids require cycles with gemmaModelDownload).
+ */
+export function registerLocalLlmDownloadStateSetter(
+  setter: StateSetter,
+  getSnapshot?: () => LocalLlmDownloadStateSnapshot,
+): void {
+  setLocalLlmDownloadState = setter;
+  if (getSnapshot) {
+    const snapshot = getSnapshot();
+    mirroredDownloadStatus = snapshot.localLlmDownloadStatus;
+    mirroredDownloadProgress = snapshot.localLlmDownloadProgress;
+  }
+}
+
+export function getMirroredLocalLlmDownloadStatus(): LocalLlmDownloadStatus {
+  return mirroredDownloadStatus;
+}
+
+export function getMirroredLocalLlmDownloadProgress(): number | null {
+  return mirroredDownloadProgress;
+}
+
 /** Applies a partial update to the persisted local LLM download slice. */
 export function applyLocalLlmDownloadState(patch: LocalLlmDownloadStatePatch): void {
-  useSettingsStore.setState(patch);
+  if (patch.localLlmDownloadStatus !== undefined) {
+    mirroredDownloadStatus = patch.localLlmDownloadStatus;
+  }
+  if (patch.localLlmDownloadProgress !== undefined) {
+    mirroredDownloadProgress = patch.localLlmDownloadProgress;
+  }
+  setLocalLlmDownloadState?.(patch);
 }
 
 export function resetLocalLlmDownloadStateToIdle(): void {

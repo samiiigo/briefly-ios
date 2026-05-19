@@ -8,6 +8,13 @@ import {
   isLocalLlmDownloadInProgress,
   isPartialLocalGemmaModelOnDisk,
 } from './gemmaModelDownload';
+import {
+  applyLocalLlmDownloadState,
+  getMirroredLocalLlmDownloadProgress,
+  getMirroredLocalLlmDownloadStatus,
+  markLocalLlmDownloadReady,
+  resetLocalLlmDownloadStateToIdle,
+} from './localLlmDownloadState';
 import { LocalLlamaError } from './localLlamaErrors';
 import {
   LOCAL_LLM_DOWNLOAD_IN_PROGRESS_MESSAGE,
@@ -39,34 +46,23 @@ export function refreshLocalLlmModelStateFromDisk(): void {
   const activeSession = isLocalLlmDownloadInProgress();
 
   if (ready) {
-    useSettingsStore.setState({
-      localLlmModelReady: true,
-      localLlmDownloadStatus: 'ready',
-      localLlmDownloadProgress: 1,
-      localLlmDownloadError: undefined,
-    });
+    markLocalLlmDownloadReady();
     return;
   }
 
   if (activeSession || partial) {
-    const { localLlmDownloadProgress } = useSettingsStore.getState();
-    useSettingsStore.setState({
+    const progress = getMirroredLocalLlmDownloadProgress();
+    applyLocalLlmDownloadState({
       localLlmModelReady: false,
       localLlmDownloadStatus: 'downloading',
-      localLlmDownloadProgress:
-        partial && localLlmDownloadProgress == null ? 0 : localLlmDownloadProgress,
+      localLlmDownloadProgress: partial && progress == null ? 0 : progress,
     });
     return;
   }
 
-  const { localLlmDownloadStatus } = useSettingsStore.getState();
-  if (localLlmDownloadStatus === 'ready' || localLlmDownloadStatus === 'downloading') {
-    useSettingsStore.setState({
-      localLlmModelReady: false,
-      localLlmDownloadStatus: 'idle',
-      localLlmDownloadProgress: null,
-      localLlmDownloadError: undefined,
-    });
+  const status = getMirroredLocalLlmDownloadStatus();
+  if (status === 'ready' || status === 'downloading') {
+    resetLocalLlmDownloadStateToIdle();
   }
 }
 
