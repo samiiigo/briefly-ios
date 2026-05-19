@@ -32,6 +32,7 @@ yarn-error.*
 
 # IDE & local tooling
 .idea/
+.vscode/
 .claude/settings.local.json
 
 # Xcode / iOS
