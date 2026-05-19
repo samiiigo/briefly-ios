@@ -33,8 +33,25 @@ module.exports = ({ config }) => {
       extra.openRouterSharedApiKey
     ) ?? '';
 
+  const plugins = [...(config.plugins ?? [])];
+  const hasLlamaPlugin = plugins.some(
+    (entry) => (Array.isArray(entry) ? entry[0] : entry) === 'llama.rn',
+  );
+  if (!hasLlamaPlugin) {
+    plugins.push([
+      'llama.rn',
+      {
+        enableEntitlements: true,
+        entitlementsProfile: 'production',
+        forceCxx20: true,
+        enableOpenCLAndHexagon: true,
+      },
+    ]);
+  }
+
   return {
     ...config,
+    plugins,
     extra: {
       ...extra,
       assemblyAiApiKey,

@@ -9,7 +9,7 @@ export function processingModeTitle(mode: ProcessingMode): string {
 
 export function processingModeDescription(mode: ProcessingMode): string {
   if (mode === 'on-device') {
-    return 'On-device summaries; currently implementing Apple Intelligence, or use Gemma for the AI. No internet required.';
+    return 'Summaries run fully on your phone with a downloaded Gemma model (~1.6 GB). No API key required; first run downloads the model.';
   }
   if (mode === 'cloud-shared-openrouter') {
     return 'Uses Briefly’s cloud AI service for rich summaries with zero data retention.';

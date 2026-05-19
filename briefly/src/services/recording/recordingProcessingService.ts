@@ -1,4 +1,5 @@
 import { ProcessingMode, TranscriptSegment, TranscriptionMode } from '@/types';
+import { useSettingsStore } from '@/context/useSettingsStore';
 import { getPathInfo } from '@/utils/fileSystem/pathInfo';
 import { ensureUploadableAudioUri } from '@/utils/fileSystem/repairWavForUpload';
 import { SummarizationService } from '@/services/summarization';
@@ -195,16 +196,18 @@ export async function obtainTranscriptWithAutoFallback(
 
 async function summarizeTranscript(
   segments: TranscriptSegment[],
-  summarizationMode: ProcessingMode,
+  summarizationModeOverride?: ProcessingMode,
 ): Promise<Pick<RecordingProcessingResult, 'summary' | 'keyInsights' | 'mainEmoji' | 'title'>> {
   assertTranscriptHasContent(segments);
+  const modeUsed =
+    summarizationModeOverride ?? useSettingsStore.getState().summarizationMode;
   try {
-    return await SummarizationService.summarize(segments, summarizationMode);
+    return await SummarizationService.summarize(segments, summarizationModeOverride);
   } catch (err) {
     throw new ProcessingFailure(
       'summarization',
       toUserFacingProcessingError(err).message,
-      summarizationMode,
+      modeUsed,
     );
   }
 }
@@ -230,7 +233,7 @@ export interface ProcessRecordingOptions {
  * Always transcribes the saved audio file, then summarizes.
  */
 export async function processRecordingFromSavedAudio(
-  summarizationMode: ProcessingMode,
+  _summarizationMode: ProcessingMode,
   filePath: string,
   callbacks: RecordingProcessingCallbacks,
   meta?: ProcessRecordingOptions,
@@ -240,10 +243,7 @@ export async function processRecordingFromSavedAudio(
     const segments = await transcribeSavedAudioFile(filePath, meta);
     await callbacks.onTranscriptReady?.(segments);
     callbacks.onStage('summarizing');
-    const { summary, keyInsights, mainEmoji, title } = await summarizeTranscript(
-      segments,
-      summarizationMode,
-    );
+    const { summary, keyInsights, mainEmoji, title } = await summarizeTranscript(segments);
     return { segments, summary, keyInsights, mainEmoji, title, usedAudioFallback: true };
   } catch (err) {
     throw toProcessingFailure(err, 'transcription');
@@ -252,7 +252,7 @@ export async function processRecordingFromSavedAudio(
 
 export async function processRecordingToReady(
   settingsTranscriptionMode: TranscriptionMode | string,
-  summarizationMode: ProcessingMode,
+  _summarizationMode: ProcessingMode,
   filePath: string,
   existingTranscript: TranscriptSegment[] | undefined,
   callbacks: RecordingProcessingCallbacks,
@@ -286,10 +286,7 @@ export async function processRecordingToReady(
     }
 
     callbacks.onStage('summarizing');
-    const { summary, keyInsights, mainEmoji, title } = await summarizeTranscript(
-      segments,
-      summarizationMode,
-    );
+    const { summary, keyInsights, mainEmoji, title } = await summarizeTranscript(segments);
 
     return { segments, summary, keyInsights, mainEmoji, title, usedAudioFallback };
   } catch (err) {

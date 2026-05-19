@@ -36,6 +36,12 @@ interface SettingsState {
    */
   hasCompletedEnvSetup: boolean;
 
+  /** Local Gemma GGUF download state (on-device summarization). */
+  localLlmModelReady: boolean;
+  localLlmDownloadProgress: number | null;
+  localLlmDownloadStatus: 'idle' | 'downloading' | 'ready' | 'error';
+  localLlmDownloadError?: string;
+
   setSummarizationMode: (mode: ProcessingMode) => void;
   setTranscriptionMode: (mode: TranscriptionMode) => void;
   setCloudProvider: (provider: CloudProvider) => void;
@@ -62,6 +68,10 @@ export const useSettingsStore = create<SettingsState>()(
       openaiApiKey: '',
       geminiApiKey: '',
       hasCompletedEnvSetup: false,
+      localLlmModelReady: false,
+      localLlmDownloadProgress: null,
+      localLlmDownloadStatus: 'idle',
+      localLlmDownloadError: undefined,
 
       setSummarizationMode: (mode) => set({ summarizationMode: mode }),
       setTranscriptionMode: (mode) => set({ transcriptionMode: mode }),

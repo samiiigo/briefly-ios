@@ -1,75 +1,44 @@
 /**
- * OnDeviceProvider — on-device summarization strategy (SRP)
+ * OnDeviceProvider — on-device summarization via llama.rn + Gemma GGUF (SRP)
  *
- * Single responsibility: invoke the local BrieflyTranscriber Expo module for
- * local inference, falling back to extractive summarization.
+ * Downloads the quantized model to the document directory, runs inference in a
+ * short-lived llama context, and surfaces memory/device errors without silently
+ * falling back to extractive summaries.
  */
 
 import { Platform } from 'react-native';
 import { TranscriptSegment } from '@/types';
 import { SummarizationProvider, SummarizationResult } from './summarizationProvider';
-import {
-  segmentsToText,
-  generateId,
-  extractiveSummarize,
-  normalizeSummarizationResult,
-  SUMMARIZATION_TIMEOUT_MS,
-} from './summarizationUtils';
+import { segmentsToText } from './summarizationUtils';
+import { summarizeWithLocalLlama } from './local/localLlamaSummarizationService';
+import { isLocalLlamaError, LocalLlamaError } from './local/localLlamaErrors';
 import { logger } from '@/utils/logging/logger';
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
-    promise
-      .then((value) => {
-        clearTimeout(timer);
-        resolve(value);
-      })
-      .catch((error) => {
-        clearTimeout(timer);
-        reject(error);
-      });
-  });
-}
 
 export class OnDeviceProvider implements SummarizationProvider {
   readonly name = 'on-device';
 
   async summarize(segments: TranscriptSegment[]): Promise<SummarizationResult> {
     const text = segmentsToText(segments);
-    logger.info('SUMMARY', 'On-device summarization requested', {
+    logger.info('SUMMARY', 'On-device llama summarization requested', {
       segmentCount: segments.length,
       chars: text.length,
       platform: Platform.OS,
-      hasNativeModule: Platform.OS === 'ios',
     });
 
-    if (Platform.OS === 'ios') {
-      try {
-        const { summarize } = await import('../../../modules/briefly-transcriber');
-        const result = await withTimeout(summarize(text), SUMMARIZATION_TIMEOUT_MS);
-        logger.info('SUMMARY', 'On-device native summarization completed', {
-          keyInsightCount: result.keyInsights.length,
-        });
-        return normalizeSummarizationResult(
-          {
-            summary: result.summary,
-            keyInsights: result.keyInsights.map((t) => ({
-              id: generateId(),
-              text: t,
-            })),
-          },
-          text
-        );
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        logger.warn('SUMMARY', 'Native on-device summarization failed; using extractive fallback', {
-          error: message,
-        });
-      }
+    try {
+      const result = await summarizeWithLocalLlama(segments);
+      logger.info('SUMMARY', 'On-device llama summarization completed', {
+        keyInsightCount: result.keyInsights.length,
+        hasTitle: !!result.title,
+      });
+      return result;
+    } catch (error: unknown) {
+      const mapped = isLocalLlamaError(error) ? error : new LocalLlamaError('unknown', error instanceof Error ? error.message : String(error));
+      logger.error('SUMMARY', 'On-device llama summarization failed', {
+        code: mapped.code,
+        error: mapped.message,
+      });
+      throw mapped;
     }
-
-    logger.info('SUMMARY', 'Using extractive summarization fallback');
-    return extractiveSummarize(text);
   }
 }

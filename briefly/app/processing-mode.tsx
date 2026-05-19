@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -25,6 +26,10 @@ import {
   detectCloudProviderFromKey,
 } from '@/utils/providers/cloudProvider';
 import { Colors, withAppFont } from '@/theme';
+import {
+  ensureLocalGemmaModelDownloaded,
+  isLocalGemmaModelDownloaded,
+} from '@/services/summarization';
 
 const PROCESSING_MODES: ProcessingMode[] = [
   'cloud-shared-openrouter',
@@ -42,7 +47,35 @@ export default function ProcessingModePickerScreen() {
     setCloudProvider,
     setProviderApiKey,
     getActiveApiKey,
+    localLlmModelReady,
+    localLlmDownloadProgress,
+    localLlmDownloadStatus,
+    localLlmDownloadError,
   } = useSettingsStore();
+  const [isFetchingModel, setIsFetchingModel] = useState(false);
+
+  useEffect(() => {
+    if (isLocalGemmaModelDownloaded()) {
+      useSettingsStore.setState({
+        localLlmModelReady: true,
+        localLlmDownloadStatus: 'ready',
+        localLlmDownloadProgress: 1,
+        localLlmDownloadError: undefined,
+      });
+    }
+  }, []);
+
+  const handleDownloadLocalModel = useCallback(async () => {
+    setIsFetchingModel(true);
+    try {
+      await ensureLocalGemmaModelDownloaded();
+    } catch {
+      // Error message is stored on the settings slice
+    } finally {
+      setIsFetchingModel(false);
+    }
+  }, []);
+
   const isCloudUserKey =
     summarizationMode === 'cloud-user-key' || summarizationMode === 'cloud';
   const [apiKeyInput, setApiKeyInput] = useState(getActiveApiKey());
@@ -91,6 +124,53 @@ export default function ProcessingModePickerScreen() {
             );
           })}
         </View>
+
+        {summarizationMode === 'on-device' ? (
+          <>
+            <Text style={sl.sectionLabel}>On-device model</Text>
+            <Text style={sl.sectionDescription}>
+              Gemma 2 (2B, Q4) is stored in your app documents (~1.6 GB). Download once while on Wi‑Fi.
+            </Text>
+            <View style={sl.card}>
+              {localLlmModelReady ? (
+                <View style={styles.modelStatusRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
+                  <Text style={styles.modelStatusText}>Model ready for offline summarization</Text>
+                </View>
+              ) : (
+                <>
+                  {localLlmDownloadStatus === 'downloading' ? (
+                    <View style={styles.modelStatusRow}>
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                      <Text style={styles.modelStatusText}>
+                        Downloading…{' '}
+                        {localLlmDownloadProgress != null
+                          ? `${Math.round(localLlmDownloadProgress * 100)}%`
+                          : ''}
+                      </Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.downloadModelButton}
+                      onPress={handleDownloadLocalModel}
+                      disabled={isFetchingModel}
+                    >
+                      {isFetchingModel ? (
+                        <ActivityIndicator size="small" color={Colors.textPrimary} />
+                      ) : (
+                        <Ionicons name="cloud-download-outline" size={18} color={Colors.textPrimary} />
+                      )}
+                      <Text style={styles.downloadModelButtonText}>Download Gemma model</Text>
+                    </TouchableOpacity>
+                  )}
+                  {localLlmDownloadError ? (
+                    <Text style={styles.modelErrorText}>{localLlmDownloadError}</Text>
+                  ) : null}
+                </>
+              )}
+            </View>
+          </>
+        ) : null}
 
         {isCloudUserKey ? (
           <>
@@ -196,4 +276,35 @@ const styles = StyleSheet.create({
   detectedTextWarning: {
     color: Colors.orange,
   },
+  modelStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  modelStatusText: withAppFont({
+    flex: 1,
+    fontSize: 15,
+    color: Colors.textPrimary,
+  }),
+  downloadModelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  downloadModelButtonText: withAppFont({
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  }),
+  modelErrorText: withAppFont({
+    fontSize: 13,
+    color: Colors.orange,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  }),
 });

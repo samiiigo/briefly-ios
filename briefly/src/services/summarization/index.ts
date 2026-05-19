@@ -9,6 +9,7 @@
  */
 
 import { TranscriptSegment, KeyInsight, ProcessingMode } from '@/types';
+import { useSettingsStore } from '@/context/useSettingsStore';
 import {
   createSummarizationProvider,
   configureSummarizationProviderFactory,
@@ -20,11 +21,20 @@ import { logger } from '@/utils/logging/logger';
 export type { SummarizationResult, SummarizationProvider } from './summarizationProvider';
 
 export const SummarizationService = {
+  /**
+   * Resolves the active summarization mode from Settings when `modeOverride` is omitted,
+   * so re-runs use the user's current choice instead of the mode stored on the recording.
+   */
   async summarize(
     segments: TranscriptSegment[],
-    mode: ProcessingMode
+    modeOverride?: ProcessingMode,
   ): Promise<{ summary: string; keyInsights: KeyInsight[]; mainEmoji?: string; title?: string }> {
-    logger.info('SUMMARY', 'Summarization requested', { mode, segmentCount: segments.length });
+    const mode = modeOverride ?? useSettingsStore.getState().summarizationMode;
+    logger.info('SUMMARY', 'Summarization requested', {
+      mode,
+      modeOverride: modeOverride ?? null,
+      segmentCount: segments.length,
+    });
     const provider = createSummarizationProvider(mode);
     return provider.summarize(segments);
   },
@@ -35,3 +45,12 @@ export {
   configureSummarizationProviderFactory,
   resetSummarizationProviderFactory,
 };
+
+export {
+  ensureLocalGemmaModelDownloaded,
+  isLocalGemmaModelDownloaded,
+  getLocalGemmaModelPath,
+  cancelLocalGemmaModelDownload,
+} from './local/gemmaModelDownload';
+export type { ModelDownloadProgress } from './local/gemmaModelDownload';
+export { LocalLlamaError, isLocalLlamaError } from './local/localLlamaErrors';
