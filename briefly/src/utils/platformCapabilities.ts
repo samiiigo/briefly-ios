@@ -3,6 +3,7 @@
  * Used by environment checks and transcription routing.
  */
 
+import { TurboModuleRegistry } from 'react-native';
 import { getBrieflyTranscriberModule } from '../../modules/briefly-transcriber';
 import { NativeAudioCapture } from '@/services/audio/nativeAudioCapture';
 import { ExpoAudioStreamingCapture } from '@/services/audio/expoAudioStreamingCapture';
@@ -41,4 +42,13 @@ export function supportsBackgroundRecording(): boolean {
 /** Android 13+ notification permission is only relevant on Android. */
 export function needsAndroidRecordingNotificationPermission(): boolean {
   return isAndroid;
+}
+
+/** On-device Gemma summarization via llama.rn (dev client / production build only). */
+export function supportsLocalLlamaSummarization(): boolean {
+  try {
+    return TurboModuleRegistry.get('RNLlama') != null;
+  } catch {
+    return false;
+  }
 }

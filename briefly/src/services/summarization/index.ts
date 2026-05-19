@@ -70,5 +70,6 @@ export {
   isOnDeviceSummarizationMode,
   LOCAL_LLM_DOWNLOAD_IN_PROGRESS_MESSAGE,
   LOCAL_LLM_MODEL_NOT_READY_MESSAGE,
+  LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE,
 } from './local/localLlmAvailability';
 export type { LocalLlmAvailability, LocalLlmBlockReason } from './local/localLlmAvailability';

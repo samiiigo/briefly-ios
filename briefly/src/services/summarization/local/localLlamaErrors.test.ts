@@ -13,4 +13,10 @@ describe('mapLlamaNativeError', () => {
     const err = mapLlamaNativeError(new Error('unable to load model: no such file'));
     assert.equal(err.code, 'device');
   });
+
+  it('maps missing RNLlama native module to unsupported_runtime', () => {
+    const err = mapLlamaNativeError(new Error("Cannot read property 'install' of null"));
+    assert.equal(err.code, 'unsupported_runtime');
+    assert.match(err.message, /Expo Go/i);
+  });
 });

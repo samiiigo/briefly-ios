@@ -1,14 +1,21 @@
 import { ProcessingMode } from '@/types';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { LocalModelStorageService } from '@/services/storage/localModelStorageService';
+import { supportsLocalLlamaSummarization } from '@/utils/platformCapabilities';
+import { isOnDeviceSummarizationModeFor } from './localLlmMode';
 import {
   isLocalGemmaModelDownloaded,
   isLocalLlmDownloadInProgress,
   isPartialLocalGemmaModelOnDisk,
 } from './gemmaModelDownload';
 import { LocalLlamaError } from './localLlamaErrors';
+import {
+  LOCAL_LLM_DOWNLOAD_IN_PROGRESS_MESSAGE,
+  LOCAL_LLM_MODEL_NOT_READY_MESSAGE,
+  LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE,
+} from './localLlmMessages';
 
-export type LocalLlmBlockReason = 'downloading' | 'not_ready';
+export type LocalLlmBlockReason = 'unsupported_build' | 'downloading' | 'not_ready';
 
 export interface LocalLlmAvailability {
   canSummarize: boolean;
@@ -16,11 +23,11 @@ export interface LocalLlmAvailability {
   userMessage?: string;
 }
 
-export const LOCAL_LLM_DOWNLOAD_IN_PROGRESS_MESSAGE =
-  'The Gemma 4 E2B model is still downloading. Wait until the download finishes, then try summarizing again. Open Settings → Summarization to check progress.';
-
-export const LOCAL_LLM_MODEL_NOT_READY_MESSAGE =
-  'The on-device model is not downloaded yet. Open Settings → Summarization to download Gemma 4 E2B (~3.5 GB), then try again.';
+export {
+  LOCAL_LLM_DOWNLOAD_IN_PROGRESS_MESSAGE,
+  LOCAL_LLM_MODEL_NOT_READY_MESSAGE,
+  LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE,
+};
 
 /**
  * Reconciles Zustand download flags with the on-disk GGUF (expo-file-system).
@@ -64,6 +71,14 @@ export function refreshLocalLlmModelStateFromDisk(): void {
 }
 
 export function evaluateLocalLlmAvailability(): LocalLlmAvailability {
+  if (!supportsLocalLlamaSummarization()) {
+    return {
+      canSummarize: false,
+      reason: 'unsupported_build',
+      userMessage: LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE,
+    };
+  }
+
   refreshLocalLlmModelStateFromDisk();
 
   if (isLocalGemmaModelDownloaded()) {
@@ -86,7 +101,9 @@ export function evaluateLocalLlmAvailability(): LocalLlmAvailability {
 }
 
 export function isOnDeviceSummarizationMode(mode?: ProcessingMode): boolean {
-  return (mode ?? useSettingsStore.getState().summarizationMode) === 'on-device';
+  return isOnDeviceSummarizationModeFor(
+    mode ?? useSettingsStore.getState().summarizationMode,
+  );
 }
 
 /**
@@ -104,6 +121,10 @@ export function getLocalLlmSummarizationBlocker(mode?: ProcessingMode): string |
 export function assertLocalLlmReadyForSummarization(): void {
   const availability = evaluateLocalLlmAvailability();
   if (availability.canSummarize) return;
+
+  if (availability.reason === 'unsupported_build') {
+    throw new LocalLlamaError('unsupported_runtime', availability.userMessage!);
+  }
 
   if (availability.reason === 'downloading') {
     throw new LocalLlamaError('download_in_progress', availability.userMessage!);

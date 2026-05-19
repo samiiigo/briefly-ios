@@ -9,6 +9,7 @@ import {
 function blockAlertTitle(mode?: ProcessingMode): string {
   if (!isOnDeviceSummarizationMode(mode)) return 'On-device model not ready';
   const { reason } = evaluateLocalLlmAvailability();
+  if (reason === 'unsupported_build') return 'Development build required';
   if (reason === 'downloading') return 'Model download in progress';
   return 'On-device model not ready';
 }

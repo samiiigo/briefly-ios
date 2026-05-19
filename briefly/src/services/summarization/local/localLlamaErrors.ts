@@ -20,6 +20,12 @@ const DEVICE_PATTERNS = [
   'invalid model',
 ];
 
+const NATIVE_MODULE_PATTERNS = [
+  "cannot read property 'install' of null",
+  'jsi bindings not installed',
+  'missing jsi bindings',
+];
+
 export class LocalLlamaError extends Error {
   readonly code:
     | 'oom'
@@ -28,6 +34,7 @@ export class LocalLlamaError extends Error {
     | 'model_not_ready'
     | 'download'
     | 'download_in_progress'
+    | 'unsupported_runtime'
     | 'unknown';
 
   constructor(code: LocalLlamaError['code'], message: string) {
@@ -37,9 +44,15 @@ export class LocalLlamaError extends Error {
   }
 }
 
+import { LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE } from './localLlmMessages';
+
 export function mapLlamaNativeError(error: unknown): LocalLlamaError {
   const raw = error instanceof Error ? error.message : String(error);
   const lower = raw.toLowerCase();
+
+  if (NATIVE_MODULE_PATTERNS.some((p) => lower.includes(p))) {
+    return new LocalLlamaError('unsupported_runtime', LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE);
+  }
 
   if (OOM_PATTERNS.some((p) => lower.includes(p))) {
     return new LocalLlamaError(
