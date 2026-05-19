@@ -25,9 +25,3 @@ export function BottomChromeOverlay({
     </ChromeOverlay>
   );
 }
-
-/** @deprecated Use {@link BottomChromeOverlay} */
-export const BottomPlaybackOverlay = BottomChromeOverlay;
-
-/** @deprecated Use {@link BottomChromeOverlay} */
-export const BottomBlurOverlay = BottomChromeOverlay;

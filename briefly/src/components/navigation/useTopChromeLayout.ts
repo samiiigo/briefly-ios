@@ -1,14 +1,14 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   getScrollPaddingTop,
-  getTopBlurFadeHeight,
+  getTopChromeFadeHeight,
   TOP_HEADER_BODY_HEIGHT,
 } from './topHeaderMetrics';
 
 export function useTopChromeLayout() {
   const insets = useSafeAreaInsets();
   const chromeHeight = insets.top + TOP_HEADER_BODY_HEIGHT;
-  const blurFadeHeight = getTopBlurFadeHeight(insets.top);
+  const blurFadeHeight = getTopChromeFadeHeight(insets.top);
   const scrollPaddingTop = getScrollPaddingTop(insets.top);
 
   return {
@@ -25,7 +25,7 @@ export {
   TOP_HEADER_PADDING_BOTTOM,
   TOP_HEADER_PADDING_TOP,
   TOP_HEADER_TITLE_FONT_SIZE,
-  TOP_BLUR_FADE_BELOW_TITLE,
+  TOP_CHROME_FADE_BELOW_TITLE,
   getScrollPaddingTop,
-  getTopBlurFadeHeight,
+  getTopChromeFadeHeight,
 } from './topHeaderMetrics';

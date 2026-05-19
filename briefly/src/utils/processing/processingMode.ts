@@ -9,7 +9,7 @@ export function processingModeTitle(mode: ProcessingMode): string {
 
 export function processingModeDescription(mode: ProcessingMode): string {
   if (mode === 'on-device') {
-    return 'Summaries are generated on your device with Apple Intelligence. No internet required.';
+    return 'On-device summaries; currently implementing Apple Intelligence, or use Gemma for the AI. No internet required.';
   }
   if (mode === 'cloud-shared-openrouter') {
     return 'Uses Briefly’s cloud AI service for rich summaries with zero data retention.';

@@ -1,5 +1,13 @@
 import React from 'react';
-import { Pressable, StyleSheet, StyleProp, ViewStyle, Platform } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  StyleProp,
+  ViewStyle,
+  Platform,
+  ActivityIndicator,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/theme';
 
@@ -10,6 +18,7 @@ interface CircularIconButtonProps {
   onPress?: () => void;
   accessibilityLabel: string;
   style?: StyleProp<ViewStyle>;
+  loading?: boolean;
 }
 
 export function CircularIconButton({
@@ -17,20 +26,34 @@ export function CircularIconButton({
   onPress,
   accessibilityLabel,
   style,
+  loading = false,
 }: CircularIconButtonProps) {
+  const disabled = loading || onPress == null;
+
   return (
     <Pressable
       style={({ pressed }) => [
         styles.button,
         style,
-        pressed && Platform.OS === 'ios' && { opacity: 0.75 },
+        pressed && !disabled && Platform.OS === 'ios' && { opacity: 0.75 },
       ]}
-      onPress={onPress}
+      onPress={disabled ? undefined : onPress}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
+      accessibilityState={{ disabled, busy: loading }}
       android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: false, radius: 22 }}
     >
-      <Ionicons name={icon} size={22} color={Colors.textPrimary} />
+      <Ionicons
+        name={icon}
+        size={22}
+        color={Colors.textPrimary}
+        style={loading ? styles.iconLoading : undefined}
+      />
+      {loading ? (
+        <View style={styles.loadingOverlay} pointerEvents="none">
+          <ActivityIndicator size="small" color={Colors.primary} />
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -41,6 +64,14 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: Colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconLoading: {
+    opacity: 0.35,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -3,12 +3,6 @@ import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 /** Shared bottom-sheet chrome aligned with Recents cards and section labels. */
 export const sheetLayoutStyles = StyleSheet.create({
-  /** @deprecated Use {@link SheetModal} — backdrop tint must not share a slide transition with the sheet. */
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.65)',
-  },
   /** Outer shell (shadow only); pairs with {@link sheetPanel}. */
   sheetShell: {
     marginTop: -1,

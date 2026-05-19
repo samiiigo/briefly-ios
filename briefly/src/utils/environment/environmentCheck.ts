@@ -1,12 +1,19 @@
 import { TranscriptionMode } from '@/types';
-import { NativeAudioCapture } from '@/services/audio/nativeAudioCapture';
-import { ExpoAudioStreamingCapture } from '@/services/audio/expoAudioStreamingCapture';
 import { getAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
+import {
+  hasBrieflyTranscriberModule,
+  supportsExpoAudioStreamingCapture,
+  supportsLocalRecording,
+  supportsNativePcmCapture,
+  supportsOnDeviceLiveTranscription,
+} from '@/utils/platformCapabilities';
 
 export interface EnvironmentCapabilities {
   hasNativeModule: boolean;
+  hasOnDeviceSpeech: boolean;
   hasAssemblyAIKey: boolean;
   canLiveTranscribe: boolean;
+  canRecord: boolean;
   recommendedTranscriptionMode: TranscriptionMode;
 }
 
@@ -14,20 +21,31 @@ export interface EnvironmentCapabilities {
  * Synchronously checks what transcription capabilities are available on this
  * device/build and returns the recommended default mode.
  *
- * Live transcription requires a valid AssemblyAI API key.
- * Audio capture uses the native module when available (dev client builds)
- * and falls back to expo-audio polling in Expo Go — so the native module is
- * NOT required for live transcription, only the API key is.
+ * Cloud live transcription needs AssemblyAI key + any audio capture path.
+ * On-device live needs iOS BrieflyTranscriber + Speech permission (native).
+ * Plain recording works on both platforms via expo-audio without BrieflyTranscriber.
  */
 export function checkEnvironment(): EnvironmentCapabilities {
-  const hasNativeModule = NativeAudioCapture.isSupported;
-  const hasAudioCapture = hasNativeModule || ExpoAudioStreamingCapture.isSupported;
+  const hasNativeModule = supportsNativePcmCapture();
+  const hasOnDeviceSpeech = supportsOnDeviceLiveTranscription();
+  const hasAudioCapture = hasNativeModule || supportsExpoAudioStreamingCapture();
   const hasAssemblyAIKey = !!getAssemblyAISharedApiKey();
   const canLiveTranscribe = hasAudioCapture && hasAssemblyAIKey;
+  const canRecord = supportsLocalRecording();
+
+  let recommendedTranscriptionMode: TranscriptionMode = 'post-assemblyai';
+  if (canLiveTranscribe) {
+    recommendedTranscriptionMode = 'live-assemblyai';
+  } else if (hasOnDeviceSpeech) {
+    recommendedTranscriptionMode = 'local-on-device';
+  }
+
   return {
-    hasNativeModule,
+    hasNativeModule: hasNativeModule || hasBrieflyTranscriberModule(),
+    hasOnDeviceSpeech,
     hasAssemblyAIKey,
     canLiveTranscribe,
-    recommendedTranscriptionMode: canLiveTranscribe ? 'live-assemblyai' : 'post-assemblyai',
+    canRecord,
+    recommendedTranscriptionMode,
   };
 }

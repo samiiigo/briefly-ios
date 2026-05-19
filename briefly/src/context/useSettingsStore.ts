@@ -51,31 +51,6 @@ interface SettingsState {
   applyEnvironmentDefaults: (recommendedMode: TranscriptionMode) => void;
 }
 
-type PersistedSettingsState = Partial<SettingsState> & {
-  defaultProcessingMode?: ProcessingMode;
-  defaultTranscriptionMode?: TranscriptionMode;
-};
-
-function migratePersistedSettings(
-  persisted: PersistedSettingsState | undefined,
-): PersistedSettingsState | undefined {
-  if (!persisted) return persisted;
-
-  const next: PersistedSettingsState = { ...persisted };
-
-  if (next.summarizationMode == null && next.defaultProcessingMode != null) {
-    next.summarizationMode = next.defaultProcessingMode;
-  }
-  delete next.defaultProcessingMode;
-
-  if (next.transcriptionMode == null && next.defaultTranscriptionMode != null) {
-    next.transcriptionMode = next.defaultTranscriptionMode;
-  }
-  delete next.defaultTranscriptionMode;
-
-  return next;
-}
-
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
@@ -133,9 +108,6 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: '@briefly/settings',
-      version: 1,
-      migrate: (persisted) =>
-        migratePersistedSettings(persisted as PersistedSettingsState | undefined),
       storage: createJSONStorage(() => AsyncStorage),
     },
   ),

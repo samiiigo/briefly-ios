@@ -1,60 +1,92 @@
 Briefly
 =======
 
-**Briefly** is an iOS-first, privacy-first AI transcription app. It records speech, converts it to text, and generates concise summaries using either fully local processing or a secure cloud mode with no subscriptions and no data retention.
+**Briefly** is a voice recorder with built-in AI transcription and summarization. You can record meetings, lectures, and voice notes, and the app generates a timestamped transcript along with a concise summary. All processing can either stay entirely on your device or route through cloud services you configure yourself. There are no subscriptions built into the app.
 
-The codebase in this repo is the React Native / Expo app that targets:
-
-- iOS
-
-The goal is to feel as fast and local as a traditional voice recorder while adding just enough AI to make your recordings useful.
+This repository contains the **Expo / React Native** app located under the `briefly/` directory. The product is built **iOS-first** (supporting features like Live Activities and on-device speech recognition) while maintaining full **Android** support for recording, library management, and cloud workflows.
 
 ---
 
-## Features
+## What it does
 
-- **Record and transcribe**
-  - Capture meetings, lectures, calls, and voice notes.
-  - Long‑form transcription with timestamps and basic segmentation.
+### Record and review
 
-- **Local & online “AI brain”**
-  - **On‑Device Mode**: Transcription and summaries run on the device (where supported) so recordings and text stay local.
-  - **Online Mode**: Optionally send audio or transcripts to a remote AI service for deeper analysis and better reasoning.
+- **One-tap recording**: Start instantly from the Recents tab. Includes audio playback, renaming, swipe actions, and a favorites system.
+- **Background recording**: Supported on both iOS and Android (using a foreground service and persistent notification on Android).
+- **Live Activity**: Real-time lock screen tracking on iOS while recording (requires a development or production build; this won't work in Expo Go).
 
-- **Summaries and insights**
-  - Short bullet summaries for each transcript.
-  - Key highlights such as decisions, action items, and main topics.
+### Transcribe
 
-- **Multi‑device UI**
-  - Phone‑optimized recording screen with a big record button and recent recordings list.
-  - Split‑view layout on larger screens (e.g. tablets, desktops) with recordings on the left and transcript/summary on the right.
+You can change the app-wide transcription mode in **Settings → Transcription**:
+
+| Mode | Behavior |
+|------|----------|
+| **Live** | Streams a real-time transcript as you speak (powered by AssemblyAI). |
+| **After recording** | Processes the entire audio file once you stop the recording. |
+| **On device** | Uses Apple's native speech recognition on iOS so your audio never leaves the phone. |
+
+Transcripts are broken down into timed segments and support speaker labels where available.
+
+### Summarize
+
+You can change the app-wide summarization mode in **Settings → Summarization**:
+
+| Mode | Behavior |
+|------|----------|
+| **Cloud** | Briefly’s shared OpenRouter-backed service. |
+| **Your API key** | Bring your own API key for OpenRouter, OpenAI, or Google Gemini. |
+| **Local** | On-device summaries; currently implementing Apple Intelligence, or use Gemma for the AI. |
+
+Summaries pull out key insights and format them into structured markdown sections.
+
+### Organize and find
+
+- **Library**: Built-in filters for All, Favorites, Archives, Unlisted, Imports, and Recently Deleted.
+- **Custom folders**: Create and pin custom folders, and toggle between list or grid layouts.
+- **Search**: Search globally across all your recordings, complete with recent search history.
+- **Export**: Share your transcripts or summaries as PDFs (via `expo-print` / `expo-sharing`) or raw text.
 
 ---
 
 ## Tech stack
 
-- **Framework**: React Native + Expo (`expo` 54, `react-native` 0.81)
-- **Navigation**: React Navigation (stack + bottom tabs)
-- **State management**: Zustand
-- **Lists**: `@shopify/flash-list`
-- **Storage**: `expo-file-system`, `expo-sqlite`, `@react-native-async-storage/async-storage`, `react-native-mmkv`
-- **Media & device APIs**: `expo-av`, `expo-audio`, `expo-device`, `expo-haptics`, `expo-sharing`, `expo-print`, `expo-speech`
+- **Framework**: Expo SDK 54, React Native 0.81, React 19
+- **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/) (`expo-router`) using file-based routes inside `briefly/app/`
+- **State**: [Zustand](https://github.com/pmndrs/zustand) paired with AsyncStorage for persistence (`briefly/src/context/`)
+- **Lists**: `@shopify/flash-list` for high-performance scrolling
+- **Audio**: `expo-audio` handling recording, playback, and background audio tasks
+- **Storage**: `expo-file-system` for local audio files; `@react-native-async-storage/async-storage` for metadata
+- **UI**: Custom chrome (including a floating tab bar and blur overlays), `expo-blur`, `expo-haptics`, and native dark theme support
+- **Build / OTA**: EAS Build and `expo-updates`
 
-All dependencies and scripts are defined in `briefly/package.json`.
+Check out `briefly/package.json` for the complete dependency tree and npm scripts.
 
 ---
 
-## Project structure (high level)
+## Project structure
 
-The important pieces for the app live under the `briefly` directory:
-
-- `briefly/src/`
-  - **`screens/`** – Top‑level screens (e.g. folder/recording lists, transcript views).
-  - **`components/`** – Reusable UI components.
-  - **`store/`** – Zustand stores for app state.
-  - **`lib/` / `utils/`** – Helpers, data access, platform abstractions.
-
-This README intentionally stays high level; see `Briefly.md` for more product‑level context and goals.
+```
+briefly/
+├── app/                    # Expo Router screens and layouts
+│   ├── (tabs)/             # Recents + Library tab shell
+│   ├── recording/          # New recording, detail, transcript, summarizing
+│   ├── folder/             # Folder browser and detail
+│   ├── settings.tsx
+│   ├── search.tsx
+│   └── …
+├── src/
+│   ├── components/         # UI (features/, navigation/)
+│   ├── context/            # Zustand stores
+│   ├── services/           # Audio, transcription, summarization, storage
+│   ├── hooks/
+│   ├── utils/
+│   ├── theme/
+│   └── types/
+├── assets/
+├── app.config.js           # Injects API keys from env into expo.extra
+├── app.json
+└── eas.json
+```
 
 ---
 
@@ -63,159 +95,79 @@ This README intentionally stays high level; see `Briefly.md` for more product‑
 ### Prerequisites
 
 - **Node.js** 20+ (LTS recommended)
-- **npm** (or `pnpm`/`yarn`, but the repo ships with an `npm`‑oriented `package-lock.json`)
-- **Expo CLI** and optional native tooling:
-  - `npm install -g expo-cli` (or use `npx expo` with the local binary)
-  - For iOS: Xcode + iOS Simulator (on macOS)
+- **npm** (this repo relies on `briefly/package-lock.json`)
+- **macOS + Xcode** for iOS Simulator or physical device builds
+- **Android Studio / SDK** if you plan to build for Android
 
-### Install dependencies
+**Note:** Briefly requires a custom dev client (`expo-dev-client`). You cannot use the standard Expo Go app because it doesn't support the native modules required for Live Activities and background recording.
 
-From the `briefly` directory:
+### Install
 
 ```bash
 cd briefly
 npm install
 ```
 
-### Setting up API keys
+### API keys (cloud modes)
 
-Briefly requires two API keys for cloud transcription and AI summarization:
+If you want to use cloud transcription (AssemblyAI) or shared cloud summarization (OpenRouter), you need to provide API keys locally or via EAS secrets for builds.
 
-1. **AssemblyAI API Key** – for transcription
-2. **OpenRouter API Key** – for AI summarization
-
-You can set them in one of two ways:
-
-#### Option 1: Environment variables (Recommended)
-
-Create a `.env` file in the `briefly/` directory:
-
-```env
-EXPO_PUBLIC_ASSEMBLYAI_API_KEY=your_assemblyai_key_here
-EXPO_PUBLIC_OPENROUTER_API_KEY=your_openrouter_key_here
-```
-
-Or set them directly in your terminal:
+Copy the example environment file and add your keys:
 
 ```bash
-export EXPO_PUBLIC_ASSEMBLYAI_API_KEY=your_assemblyai_key
-export EXPO_PUBLIC_OPENROUTER_API_KEY=your_openrouter_key
+cp .env.example .env
 ```
 
-#### Option 2: Expo config
-
-Edit `briefly/app.json` and add to the `expo.extra` section:
-
-```json
-{
-  "expo": {
-    "extra": {
-      "assemblyAiApiKey": "your_assemblyai_key_here",
-      "openRouterSharedApiKey": "your_openrouter_key_here"
-    }
-  }
-}
+```env
+EXPO_PUBLIC_ASSEMBLYAI_API_KEY=your_assemblyai_key
+EXPO_PUBLIC_OPENROUTER_API_KEY=your_openrouter_key
 ```
 
-#### Option 3: Native build settings (development builds / CI)
+- AssemblyAI: https://www.assemblyai.com/
+- OpenRouter: https://openrouter.ai/
 
-For native builds, you can also inject AssemblyAI at native compile time by setting `expo.ios.infoPlist.ASSEMBLYAI_API_KEY` in `briefly/app.json` (or by injecting the value during CI builds).
+`app.config.js` also reads non-`EXPO_PUBLIC_` fallbacks (`ASSEMBLYAI_API_KEY`, `OPENROUTER_SHARED_API_KEY`). For production builds, it is highly recommended to use [EAS secrets](https://docs.expo.dev/build-reference/variables/) instead of committing your keys. You can also configure `expo.extra.assemblyAiApiKey` and `expo.extra.openRouterSharedApiKey` directly in `app.json`.
 
-#### Obtaining API keys
+**On-device** transcription and **Local** summarization completely bypass these requirements. **Your API key** summarization just uses the provider you select in Settings—it doesn't use the shared Briefly key.
 
-- **AssemblyAI**: Get your key at https://www.assemblyai.com/
-- **OpenRouter**: Get your key at https://openrouter.ai/
+### Run in development
 
-### Run the app
-
-Start the Expo dev server:
+Start the dev server (this assumes you already have a dev client installed on your device or simulator):
 
 ```bash
 npm run start
 ```
 
-Then:
-
-- Press **`i`** in the Expo CLI to run on iOS Simulator (macOS only), or
-- Scan the QR code with the Expo Go app on iOS.
-
-You can also use the convenience scripts:
+Run a native debug build (you need to do this the first time you run the app, or whenever you change a native dependency):
 
 ```bash
-# iOS (native build, macOS only)
+# iOS (macOS required)
 npm run ios
+
+# Android
+npm run android
 ```
 
----
-
-## Building and releasing
-
-This project is set up for EAS (Expo Application Services) builds:
-
-```bash
-# Build for iOS
-npm run build:ios
-
-# Submit to stores (after configuring EAS)
-npm run submit:ios
-```
-
-See the Expo/EAS docs for store credentials, signing, and configuration.
+If you run into caching issues, run `npm run start:clean` to clear the Metro cache.
 
 ---
 
 ## Quality checks
 
-From `briefly`:
+Run these commands from the root `briefly/` directory before committing code:
 
 ```bash
-# Type checking
 npm run typecheck
-
-# Linting
 npm run lint
-
-# Tests
 npm test
+npm run verify      # Runs typecheck + test + npm audit (high)
 ```
 
 ---
 
-## Privacy and data handling
+## Privacy
 
-Briefly is designed as a **privacy‑first** app:
-
-- In **On‑Device Mode**, recordings and transcripts are processed and stored locally on the device.
-- In **Online Mode**, audio/transcripts are sent to a remote AI service over encrypted channels for more advanced analysis.
-- There are **no subscriptions** and no built‑in data‑retention features beyond what is required to make the app function.
-
-Implementation details of which providers and models are used in Online Mode depend on your local configuration and environment; you should review and adapt this to match your own privacy and compliance requirements.
-
----
-
-## Roadmap (v1 scope)
-
-In scope for the first public version:
-
-- Record audio and play it back.
-- Transcribe recordings in both local and online modes.
-- Generate concise summaries and key‑points lists from each transcript.
-- Per‑recording toggle between On‑Device and Online processing with clear labels so users know where computation happens.
-
-Out of scope for v1:
-
-- Subscription tiers, billing, or “Pro” plans.
-- Complex collaboration features such as shared workspaces, comments, or multi‑user accounts.
-
----
-
-## Contributing
-
-Issues and pull requests are welcome. When contributing:
-
-- Keep the **privacy‑first** philosophy in mind.
-- Prefer simple, reliable flows over feature creep.
-- Align new UI with the existing design patterns in the app.
-
-Before opening a PR, make sure `npm run typecheck`, `npm run lint`, and `npm test` all pass.
-
+- **On-device transcription** utilizes native iOS speech APIs, meaning your audio never leaves the phone.
+- **Cloud** modes send audio or text directly to the third-party APIs you configure (AssemblyAI, OpenRouter, or your own provider). You should review the privacy terms of the provider you choose.
+- All recordings and metadata are stored **locally** on your device unless you manually export or share them.
+- The app has zero subscription billing logic; cloud features run strictly on the API keys you provide or build into the app.

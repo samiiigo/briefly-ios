@@ -41,11 +41,11 @@ import { useTimer } from '@/hooks/useTimer';
 import { useLiveTranscript } from '@/hooks/useLiveTranscript';
 import { useAppInterruptGuard } from '@/hooks/useAppInterruptGuard';
 import {
-  onAndroidRecordingEnteredBackground,
-  onAndroidRecordingReturnedForeground,
-  registerAndroidRecordingStoppedHandler,
-  shouldPauseRecordingWhenAppBackgrounds,
+  onRecordingEnteredBackground,
+  onRecordingReturnedForeground,
+  registerRecordingStoppedHandler,
 } from '@/services/audio/recordingSession';
+import { updateRecordingLiveActivity } from '@/services/audio/recordingLiveActivity';
 import { isAndroid } from '@/utils/platform';
 function isPermissionError(message: string): boolean {
   return /microphone|permission|speech recognition/i.test(message);
@@ -113,35 +113,38 @@ export default function NewRecordingScreen() {
     [router],
   );
 
-  const handlePauseRef = useRef<() => Promise<void>>(async () => {});
   const executeStopAndSaveRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     if (!isAndroid) return;
 
-    registerAndroidRecordingStoppedHandler(() => {
+    registerRecordingStoppedHandler(() => {
       void executeStopAndSaveRef.current();
     });
-    return () => registerAndroidRecordingStoppedHandler(null);
+    return () => registerRecordingStoppedHandler(null);
   }, []);
+
+  useEffect(() => {
+    if (!isStarted || startFailed || isStopped.current) return;
+
+    updateRecordingLiveActivity(elapsedRef.current, isPausedRef.current);
+    const interval = setInterval(() => {
+      updateRecordingLiveActivity(elapsedRef.current, isPausedRef.current);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isStarted, startFailed, isPaused, elapsed]);
 
   useAppInterruptGuard({
     enabled: isStarted && !startFailed && !isStopped.current,
     onBackground: () => {
-      if (shouldPauseRecordingWhenAppBackgrounds()) {
-        setInterruptHint('Recording paused while the app was in the background.');
-        void handlePauseRef.current();
-        return;
-      }
       void (async () => {
-        const hint = await onAndroidRecordingEnteredBackground();
+        const hint = await onRecordingEnteredBackground();
         if (hint) setInterruptHint(hint);
       })();
     },
     onForeground: () => {
-      if (!shouldPauseRecordingWhenAppBackgrounds()) {
-        void onAndroidRecordingReturnedForeground();
-      }
+      void onRecordingReturnedForeground();
       setInterruptHint(null);
     },
   });
@@ -213,6 +216,7 @@ export default function NewRecordingScreen() {
       startTimer();
       setIsPaused(false);
       isPausedRef.current = false;
+      updateRecordingLiveActivity(elapsedRef.current, false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Could not resume recording.';
       Alert.alert('Error', message);
@@ -227,6 +231,7 @@ export default function NewRecordingScreen() {
       stopTimer();
       setIsPaused(true);
       isPausedRef.current = true;
+      updateRecordingLiveActivity(elapsedRef.current, true);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Could not pause recording.';
       Alert.alert('Error', message);
@@ -237,8 +242,6 @@ export default function NewRecordingScreen() {
     if (isPausedRef.current) await resumeRecording();
     else await pauseRecording();
   };
-
-  handlePauseRef.current = handlePause;
 
   const handleDiscard = useCallback(() => {
     Alert.alert('Discard recording', 'This recording will be permanently deleted.', [

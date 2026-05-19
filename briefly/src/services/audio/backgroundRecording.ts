@@ -1,10 +1,9 @@
 /**
- * Android-only background recording lifecycle.
+ * Background recording lifecycle (Android + iOS).
  *
  * Uses expo-audio `allowsBackgroundRecording` (requires `enableBackgroundRecording`
- * in the expo-audio config plugin), which starts a foreground service with a
- * persistent notification and Stop action. iOS continues to pause on background
- * via the recording screen interrupt guard.
+ * in the expo-audio config plugin). Android also starts a foreground service with
+ * a persistent notification and Stop action.
  */
 
 import { PermissionsAndroid, Platform } from 'react-native';
@@ -14,19 +13,19 @@ import type { EventSubscription } from 'expo-modules-core';
 import { isAndroid } from '@/utils/platform';
 import { logger } from '@/utils/logging/logger';
 
-const ANDROID_BACKGROUND_RECORDING_MODE = {
+const BACKGROUND_RECORDING_MODE = {
   allowsRecording: true,
   playsInSilentMode: true,
-  /** Prevents expo-audio from pausing recorders in OnActivityEntersBackground. */
+  /** Prevents expo-audio from pausing recorders when the app backgrounds. */
   shouldPlayInBackground: true,
   interruptionMode: 'duckOthers' as const,
   allowsBackgroundRecording: true,
 };
 
-export type AndroidRecordingStoppedExternally = () => void;
+export type RecordingStoppedExternally = () => void;
 
 let statusSubscription: EventSubscription | null = null;
-let externalStopHandler: AndroidRecordingStoppedExternally | null = null;
+let externalStopHandler: RecordingStoppedExternally | null = null;
 let stopInitiatedFromApp = false;
 
 /** Requests POST_NOTIFICATIONS on Android 13+ so the recording control can appear. */
@@ -53,21 +52,19 @@ export async function ensureAndroidRecordingNotificationPermission(): Promise<bo
 }
 
 /** Configures the shared audio session for recording that may continue in the background. */
-export async function configureAndroidBackgroundRecordingSession(): Promise<void> {
-  if (!isAndroid) return;
-
-  await setAudioModeAsync(ANDROID_BACKGROUND_RECORDING_MODE);
-  logger.info('AUDIO', 'Android background recording session configured');
+export async function configureBackgroundRecordingSession(): Promise<void> {
+  await setAudioModeAsync(BACKGROUND_RECORDING_MODE);
+  logger.info('AUDIO', 'Background recording session configured', { platform: Platform.OS });
 }
 
 /**
- * Subscribes to the recorder status stream so notification Stop triggers app logic.
+ * Subscribes to the recorder status stream so notification Stop triggers app logic (Android).
  * The native foreground service is provided by expo-audio when background recording is enabled.
  */
-export function attachAndroidRecordingNotificationControls(recorder: AudioRecorder): void {
+export function attachRecordingNotificationControls(recorder: AudioRecorder): void {
   if (!isAndroid) return;
 
-  detachAndroidRecordingNotificationControls();
+  detachRecordingNotificationControls();
 
   statusSubscription = recorder.addListener(
     'recordingStatusUpdate',
@@ -79,20 +76,18 @@ export function attachAndroidRecordingNotificationControls(recorder: AudioRecord
   );
 }
 
-export function detachAndroidRecordingNotificationControls(): void {
+export function detachRecordingNotificationControls(): void {
   statusSubscription?.remove();
   statusSubscription = null;
 }
 
-/** Screen-level handler when the user taps Stop on the recording notification. */
-export function registerAndroidRecordingStoppedHandler(
-  handler: AndroidRecordingStoppedExternally | null,
-): void {
+/** Screen-level handler when the user taps Stop on the recording notification (Android). */
+export function registerRecordingStoppedHandler(handler: RecordingStoppedExternally | null): void {
   externalStopHandler = handler;
 }
 
 /** Marks in-app stop so we do not treat it as a notification stop. */
-export function markAndroidRecordingStopFromApp(active: boolean): void {
+export function markRecordingStopFromApp(active: boolean): void {
   stopInitiatedFromApp = active;
 }
 
@@ -100,17 +95,16 @@ export function markAndroidRecordingStopFromApp(active: boolean): void {
  * Called when the app moves to background during an active recording.
  * Re-applies the recording session and keeps capture running (no pause).
  */
-export async function onAndroidRecordingEnteredBackground(): Promise<string> {
-  if (!isAndroid) {
-    return '';
-  }
-
+export async function onRecordingEnteredBackground(): Promise<string> {
   try {
-    await configureAndroidBackgroundRecordingSession();
-    logger.info('AUDIO', 'Android recording continuing in background');
-    return 'Recording continues in the background. Use the notification to stop.';
+    await configureBackgroundRecordingSession();
+    logger.info('AUDIO', 'Recording continuing in background');
+    if (isAndroid) {
+      return 'Recording continues in the background. Use the notification to stop.';
+    }
+    return 'Recording continues in the background. Check the Lock Screen or Dynamic Island.';
   } catch (error) {
-    logger.warn('AUDIO', 'Failed to refresh Android background recording session', {
+    logger.warn('AUDIO', 'Failed to refresh background recording session', {
       error: error instanceof Error ? error.message : String(error),
     });
     return 'Recording may stop if the app stays in the background.';
@@ -118,19 +112,17 @@ export async function onAndroidRecordingEnteredBackground(): Promise<string> {
 }
 
 /** Called when the app returns to the foreground during an active recording. */
-export async function onAndroidRecordingReturnedForeground(): Promise<void> {
-  if (!isAndroid) return;
-
+export async function onRecordingReturnedForeground(): Promise<void> {
   try {
-    await configureAndroidBackgroundRecordingSession();
+    await configureBackgroundRecordingSession();
   } catch (error) {
-    logger.warn('AUDIO', 'Failed to refresh Android recording session on foreground', {
+    logger.warn('AUDIO', 'Failed to refresh recording session on foreground', {
       error: error instanceof Error ? error.message : String(error),
     });
   }
 }
 
-/** iOS pauses on background; Android keeps recording with a foreground service. */
+/** Recording continues in the background on both platforms. */
 export function shouldPauseRecordingWhenAppBackgrounds(): boolean {
-  return !isAndroid;
+  return false;
 }

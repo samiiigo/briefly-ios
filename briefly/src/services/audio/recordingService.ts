@@ -8,7 +8,7 @@
 
 import { AudioModule, requestRecordingPermissionsAsync } from 'expo-audio';
 import type { AudioRecorder, RecordingOptions } from 'expo-audio';
-import { getInfoAsync } from 'expo-file-system/legacy';
+import { getPathInfo } from '@/utils/fileSystem/pathInfo';
 import { AudioRecordingResult } from './types';
 import { assemblyAIRecordingOptions } from './recordingOptions';
 import { normalizeDbMetering } from './audioMetering';
@@ -25,6 +25,10 @@ import {
   configureRecordingStoppedAudioSession,
   prepareRecorderAsync,
 } from './playbackSession';
+import {
+  startRecordingLiveActivity,
+  stopRecordingLiveActivity,
+} from './recordingLiveActivity';
 
 class RecordingServiceClass {
   private recorder: AudioRecorder | null = null;
@@ -54,8 +58,8 @@ class RecordingServiceClass {
     let fileSize = 0;
     if (uri) {
       try {
-        const info = await getInfoAsync(uri);
-        fileSize = info.exists ? ((info as { size?: number }).size ?? 0) : 0;
+        const info = getPathInfo(uri);
+        fileSize = info.exists ? info.size : 0;
       } catch (error: unknown) {
         logger.warn('AUDIO', 'Failed to read local recording file metadata', {
           error: error instanceof Error ? error.message : String(error),
@@ -101,6 +105,7 @@ class RecordingServiceClass {
     this._recordingPaused = false;
     this.startTime = Date.now();
     attachActiveRecordingControls(recorder);
+    startRecordingLiveActivity();
     logger.info('AUDIO', 'Local recording started');
   }
 
@@ -123,6 +128,7 @@ class RecordingServiceClass {
   async stop(): Promise<AudioRecordingResult> {
     if (!this.recorder) {
       logger.warn('AUDIO', 'Stop called without active recorder, returning empty result');
+      stopRecordingLiveActivity();
       return { uri: '', duration: 0, fileSize: 0 };
     }
 
@@ -149,6 +155,7 @@ class RecordingServiceClass {
     this.recorder = null;
     this._recordingPaused = false;
 
+    stopRecordingLiveActivity(result.duration);
     await configureRecordingStoppedAudioSession();
 
     logger.info('AUDIO', 'Local recording stopped', {

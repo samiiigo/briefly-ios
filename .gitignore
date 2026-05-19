@@ -5,7 +5,10 @@ node_modules/
 .env
 .env*.local
 briefly/.env
+!briefly/.env.example
 google-service-account.json
+briefly/play-store-service-account.json
+play-store-service-account.json
 
 # Expo
 .expo/
@@ -29,6 +32,7 @@ yarn-error.*
 
 # IDE & local tooling
 .idea/
+.vscode/
 .claude/settings.local.json
 
 # Xcode / iOS

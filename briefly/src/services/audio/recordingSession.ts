@@ -1,64 +1,49 @@
 /**
  * Cross-platform recording session orchestration.
  *
- * iOS: standard playAndRecord session via playbackSession.
  * Android: background-capable session + notification Stop (expo-audio foreground service).
+ * iOS: background-capable session, Live Activity on lock screen / Dynamic Island.
  */
 
 import type { AudioRecorder } from 'expo-audio';
-import { isAndroid } from '@/utils/platform';
 import {
-  configureRecordingAudioSession,
-  reapplyRecordingAudioMode,
-} from './playbackSession';
-import {
-  attachAndroidRecordingNotificationControls,
-  configureAndroidBackgroundRecordingSession,
-  detachAndroidRecordingNotificationControls,
+  attachRecordingNotificationControls,
+  configureBackgroundRecordingSession,
+  detachRecordingNotificationControls,
   ensureAndroidRecordingNotificationPermission,
-  markAndroidRecordingStopFromApp,
-} from './androidBackgroundRecording';
+  markRecordingStopFromApp,
+} from './backgroundRecording';
 
 export {
-  onAndroidRecordingEnteredBackground,
-  onAndroidRecordingReturnedForeground,
-  registerAndroidRecordingStoppedHandler,
+  onRecordingEnteredBackground,
+  onRecordingReturnedForeground,
+  registerRecordingStoppedHandler,
   shouldPauseRecordingWhenAppBackgrounds,
-} from './androidBackgroundRecording';
+} from './backgroundRecording';
 
 /** Microphone + (Android 13+) notification permission before starting capture. */
 export async function ensureRecordingPrerequisites(): Promise<void> {
-  if (isAndroid) {
-    await ensureAndroidRecordingNotificationPermission();
-  }
+  await ensureAndroidRecordingNotificationPermission();
 }
 
 /** Prepares the shared audio session for an active recording. */
 export async function configureActiveRecordingSession(): Promise<void> {
   await ensureRecordingPrerequisites();
-  if (isAndroid) {
-    await configureAndroidBackgroundRecordingSession();
-  } else {
-    await configureRecordingAudioSession();
-  }
+  await configureBackgroundRecordingSession();
 }
 
 /** Re-applies session settings after pause/resume or returning from background. */
 export async function reapplyActiveRecordingSession(): Promise<void> {
-  if (isAndroid) {
-    await configureAndroidBackgroundRecordingSession();
-  } else {
-    await reapplyRecordingAudioMode();
-  }
+  await configureBackgroundRecordingSession();
 }
 
 /** Wires notification Stop → recorder status (Android only). */
 export function attachActiveRecordingControls(recorder: AudioRecorder): void {
-  attachAndroidRecordingNotificationControls(recorder);
+  attachRecordingNotificationControls(recorder);
 }
 
 export function detachActiveRecordingControls(): void {
-  detachAndroidRecordingNotificationControls();
+  detachRecordingNotificationControls();
 }
 
 /**
@@ -69,13 +54,13 @@ export async function finalizeActiveRecorderStop(
   recorder: AudioRecorder,
   alreadyStopped: boolean,
 ): Promise<void> {
-  markAndroidRecordingStopFromApp(true);
+  markRecordingStopFromApp(true);
   try {
     if (!alreadyStopped) {
       await recorder.stop();
     }
   } finally {
-    markAndroidRecordingStopFromApp(false);
-    detachAndroidRecordingNotificationControls();
+    markRecordingStopFromApp(false);
+    detachRecordingNotificationControls();
   }
 }

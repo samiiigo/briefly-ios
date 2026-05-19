@@ -1,4 +1,6 @@
 import { ProcessingMode, TranscriptSegment, TranscriptionMode } from '@/types';
+import { getPathInfo } from '@/utils/fileSystem/pathInfo';
+import { ensureUploadableAudioUri } from '@/utils/fileSystem/repairWavForUpload';
 import { SummarizationService } from '@/services/summarization';
 import { TranscriptionService } from '@/services/transcription';
 import {
@@ -59,11 +61,54 @@ export async function transcribeSavedAudioFile(
     throw new Error('No audio file was saved for this recording.');
   }
 
-  logger.info('RECORDING', 'Fallback: transcribing saved audio file', { filePath });
-  const segments = await TranscriptionService.transcribe(
+  const uploadUri = await ensureUploadableAudioUri(filePath);
+  logger.info('RECORDING', 'Fallback: transcribing saved audio file', {
     filePath,
+    uploadUri: uploadUri !== filePath ? uploadUri : undefined,
+  });
+  const segments = await TranscriptionService.transcribe(
+    uploadUri,
     undefined,
     FALLBACK_TRANSCRIPTION_MODE,
+  );
+  assertTranscriptHasContent(segments);
+  return segments;
+}
+
+/**
+ * Re-transcribes a saved recording from its audio file via AssemblyAI.
+ * Ignores original capture mode (live, on-device, post) and any existing transcript.
+ */
+export async function retranscribeRecordingFromAudio(
+  filePath: string,
+  meta?: { durationSec?: number; fileSizeBytes?: number },
+): Promise<TranscriptSegment[]> {
+  if (!filePath?.trim()) {
+    throw new Error('No audio file was saved for this recording.');
+  }
+
+  const onDisk = getPathInfo(filePath);
+  if (!onDisk.exists) {
+    throw new Error('Audio file not found.');
+  }
+
+  const fileSizeBytes = onDisk.size ?? meta?.fileSizeBytes ?? 0;
+  validateRecordingAsset({
+    filePath,
+    durationSec: meta?.durationSec ?? 0,
+    fileSizeBytes,
+  });
+
+  const uploadUri = await ensureUploadableAudioUri(filePath);
+  logger.info('RECORDING', 'Re-transcribing saved audio via AssemblyAI', {
+    filePath,
+    fileSizeBytes,
+    uploadUri: uploadUri !== filePath ? uploadUri : undefined,
+  });
+  const segments = await TranscriptionService.transcribe(
+    uploadUri,
+    undefined,
+    'post-assemblyai',
   );
   assertTranscriptHasContent(segments);
   return segments;

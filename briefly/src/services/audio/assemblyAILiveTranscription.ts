@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
+import { supportsOnDeviceLiveTranscription } from '@/utils/platformCapabilities';
 import { AssemblyAIConfig, getAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
 
 const { BrieflyTranscriber } = NativeModules;
@@ -98,9 +99,7 @@ export class AssemblyAILiveTranscriptionClient {
   }
 
   static get isOnDeviceSupported(): boolean {
-    // We rely on the native implementation to fail gracefully if the OS
-    // does not support on-device recognition for the current locale.
-    return AssemblyAILiveTranscriptionClient.isSupported;
+    return supportsOnDeviceLiveTranscription();
   }
 
   async start(options: AssemblyAILiveStartOptions = {}): Promise<AssemblyAILiveStartResult> {

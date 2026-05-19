@@ -17,7 +17,7 @@
  */
 
 import { NativeModules } from 'react-native';
-import { getInfoAsync } from 'expo-file-system/legacy';
+import { getPathInfo } from '@/utils/fileSystem/pathInfo';
 import { normalizeDbMetering } from './audioMetering';
 import { AssemblyAIConfig, requireAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
 import { AudioRecordingResult } from './types';
@@ -30,6 +30,10 @@ import { ExpoAudioStreamingCapture } from './expoAudioStreamingCapture';
 import { ensureMicrophonePermission } from '@/utils/recording/recordingPermissions';
 import { PlaybackService } from './playbackService';
 import { configureActiveRecordingSession } from './recordingSession';
+import {
+  startRecordingLiveActivity,
+  stopRecordingLiveActivity,
+} from './recordingLiveActivity';
 
 export interface LiveTranscriptionCallbacks {
   onPartial: (text: string) => void;
@@ -79,6 +83,7 @@ class LiveTranscriptionServiceClass {
         mode: 'on-device',
       });
       this.active = { kind: 'on-device', client };
+      startRecordingLiveActivity();
       logger.info('AUDIO', 'Live transcription started (on-device)');
       return;
     }
@@ -125,6 +130,8 @@ class LiveTranscriptionServiceClass {
       this.active = { kind: 'expo-js', capture, ws };
       logger.info('AUDIO', 'Live transcription started (expo-audio + JS WebSocket)');
     }
+
+    startRecordingLiveActivity();
   }
 
   async pause(): Promise<void> {
@@ -179,11 +186,16 @@ class LiveTranscriptionServiceClass {
     const a = this.active;
     this.active = null;
 
-    if (!a) return { uri: '', duration: 0, fileSize: 0 };
+    if (!a) {
+      stopRecordingLiveActivity();
+      return { uri: '', duration: 0, fileSize: 0 };
+    }
 
     if (a.kind === 'on-device') {
       const result = await a.client.stop();
-      return this.toRecordingResult(result?.uri ?? '', result?.duration ?? 0);
+      const recording = await this.toRecordingResult(result?.uri ?? '', result?.duration ?? 0);
+      stopRecordingLiveActivity(recording.duration);
+      return recording;
     }
 
     // Cloud paths: terminate WebSocket gracefully, then stop audio.
@@ -204,14 +216,16 @@ class LiveTranscriptionServiceClass {
       uri: result.uri,
       duration: result.duration,
     });
-    return this.toRecordingResult(result.uri, result.duration);
+    const recording = await this.toRecordingResult(result.uri, result.duration);
+    stopRecordingLiveActivity(recording.duration);
+    return recording;
   }
 
   private async toRecordingResult(uri: string, duration: number): Promise<AudioRecordingResult> {
     let fileSize = 0;
     try {
-      const info = await getInfoAsync(uri);
-      fileSize = info.exists ? ((info as any).size ?? 0) : 0;
+      const info = getPathInfo(uri);
+      fileSize = info.exists ? info.size : 0;
     } catch {
       // non-critical
     }
@@ -221,6 +235,7 @@ class LiveTranscriptionServiceClass {
   private stopActive(): void {
     const a = this.active;
     this.active = null;
+    stopRecordingLiveActivity();
     if (!a) return;
 
     if (a.kind === 'on-device') {

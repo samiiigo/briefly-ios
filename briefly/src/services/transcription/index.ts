@@ -12,7 +12,7 @@
  * not on low-level HTTP or parsing details (DIP).
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
+import { getPathInfo } from '@/utils/fileSystem/pathInfo';
 import { TranscriptSegment, TranscriptionMode } from '@/types';
 import { requireAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
 import { normalizeTranscriptionMode } from '@/utils/processing/transcriptionMode';
@@ -51,8 +51,8 @@ function createDefaultDependencies(): TranscriptionDependencies {
   return {
     getApiKey: requireAssemblyAISharedApiKey,
     getFileInfo: async (audioUri) => {
-      const info = await FileSystem.getInfoAsync(audioUri);
-      return { exists: info.exists, size: (info as any).size };
+      const info = getPathInfo(audioUri);
+      return { exists: info.exists, size: info.size };
     },
     client: {
       uploadAudio,
@@ -103,18 +103,33 @@ async function transcribeWithAssemblyAI(
   const payload = await dependencies.client.pollForCompletion(transcriptId, apiKey);
 
   const words = payload.words ?? [];
+  const fullText = (payload.text ?? '').trim();
+  const textWordCount = fullText ? fullText.split(/\s+/).filter(Boolean).length : 0;
+
+  if (fullText && words.length > 0 && textWordCount > words.length * 2) {
+    logger.info('TranscriptionService', 'Using full transcript text (words array sparse)', {
+      wordTimings: words.length,
+      textWordCount,
+    });
+    const textSegments = dependencies.segmentBuilder.buildFromText(fullText);
+    textSegments.forEach((segment) => onSegment?.(segment));
+    return textSegments;
+  }
+
   if (words.length > 0) {
     const segments = dependencies.segmentBuilder.buildFromWords(words);
     segments.forEach((segment) => onSegment?.(segment));
     if (segments.length > 0) {
       logger.info('TranscriptionService', 'Transcription result received', {
         segmentCount: segments.length,
+        wordTimings: words.length,
+        textWordCount,
       });
       return segments;
     }
   }
 
-  const fallback = (payload.text ?? '').trim();
+  const fallback = fullText;
   if (!fallback) {
     logger.error('TranscriptionService', 'Empty transcript returned');
     throw new Error('AssemblyAI returned an empty transcript.');

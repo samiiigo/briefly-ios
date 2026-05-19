@@ -13,7 +13,6 @@ import { requireOpenRouterSharedApiKey } from '@/constants/api/openRouter';
 import { SummarizationProvider } from './summarizationProvider';
 import { OnDeviceProvider } from './onDeviceProvider';
 import { OpenRouterProvider } from './openRouterProvider';
-import { OpenAIProvider } from './openAIProvider';
 import { GeminiProvider } from './geminiProvider';
 import {
   SummarizationSettingsReader,
@@ -74,7 +73,7 @@ function createDefaultFactory(
 ): SummarizationProviderFactory {
   const cloudResolver = new UserKeyCloudProviderResolver(settingsReader, {
     openrouter: (key) => new OpenRouterProvider(key),
-    openai: (key) => new OpenAIProvider(key),
+    openai: (key) => new OpenRouterProvider(key, 'openai'),
     gemini: (key) => new GeminiProvider(key),
   });
 

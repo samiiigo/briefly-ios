@@ -40,7 +40,7 @@ interface StructuredSummaryJson {
   overview?: string;
   keyInsights?: string[];
   sections?: StructuredSection[];
-  /** @deprecated Legacy schema; prefer top-level keyInsights. */
+  /** Older LLM schema; mapped to keyInsights when top-level keyInsights is absent. */
   actionItems?: StructuredActionItem[];
 }
 

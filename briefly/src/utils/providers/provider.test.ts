@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { CloudProvider, detectProvider, providerEndpoint, providerLabel } from '../index';
+import {
+  type DetectedCloudProvider as CloudProvider,
+  detectProvider,
+  providerEndpoint,
+  providerLabel,
+} from './providerDetection';
 
 describe('cloud provider detection', () => {
   it('detects OpenRouter keys by prefix', () => {

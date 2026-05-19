@@ -12,7 +12,11 @@
 
 import { AudioModule, requestRecordingPermissionsAsync } from 'expo-audio';
 import type { AudioRecorder, RecordingOptions } from 'expo-audio';
-import * as FileSystem from 'expo-file-system/legacy';
+import {
+  getInfoAsync,
+  readAsStringAsync,
+  EncodingType,
+} from '@/utils/fileSystem/legacyPositionalRead';
 import { Platform } from 'react-native';
 import { assemblyAIRecordingOptions, WAV_HEADER_BYTES } from './recordingOptions';
 import { normalizeDbMetering, pcmBufferToLevel, smoothMeteringLevel } from './audioMetering';
@@ -152,7 +156,7 @@ export class ExpoAudioStreamingCapture {
 
     this.pollInFlight = true;
     try {
-      const info = await FileSystem.getInfoAsync(uri);
+      const info = await getInfoAsync(uri);
       if (!info.exists) return;
 
       const totalBytes: number = (info as { size?: number }).size ?? 0;
@@ -163,8 +167,8 @@ export class ExpoAudioStreamingCapture {
 
       const readLength = Math.min(pendingBytes, MAX_READ_BYTES_PER_POLL);
 
-      const b64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
+      const b64 = await readAsStringAsync(uri, {
+        encoding: EncodingType.Base64,
         position: readFrom,
         length: readLength,
       });

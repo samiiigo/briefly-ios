@@ -12,6 +12,18 @@ import { RecordingRepository } from './contracts';
 
 const RECORDINGS_KEY = '@briefly/recordings';
 
+/** Serializes read-modify-write so concurrent saves cannot drop fields. */
+let persistChain: Promise<void> = Promise.resolve();
+
+function enqueuePersist<T>(task: () => Promise<T>): Promise<T> {
+  const next = persistChain.then(task);
+  persistChain = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
+}
+
 export const RecordingStorageService: RecordingRepository = {
   async loadAll(): Promise<Recording[]> {
     try {
@@ -31,31 +43,39 @@ export const RecordingStorageService: RecordingRepository = {
   },
 
   async save(recording: Recording): Promise<void> {
-    const existing = await this.loadAll();
-    const updated = [recording, ...existing.filter((r) => r.id !== recording.id)];
-    await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(updated));
-    logger.info('StorageService', 'Recording saved', {
-      id: recording.id,
-      title: recording.title,
+    return enqueuePersist(async () => {
+      const existing = await this.loadAll();
+      const updated = [recording, ...existing.filter((r) => r.id !== recording.id)];
+      await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(updated));
+      logger.info('StorageService', 'Recording saved', {
+        id: recording.id,
+        title: recording.title,
+      });
     });
   },
 
   async update(id: string, updates: Partial<Recording>): Promise<void> {
-    const existing = await this.loadAll();
-    const updated = existing.map((r) => (r.id === id ? { ...r, ...updates } : r));
-    await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(updated));
-    logger.info('StorageService', 'Recording updated', { id, fields: Object.keys(updates) });
+    return enqueuePersist(async () => {
+      const existing = await this.loadAll();
+      const updated = existing.map((r) => (r.id === id ? { ...r, ...updates } : r));
+      await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(updated));
+      logger.info('StorageService', 'Recording updated', { id, fields: Object.keys(updates) });
+    });
   },
 
   async remove(id: string): Promise<void> {
-    const existing = await this.loadAll();
-    const updated = existing.filter((r) => r.id !== id);
-    await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(updated));
-    logger.info('StorageService', 'Recording deleted from storage', { id });
+    return enqueuePersist(async () => {
+      const existing = await this.loadAll();
+      const updated = existing.filter((r) => r.id !== id);
+      await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(updated));
+      logger.info('StorageService', 'Recording deleted from storage', { id });
+    });
   },
 
   async saveAll(recordings: Recording[]): Promise<void> {
-    await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(recordings));
-    logger.info('StorageService', 'All recordings saved', { count: recordings.length });
+    return enqueuePersist(async () => {
+      await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(recordings));
+      logger.info('StorageService', 'All recordings saved', { count: recordings.length });
+    });
   },
 };

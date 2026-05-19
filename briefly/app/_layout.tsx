@@ -45,8 +45,10 @@ export default function RootLayout() {
       const env = checkEnvironment();
       logger.info('SYSTEM', 'Environment check', {
         hasNative: env.hasNativeModule,
+        hasOnDeviceSpeech: env.hasOnDeviceSpeech,
         hasKey: env.hasAssemblyAIKey,
         canLive: env.canLiveTranscribe,
+        canRecord: env.canRecord,
         recommended: env.recommendedTranscriptionMode,
       });
       useSettingsStore.getState().applyEnvironmentDefaults(
