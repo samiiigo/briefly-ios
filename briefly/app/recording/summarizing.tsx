@@ -37,6 +37,8 @@ import {
 } from '@/utils/recording/recordingValidation';
 import { useAppInterruptGuard } from '@/hooks/useAppInterruptGuard';
 import { getLocalLlmSummarizationBlocker } from '@/services/summarization';
+import { interceptOnDeviceSummarizationIfBlocked } from '@/utils/processing/localLlmSummarizationGate';
+import { cancelRecordingBackgroundProcessing } from '@/services/recording/recordingBackgroundProcessing';
 import { Colors, Spacing, BorderRadius, SliderAnimation, withAppFont } from '@/theme';
 
 function assertOnDeviceModelReadyForSummarization(mode: ProcessingMode): void {
@@ -348,6 +350,26 @@ export default function SummarizingScreen() {
     hasStarted.current = true;
     isCancelled.current = false;
 
+    const summarizationModeForGate =
+      (retrySummarizationMode as ProcessingMode | undefined) ??
+      useSettingsStore.getState().summarizationMode;
+
+    if (interceptOnDeviceSummarizationIfBlocked(summarizationModeForGate)) {
+      isCancelled.current = true;
+      cancelRecordingBackgroundProcessing(recordingId);
+      void (async () => {
+        try {
+          await updateRecording(recordingId, { status: 'saved', errorMessage: undefined });
+        } catch {
+          // Still leave the screen
+        }
+        router.replace(`/recording/${recordingId}`);
+      })();
+      return () => {
+        isCancelled.current = true;
+      };
+    }
+
     if (retrySummarizationMode) {
       const mode = retrySummarizationMode as ProcessingMode;
       if (rec.processingMode) {
@@ -427,6 +449,8 @@ export default function SummarizingScreen() {
     runProcessing,
     runSummarizationOnly,
     retrySummarizationMode,
+    router,
+    updateRecording,
     useAudioFallbackOnly,
   ]);
 

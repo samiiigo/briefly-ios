@@ -58,13 +58,16 @@ export {
   isLocalGemmaModelDownloaded,
   getLocalGemmaModelPath,
   cancelLocalGemmaModelDownload,
+  deleteLocalGemmaModel,
 } from './local/gemmaModelDownload';
+export { LocalModelStorageService } from '@/services/storage/localModelStorageService';
 export type { ModelDownloadProgress } from './local/gemmaModelDownload';
 export { LocalLlamaError, isLocalLlamaError } from './local/localLlamaErrors';
 export {
   refreshLocalLlmModelStateFromDisk,
   getLocalLlmSummarizationBlocker,
   evaluateLocalLlmAvailability,
+  isOnDeviceSummarizationMode,
   LOCAL_LLM_DOWNLOAD_IN_PROGRESS_MESSAGE,
   LOCAL_LLM_MODEL_NOT_READY_MESSAGE,
 } from './local/localLlmAvailability';

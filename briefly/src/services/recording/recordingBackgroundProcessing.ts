@@ -18,6 +18,7 @@ import {
 } from '@/utils/recording/recordingValidation';
 import { logger } from '@/utils/logging/logger';
 import { buildRecordingReadyFromSummarization } from '@/utils/recording/recordingSummarization';
+import { getLocalLlmSummarizationBlocker } from '@/services/summarization';
 
 const PROCESSING_TIMEOUT_MS = 12 * 60 * 1000;
 
@@ -180,11 +181,31 @@ async function runJob(
  * Runs transcription (and summarization) without blocking navigation.
  * Safe to call multiple times; only one job runs per recording id.
  */
+async function abortBlockedOnDeviceProcessing(recordingId: string, message: string): Promise<void> {
+  const { updateRecording } = useRecordingStore.getState();
+  try {
+    await updateRecording(recordingId, { status: 'saved', errorMessage: undefined });
+  } catch {
+    // Store may still reflect saved in memory
+  }
+  logger.warn('RECORDING', 'On-device summarization blocked; background job not started', {
+    recordingId,
+    message,
+  });
+}
+
 export function startRecordingBackgroundProcessing(
   recordingId: string,
   options?: { audioFallbackOnly?: boolean },
 ): void {
   if (activeJobs.has(recordingId)) return;
+
+  const pMode = useSettingsStore.getState().summarizationMode;
+  const blocker = getLocalLlmSummarizationBlocker(pMode);
+  if (blocker) {
+    void abortBlockedOnDeviceProcessing(recordingId, blocker);
+    return;
+  }
 
   const stageRef = { current: 'transcribing' as 'transcribing' | 'summarizing' };
   const audioFallbackOnly = options?.audioFallbackOnly ?? false;

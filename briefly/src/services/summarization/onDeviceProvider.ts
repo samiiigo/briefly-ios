@@ -1,9 +1,9 @@
 /**
  * OnDeviceProvider — on-device summarization via llama.rn + Gemma GGUF (SRP)
  *
- * Downloads the quantized model to the document directory, runs inference in a
- * short-lived llama context, and surfaces memory/device errors without silently
- * falling back to extractive summaries.
+ * Requires the model to be downloaded from Settings → Summarization first.
+ * Runs inference in a short-lived llama context and surfaces memory/device
+ * errors without silently falling back to extractive summaries.
  */
 
 import { Platform } from 'react-native';

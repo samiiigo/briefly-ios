@@ -1,5 +1,6 @@
 import { ProcessingMode } from '@/types';
 import { useSettingsStore } from '@/context/useSettingsStore';
+import { LocalModelStorageService } from '@/services/storage/localModelStorageService';
 import {
   isLocalGemmaModelDownloaded,
   isLocalLlmDownloadInProgress,
@@ -16,19 +17,19 @@ export interface LocalLlmAvailability {
 }
 
 export const LOCAL_LLM_DOWNLOAD_IN_PROGRESS_MESSAGE =
-  'The Gemma 4 E2B model is still downloading. Open Settings → Summarization to check progress, then try again once the download finishes.';
+  'The Gemma 4 E2B model is still downloading. Wait until the download finishes, then try summarizing again. Open Settings → Summarization to check progress.';
 
 export const LOCAL_LLM_MODEL_NOT_READY_MESSAGE =
-  'The on-device model is not ready yet. Open Settings → Summarization to download Gemma 4 E2B (~3.5 GB), then try again.';
+  'The on-device model is not downloaded yet. Open Settings → Summarization to download Gemma 4 E2B (~3.5 GB), then try again.';
 
 /**
  * Reconciles Zustand download flags with the on-disk GGUF (expo-file-system).
  * Call before gating summarization or after app rehydrate.
  */
 export function refreshLocalLlmModelStateFromDisk(): void {
-  const ready = isLocalGemmaModelDownloaded();
-  const partial = isPartialLocalGemmaModelOnDisk();
-  const inFlight = isLocalLlmDownloadInProgress();
+  const ready = LocalModelStorageService.isCompleteModelOnDisk();
+  const partial = LocalModelStorageService.isPartialModelOnDisk();
+  const activeSession = isLocalLlmDownloadInProgress();
 
   if (ready) {
     useSettingsStore.setState({
@@ -40,12 +41,13 @@ export function refreshLocalLlmModelStateFromDisk(): void {
     return;
   }
 
-  if (inFlight || partial) {
+  if (activeSession || partial) {
     const { localLlmDownloadProgress } = useSettingsStore.getState();
     useSettingsStore.setState({
       localLlmModelReady: false,
       localLlmDownloadStatus: 'downloading',
-      localLlmDownloadProgress: partial && localLlmDownloadProgress == null ? 0 : localLlmDownloadProgress,
+      localLlmDownloadProgress:
+        partial && localLlmDownloadProgress == null ? 0 : localLlmDownloadProgress,
     });
     return;
   }
@@ -56,6 +58,7 @@ export function refreshLocalLlmModelStateFromDisk(): void {
       localLlmModelReady: false,
       localLlmDownloadStatus: 'idle',
       localLlmDownloadProgress: null,
+      localLlmDownloadError: undefined,
     });
   }
 }

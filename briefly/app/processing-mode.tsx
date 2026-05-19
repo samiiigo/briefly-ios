@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -27,6 +28,7 @@ import {
 } from '@/utils/providers/cloudProvider';
 import { Colors, withAppFont } from '@/theme';
 import {
+  cancelLocalGemmaModelDownload,
   ensureLocalGemmaModelDownloaded,
   refreshLocalLlmModelStateFromDisk,
 } from '@/services/summarization';
@@ -51,23 +53,44 @@ export default function ProcessingModePickerScreen() {
     localLlmDownloadProgress,
     localLlmDownloadStatus,
     localLlmDownloadError,
+    deleteLocalLlmModel,
   } = useSettingsStore();
-  const [isFetchingModel, setIsFetchingModel] = useState(false);
 
   useEffect(() => {
     refreshLocalLlmModelStateFromDisk();
   }, []);
 
+  const isDownloading = localLlmDownloadStatus === 'downloading';
+
   const handleDownloadLocalModel = useCallback(async () => {
-    setIsFetchingModel(true);
+    if (isDownloading) return;
     try {
       await ensureLocalGemmaModelDownloaded();
     } catch {
       // Error message is stored on the settings slice
-    } finally {
-      setIsFetchingModel(false);
     }
+  }, [isDownloading]);
+
+  const handleCancelDownload = useCallback(async () => {
+    await cancelLocalGemmaModelDownload();
   }, []);
+
+  const handleDeleteLocalModel = useCallback(() => {
+    Alert.alert(
+      'Delete on-device model?',
+      'This removes the Gemma model from your device (~3.5 GB). You can download it again later.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void deleteLocalLlmModel();
+          },
+        },
+      ],
+    );
+  }, [deleteLocalLlmModel]);
 
   const isCloudUserKey =
     summarizationMode === 'cloud-user-key' || summarizationMode === 'cloud';
@@ -125,37 +148,54 @@ export default function ProcessingModePickerScreen() {
               Gemma 4 E2B (Q4) is stored in your app documents (~3.5 GB). Download once while on Wi‑Fi.
             </Text>
             <View style={sl.card}>
-              {localLlmModelReady ? (
-                <View style={styles.modelStatusRow}>
-                  <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
-                  <Text style={styles.modelStatusText}>Model ready for offline summarization</Text>
-                </View>
+              {localLlmModelReady && localLlmDownloadStatus === 'ready' ? (
+                <>
+                  <View style={styles.modelStatusRow}>
+                    <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
+                    <Text style={styles.modelStatusText}>Model ready for offline summarization</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.deleteModelButton}
+                    onPress={handleDeleteLocalModel}
+                  >
+                    <Ionicons name="trash-outline" size={18} color={Colors.orange} />
+                    <Text style={styles.deleteModelButtonText}>Delete model from device</Text>
+                  </TouchableOpacity>
+                </>
+              ) : isDownloading ? (
+                <>
+                  <View style={styles.modelStatusRow}>
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                    <Text style={styles.modelStatusText}>
+                      Downloading…{' '}
+                      {localLlmDownloadProgress != null
+                        ? `${Math.round(localLlmDownloadProgress * 100)}%`
+                        : '0%'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.cancelDownloadButton}
+                    onPress={() => {
+                      void handleCancelDownload();
+                    }}
+                  >
+                    <Text style={styles.cancelDownloadButtonText}>Cancel download</Text>
+                  </TouchableOpacity>
+                </>
               ) : (
                 <>
-                  {localLlmDownloadStatus === 'downloading' ? (
-                    <View style={styles.modelStatusRow}>
-                      <ActivityIndicator size="small" color={Colors.primary} />
-                      <Text style={styles.modelStatusText}>
-                        Downloading…{' '}
-                        {localLlmDownloadProgress != null
-                          ? `${Math.round(localLlmDownloadProgress * 100)}%`
-                          : ''}
-                      </Text>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.downloadModelButton}
-                      onPress={handleDownloadLocalModel}
-                      disabled={isFetchingModel}
-                    >
-                      {isFetchingModel ? (
-                        <ActivityIndicator size="small" color={Colors.textPrimary} />
-                      ) : (
-                        <Ionicons name="cloud-download-outline" size={18} color={Colors.textPrimary} />
-                      )}
-                      <Text style={styles.downloadModelButtonText}>Download Gemma model</Text>
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity
+                    style={styles.downloadModelButton}
+                    onPress={() => {
+                      void handleDownloadLocalModel();
+                    }}
+                    disabled={isDownloading}
+                  >
+                    <Ionicons name="cloud-download-outline" size={18} color={Colors.textPrimary} />
+                    <Text style={styles.downloadModelButtonText}>
+                      {localLlmDownloadStatus === 'error' ? 'Retry download' : 'Download Gemma model'}
+                    </Text>
+                  </TouchableOpacity>
                   {localLlmDownloadError ? (
                     <Text style={styles.modelErrorText}>{localLlmDownloadError}</Text>
                   ) : null}
@@ -299,5 +339,28 @@ const styles = StyleSheet.create({
     color: Colors.orange,
     paddingHorizontal: 16,
     paddingBottom: 12,
+  }),
+  cancelDownloadButton: {
+    alignItems: 'center',
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  cancelDownloadButtonText: withAppFont({
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  }),
+  deleteModelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  deleteModelButtonText: withAppFont({
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.orange,
   }),
 });

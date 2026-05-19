@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProcessingMode, TranscriptionMode, CloudProvider } from '@/types';
+import { deleteLocalGemmaModel } from '@/services/summarization/local/gemmaModelDownload';
 
 /**
  * Provider API key field mapping (OCP).
@@ -55,6 +56,9 @@ interface SettingsState {
    * setup as complete. Subsequent calls are no-ops (idempotent).
    */
   applyEnvironmentDefaults: (recommendedMode: TranscriptionMode) => void;
+
+  /** Deletes the on-device GGUF and resets download state to idle. */
+  deleteLocalLlmModel: () => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -114,6 +118,10 @@ export const useSettingsStore = create<SettingsState>()(
           transcriptionMode: recommendedMode,
           hasCompletedEnvSetup: true,
         });
+      },
+
+      deleteLocalLlmModel: async () => {
+        await deleteLocalGemmaModel();
       },
     }),
     {
