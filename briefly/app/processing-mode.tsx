@@ -28,7 +28,7 @@ import {
 import { Colors, withAppFont } from '@/theme';
 import {
   ensureLocalGemmaModelDownloaded,
-  isLocalGemmaModelDownloaded,
+  refreshLocalLlmModelStateFromDisk,
 } from '@/services/summarization';
 
 const PROCESSING_MODES: ProcessingMode[] = [
@@ -55,14 +55,7 @@ export default function ProcessingModePickerScreen() {
   const [isFetchingModel, setIsFetchingModel] = useState(false);
 
   useEffect(() => {
-    if (isLocalGemmaModelDownloaded()) {
-      useSettingsStore.setState({
-        localLlmModelReady: true,
-        localLlmDownloadStatus: 'ready',
-        localLlmDownloadProgress: 1,
-        localLlmDownloadError: undefined,
-      });
-    }
+    refreshLocalLlmModelStateFromDisk();
   }, []);
 
   const handleDownloadLocalModel = useCallback(async () => {
@@ -129,7 +122,7 @@ export default function ProcessingModePickerScreen() {
           <>
             <Text style={sl.sectionLabel}>On-device model</Text>
             <Text style={sl.sectionDescription}>
-              Gemma 2 (2B, Q4) is stored in your app documents (~1.6 GB). Download once while on Wi‑Fi.
+              Gemma 4 E2B (Q4) is stored in your app documents (~3.5 GB). Download once while on Wi‑Fi.
             </Text>
             <View style={sl.card}>
               {localLlmModelReady ? (

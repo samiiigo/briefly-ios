@@ -21,7 +21,14 @@ const DEVICE_PATTERNS = [
 ];
 
 export class LocalLlamaError extends Error {
-  readonly code: 'oom' | 'device' | 'model_missing' | 'download' | 'unknown';
+  readonly code:
+    | 'oom'
+    | 'device'
+    | 'model_missing'
+    | 'model_not_ready'
+    | 'download'
+    | 'download_in_progress'
+    | 'unknown';
 
   constructor(code: LocalLlamaError['code'], message: string) {
     super(message);

@@ -16,6 +16,10 @@ import {
   resetSummarizationProviderFactory,
 } from './summarizationProviderFactory';
 import { logger } from '@/utils/logging/logger';
+import {
+  assertLocalLlmReadyForSummarization,
+  isOnDeviceSummarizationMode,
+} from './local/localLlmAvailability';
 
 // Re-export for external consumers
 export type { SummarizationResult, SummarizationProvider } from './summarizationProvider';
@@ -35,6 +39,9 @@ export const SummarizationService = {
       modeOverride: modeOverride ?? null,
       segmentCount: segments.length,
     });
+    if (isOnDeviceSummarizationMode(mode)) {
+      assertLocalLlmReadyForSummarization();
+    }
     const provider = createSummarizationProvider(mode);
     return provider.summarize(segments);
   },
@@ -54,3 +61,11 @@ export {
 } from './local/gemmaModelDownload';
 export type { ModelDownloadProgress } from './local/gemmaModelDownload';
 export { LocalLlamaError, isLocalLlamaError } from './local/localLlamaErrors';
+export {
+  refreshLocalLlmModelStateFromDisk,
+  getLocalLlmSummarizationBlocker,
+  evaluateLocalLlmAvailability,
+  LOCAL_LLM_DOWNLOAD_IN_PROGRESS_MESSAGE,
+  LOCAL_LLM_MODEL_NOT_READY_MESSAGE,
+} from './local/localLlmAvailability';
+export type { LocalLlmAvailability, LocalLlmBlockReason } from './local/localLlmAvailability';

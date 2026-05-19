@@ -8,12 +8,9 @@ import {
 } from '../summarizationUtils';
 import { SummarizationResult } from '../summarizationProvider';
 import { TranscriptSegment } from '@/types';
-import { buildGemmaSummarizationPrompt } from './gemmaPrompt';
-import {
-  ensureLocalGemmaModelDownloaded,
-  getLocalGemmaModelPath,
-  isLocalGemmaModelDownloaded,
-} from './gemmaModelDownload';
+import { buildGemmaSummarizationMessages } from './gemmaPrompt';
+import { getLocalGemmaModelPath } from './gemmaModelDownload';
+import { assertLocalLlmReadyForSummarization } from './localLlmAvailability';
 import {
   LOCAL_GEMMA_MAX_TRANSCRIPT_CHARS,
   LOCAL_GEMMA_N_CTX,
@@ -89,16 +86,17 @@ async function createContext(modelPath: string): Promise<LlamaContext> {
 
 async function runCompletion(
   context: LlamaContext,
-  prompt: string,
+  transcript: string,
   fallbackText: string,
 ): Promise<SummarizationResult> {
   const result = await context.completion({
-    prompt,
+    messages: buildGemmaSummarizationMessages(transcript),
     n_predict: 1400,
     temperature: 0.25,
     top_p: 0.9,
     stop: LOCAL_GEMMA_STOP_WORDS,
-    jinja: false,
+    jinja: true,
+    add_generation_prompt: true,
   });
 
   const raw = result.text?.trim() ?? '';
@@ -125,11 +123,8 @@ export async function summarizeWithLocalLlama(
     }
 
     const transcript = trimTranscriptForContext(fallbackText);
-    const prompt = buildGemmaSummarizationPrompt(transcript);
 
-    if (!isLocalGemmaModelDownloaded()) {
-      await ensureLocalGemmaModelDownloaded();
-    }
+    assertLocalLlmReadyForSummarization();
 
     const modelPath = getLocalGemmaModelPath();
     let context: LlamaContext | null = null;
@@ -142,7 +137,7 @@ export async function summarizeWithLocalLlama(
       );
 
       return await withTimeout(
-        runCompletion(context, prompt, fallbackText),
+        runCompletion(context, transcript, fallbackText),
         ON_DEVICE_SUMMARIZATION_TIMEOUT_MS,
         'Summarization',
       );

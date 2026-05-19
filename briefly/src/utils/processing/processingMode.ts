@@ -9,7 +9,7 @@ export function processingModeTitle(mode: ProcessingMode): string {
 
 export function processingModeDescription(mode: ProcessingMode): string {
   if (mode === 'on-device') {
-    return 'Summaries run fully on your phone with a downloaded Gemma model (~1.6 GB). No API key required; first run downloads the model.';
+    return 'Summaries run fully on your phone with Gemma 4 E2B (~3.5 GB download). No API key required; first run downloads the model.';
   }
   if (mode === 'cloud-shared-openrouter') {
     return 'Uses Briefly’s cloud AI service for rich summaries with zero data retention.';

@@ -36,7 +36,15 @@ import {
   isRecordingTooShort,
 } from '@/utils/recording/recordingValidation';
 import { useAppInterruptGuard } from '@/hooks/useAppInterruptGuard';
+import { getLocalLlmSummarizationBlocker } from '@/services/summarization';
 import { Colors, Spacing, BorderRadius, SliderAnimation, withAppFont } from '@/theme';
+
+function assertOnDeviceModelReadyForSummarization(mode: ProcessingMode): void {
+  const blocker = getLocalLlmSummarizationBlocker(mode);
+  if (blocker) {
+    throw new ProcessingFailure('summarization', blocker, mode);
+  }
+}
 
 type Stage = 'transcribing' | 'summarizing' | 'done' | 'error';
 type FailurePhase = 'transcription' | 'summarization';
@@ -175,6 +183,14 @@ export default function SummarizingScreen() {
       const existingTranscript = options.audioFallbackOnly ? undefined : rec.transcript;
       const meta = { durationSec: rec.duration, fileSizeBytes: rec.fileSize };
 
+      const pipeline = resolvePostRecordingPipeline(
+        settingsMode,
+        existingTranscript,
+      );
+      if (pipeline.skipAsyncTranscription) {
+        assertOnDeviceModelReadyForSummarization(pMode);
+      }
+
       const callbacks = {
         onStage: (nextStage: 'transcribing' | 'summarizing') => {
           if (isCancelled.current) return;
@@ -207,7 +223,6 @@ export default function SummarizingScreen() {
         return processRecordingFromSavedAudio(pMode, rec.filePath, callbacks, meta);
       }
 
-      const pipeline = resolvePostRecordingPipeline(settingsMode, existingTranscript);
       if (pipeline.skipAsyncTranscription) {
         await updateRecording(recordingId, {
           status: 'summarizing',
@@ -278,6 +293,7 @@ export default function SummarizingScreen() {
   const runSummarizationOnly = useCallback(
     async (mode: ProcessingMode) => {
       if (!recordingId) return;
+      assertOnDeviceModelReadyForSummarization(mode);
       const rec = getRecordingById(recordingId);
       if (!rec?.transcript || !hasMeaningfulTranscript(rec.transcript)) {
         throw new Error('No transcript available to summarize.');
@@ -456,6 +472,13 @@ export default function SummarizingScreen() {
     if (!recordingId || isRetrying || !summarizationFallbackAction) return;
 
     const { mode } = summarizationFallbackAction;
+    const blocker = getLocalLlmSummarizationBlocker(mode);
+    if (blocker) {
+      setFailurePhase('summarization');
+      setErrorMessage(blocker);
+      setStage('error');
+      return;
+    }
     const rec = getRecordingById(recordingId);
     if (!rec?.transcript || !hasMeaningfulTranscript(rec.transcript)) {
       await handleTranscriptionFallbackRetry();

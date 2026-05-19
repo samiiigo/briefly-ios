@@ -12,6 +12,7 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { installRealtimeTerminalLogs, logger } from '@/utils/logging/logger';
 import { checkEnvironment } from '@/utils/environment/environmentCheck';
+import { refreshLocalLlmModelStateFromDisk } from '@/services/summarization';
 import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
 import { Colors } from '@/theme';
 import { iconFonts } from '@/theme/iconFonts';
@@ -42,6 +43,7 @@ export default function RootLayout() {
     loadRecordings();
 
     const runEnvCheck = () => {
+      refreshLocalLlmModelStateFromDisk();
       const env = checkEnvironment();
       logger.info('SYSTEM', 'Environment check', {
         hasNative: env.hasNativeModule,

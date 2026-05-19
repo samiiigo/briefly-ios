@@ -1,6 +1,11 @@
 /**
- * Gemma chat-turn prompt for on-device summarization.
- * Uses official turn markers; title must be plain text (no emojis).
+ * Gemma 4 E2B instruction-tuned chat formatting for on-device summarization.
+ *
+ * Matches google/gemma-4-E2B-it chat_template.jinja:
+ * - Turns: <|turn>{role}\n{content} \n
+ * - Generation prompt ends with <|turn>model\n
+ *
+ * Title field must remain plain text (no emojis).
  */
 
 export const ON_DEVICE_SUMMARIZATION_SYSTEM = `You are an expert meeting and lecture summarizer. Given a transcript, extract the key information and output a highly structured JSON object.
@@ -21,16 +26,33 @@ Content rules:
 
 Respond ONLY with valid JSON. No introductory or trailing text.`;
 
-const TURN_START = '<start_of_turn>';
-const TURN_END = '<end_of_turn>';
+/** End-of-turn marker in Gemma 4 templates (space + newline). */
+export const GEMMA4_TURN_SUFFIX = ' \n';
 
+const turn = (role: 'system' | 'user' | 'model', content: string) =>
+  `<|turn>${role}\n${content.trim()}${GEMMA4_TURN_SUFFIX}`;
+
+/**
+ * Serializes system + user turns and opens the model turn for generation.
+ * Equivalent to chat_template.jinja with add_generation_prompt=true.
+ */
 export function buildGemmaSummarizationPrompt(transcript: string): string {
-  const userContent = `${ON_DEVICE_SUMMARIZATION_SYSTEM}\n\nTranscript:\n${transcript.trim()}`;
+  const userContent = `Transcript:\n${transcript.trim()}`;
 
   return (
-    `${TURN_START}user\n` +
-    `${userContent}\n` +
-    `${TURN_END}\n` +
-    `${TURN_START}model\n`
+    turn('system', ON_DEVICE_SUMMARIZATION_SYSTEM) +
+    turn('user', userContent) +
+    '<|turn>model\n'
   );
+}
+
+/** Messages for llama.rn Jinja chat formatting (preferred at inference). */
+export function buildGemmaSummarizationMessages(transcript: string) {
+  return [
+    { role: 'system' as const, content: ON_DEVICE_SUMMARIZATION_SYSTEM },
+    {
+      role: 'user' as const,
+      content: `Transcript:\n${transcript.trim()}`,
+    },
+  ];
 }
