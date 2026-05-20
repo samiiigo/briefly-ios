@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { RECORDING_LIST_HEADER_GAP } from '@/utils/list/flattenRecordingSections';
 import { RecentSearchCard } from './RecentSearchCard';
-import { Colors, withAppFont } from '@/theme';
+import { useCreateStyles, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface Props {
   queries: string[];
@@ -17,6 +18,7 @@ export function RecentSearchesSection({
   onRemove,
   onClearAll,
 }: Props) {
+  const styles = useCreateStyles(createRecentSearchesSectionStyles);
   if (queries.length === 0) return null;
 
   return (
@@ -41,25 +43,27 @@ export function RecentSearchesSection({
   );
 }
 
-const styles = StyleSheet.create({
-  section: {
-    gap: RECORDING_LIST_HEADER_GAP,
-    paddingLeft: 8,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionHeader: withAppFont({
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 16,
-    color: Colors.subtext,
-  }),
-  clearAll: withAppFont({
-    fontSize: 15,
-    fontWeight: '500',
-    color: Colors.primary,
-  }),
-});
+function createRecentSearchesSectionStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    section: {
+      gap: RECORDING_LIST_HEADER_GAP,
+      paddingLeft: 8,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    sectionHeader: withAppFont({
+      fontSize: 14,
+      fontWeight: '500',
+      lineHeight: 16,
+      color: c.subtext,
+    }),
+    clearAll: withAppFont({
+      fontSize: 15,
+      fontWeight: '500',
+      color: c.primary,
+    }),
+  });
+}

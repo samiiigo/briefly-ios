@@ -2,7 +2,10 @@ import React from 'react';
 import { ChromeBlurVariant } from './chromeBlur';
 import { ChromeOverlay, type ChromeOverlayProps } from './ChromeOverlay';
 
-type Props = Pick<ChromeOverlayProps, 'children' | 'style' | 'contentStyle' | 'zIndex'> & {
+type Props = Pick<
+  ChromeOverlayProps,
+  'children' | 'style' | 'contentStyle' | 'zIndex' | 'blurBottomInset'
+> & {
   /** `tabBar` for lists/settings; `playback` for the recording playback pill. */
   variant?: ChromeBlurVariant;
 };

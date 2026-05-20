@@ -63,7 +63,7 @@ export function buildSearchableFolders(
     name: f.name,
     folderType: 'user',
     icon: 'folder',
-    accent: 'rgba(255,255,255,0.55)',
+    accent: '',
     count: counts.byUserFolderId.get(f.id) ?? 0,
   }));
   return [...builtIn, ...user];

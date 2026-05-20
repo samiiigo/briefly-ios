@@ -10,8 +10,8 @@ import {
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import {
-  modePickerStyles as mp,
-  screenLayoutStyles as sl,
+  useModePickerStyles,
+  useScreenLayoutStyles,
 } from '@/components/navigation/screenLayout';
 
 const LAYOUT_OPTIONS: FolderListLayoutMode[] = ['list', 'grid'];
@@ -19,6 +19,8 @@ const LAYOUT_OPTIONS: FolderListLayoutMode[] = ['list', 'grid'];
 export default function FolderLayoutPickerScreen() {
   const router = useRouter();
   const { scrollPaddingTop } = useTopChromeLayout();
+  const sl = useScreenLayoutStyles();
+  const mp = useModePickerStyles();
   const layout = useFolderListLayoutStore((s) => s.layout);
   const setLayout = useFolderListLayoutStore((s) => s.setLayout);
 

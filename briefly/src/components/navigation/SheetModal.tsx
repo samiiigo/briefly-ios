@@ -14,8 +14,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { sheetLayoutStyles as sh } from '@/components/navigation/sheetLayout';
-import { Spacing } from '@/theme';
+import { useSheetLayoutStyles } from '@/components/navigation/sheetLayout';
+import { useCreateStyles, Spacing } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 const SHEET_SLIDE_DISTANCE = 480;
 const SHEET_OPEN_MS = 280;
@@ -40,6 +41,8 @@ export function SheetModal({
   children,
   footer,
 }: SheetModalProps) {
+  const sh = useSheetLayoutStyles();
+  const styles = useCreateStyles(createSheetModalStyles);
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(SHEET_SLIDE_DISTANCE);
 
@@ -94,13 +97,15 @@ export function SheetModal({
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-  },
-});
+function createSheetModalStyles(_c: ColorPalette) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.65)',
+    },
+  });
+}

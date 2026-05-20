@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, withAppFont } from '@/theme';
+import { useCreateStyles, useThemedColors, Spacing, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 /** Matches {@link SearchField} leading icon + trailing gap for row alignment. */
 const LEADING_ICON_SIZE = 18;
@@ -16,6 +17,9 @@ interface Props {
 }
 
 export function RecentSearchCard({ query, onPress, onRemove }: Props) {
+  const styles = useCreateStyles(createRecentSearchCardStyles);
+  const colors = useThemedColors();
+
   return (
     <View style={styles.row}>
       <Pressable
@@ -25,7 +29,7 @@ export function RecentSearchCard({ query, onPress, onRemove }: Props) {
         accessibilityLabel={`Search for ${query}`}
       >
         <View style={styles.leadingSlot}>
-          <Ionicons name="time-outline" size={LEADING_ICON_SIZE} color={Colors.subtext} />
+          <Ionicons name="time-outline" size={LEADING_ICON_SIZE} color={colors.subtext} />
         </View>
         <Text style={styles.label} numberOfLines={1}>
           {query}
@@ -38,40 +42,42 @@ export function RecentSearchCard({ query, onPress, onRemove }: Props) {
         accessibilityRole="button"
         accessibilityLabel={`Remove ${query} from recent searches`}
       >
-        <Ionicons name="close" size={18} color={Colors.subtext} />
+        <Ionicons name="close" size={18} color={colors.subtext} />
       </Pressable>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 44,
-  },
-  labelPressable: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 0,
-    paddingVertical: Spacing.sm,
-    marginRight: Spacing.sm,
-  },
-  leadingSlot: {
-    width: LEADING_ICON_SIZE,
-    marginRight: LEADING_ICON_GAP,
-    alignItems: 'center',
-  },
-  label: withAppFont({
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    lineHeight: 22,
-  }),
-  removeButton: {
-    padding: 4,
-  },
-});
+function createRecentSearchCardStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      minHeight: 44,
+    },
+    labelPressable: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      minWidth: 0,
+      paddingVertical: Spacing.sm,
+      marginRight: Spacing.sm,
+    },
+    leadingSlot: {
+      width: LEADING_ICON_SIZE,
+      marginRight: LEADING_ICON_GAP,
+      alignItems: 'center',
+    },
+    label: withAppFont({
+      flex: 1,
+      fontSize: 17,
+      fontWeight: '600',
+      color: c.textPrimary,
+      lineHeight: 22,
+    }),
+    removeButton: {
+      padding: 4,
+    },
+  });
+}

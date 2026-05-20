@@ -12,7 +12,7 @@ export const BUILT_IN_LIBRARY_FOLDERS = [
 /** Secondary folders shown at the bottom of Library under Utilities. */
 export const BUILT_IN_UTILITY_FOLDERS = [
   { id: 'imports', name: 'Imports', icon: 'download-outline' as const, accent: '#34C759' },
-  { id: 'recently-deleted', name: 'Deleted', icon: 'trash-outline' as const, accent: '#FF9F9F' },
+  { id: 'recently-deleted', name: 'Recently Deleted', icon: 'trash-outline' as const, accent: '#FF9F9F' },
 ] as const;
 
 export const BUILT_IN_FOLDERS = [

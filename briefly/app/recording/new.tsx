@@ -12,17 +12,24 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { CircularIconButton } from '@/components/ui/CircularIconButton';
-import { AnchoredOverflowMenu } from '@/components/ui/AnchoredOverflowMenu';
+import { useFloatingTabBarLayout } from '@/components/navigation/useFloatingTabBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { RecordingService, LiveTranscriptionService } from '@/services/audio';
 import { saveCapturedRecording } from '@/services/recording/saveCapturedRecording';
 import { interceptOnDeviceSummarizationIfBlocked } from '@/utils/processing/localLlmSummarizationGate';
 import { RecordingFolder } from '@/types';
 import { WaveformVisualizer } from '@/components/features/recording/WaveformVisualizer';
-import { Colors, Spacing, BorderRadius } from '@/theme';
+import {
+  Spacing,
+  BorderRadius,
+  useCreateStyles,
+  useResolvedColorScheme,
+  useThemedColors,
+  withAppFont,
+} from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import {
@@ -52,8 +59,16 @@ function isPermissionError(message: string): boolean {
   return /microphone|permission|speech recognition/i.test(message);
 }
 
+/** Pause/stop row + labels (above bottom chrome fade). */
+const RECORDING_CONTROLS_HEIGHT = 96;
+
 export default function NewRecordingScreen() {
+  const sl = useScreenLayoutStyles();
+  const s = useCreateStyles(createNewRecordingStyles);
+  const colors = useThemedColors();
+  const isLight = useResolvedColorScheme() === 'light';
   const { scrollPaddingTop } = useTopChromeLayout();
+  const { bottomOffset } = useFloatingTabBarLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{
     targetFolder?: string;
@@ -265,6 +280,14 @@ export default function NewRecordingScreen() {
     ]);
   }, [cleanup, isStarted, router, startFailed, stopTimer, teardownCapture]);
 
+  const handleBack = useCallback(() => {
+    if (isStarted && !isStopped.current && !startFailed) {
+      handleDiscard();
+      return;
+    }
+    router.replace('/(tabs)');
+  }, [handleDiscard, isStarted, router, startFailed]);
+
   useEffect(() => {
     const onBackPress = () => {
       if (isStarted && !isStopped.current && !startFailed) {
@@ -462,10 +485,18 @@ export default function NewRecordingScreen() {
 
   return (
     <View style={sl.container}>
-      <View style={[s.body, { paddingTop: scrollPaddingTop }]}>
+      <View
+        style={[
+          s.body,
+          {
+            paddingTop: scrollPaddingTop,
+            paddingBottom: bottomOffset + RECORDING_CONTROLS_HEIGHT,
+          },
+        ]}
+      >
         {interruptHint ? (
           <View style={s.hintBanner}>
-            <Ionicons name="information-circle-outline" size={16} color={Colors.orange} />
+            <Ionicons name="information-circle-outline" size={16} color={colors.orange} />
             <Text style={s.hintText}>{interruptHint}</Text>
           </View>
         ) : null}
@@ -504,7 +535,7 @@ export default function NewRecordingScreen() {
         {showLivePreviewPanel ? (
           <View style={[s.lpC, !showLiveStream && s.lpCCollapsed]}>
             <View style={s.lpH}>
-              <Ionicons name="document-text" size={14} color={Colors.primary} />
+              <Ionicons name="document-text" size={14} color={colors.primary} />
               <Text style={s.lpLbl}>Live transcript</Text>
               {isLocalLive ? (
                 <Pressable
@@ -514,12 +545,16 @@ export default function NewRecordingScreen() {
                     liveStreamVisible ? 'Hide live transcript' : 'Show live transcript'
                   }
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  android_ripple={{ color: 'rgba(0,0,0,0.1)', borderless: true, radius: 16 }}
+                  android_ripple={{
+                    color: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)',
+                    borderless: true,
+                    radius: 16,
+                  }}
                 >
                   <Ionicons
                     name={liveStreamVisible ? 'eye-off-outline' : 'eye-outline'}
                     size={20}
-                    color={Colors.textSecondary}
+                    color={colors.textSecondary}
                   />
                 </Pressable>
               ) : null}
@@ -559,16 +594,22 @@ export default function NewRecordingScreen() {
             )}
           </View>
         ) : null}
+      </View>
 
-        <View style={s.ctrls}>
+      <View style={s.ctrlsChrome} pointerEvents="box-none">
+        <View style={[s.ctrls, { paddingBottom: bottomOffset }]} pointerEvents="box-none">
           <View style={s.ctrlItem}>
             <Pressable
               style={({ pressed }) => [s.pauseBtn, pressed && Platform.OS === 'ios' && { opacity: 0.75 }]}
               onPress={handlePause}
               disabled={!isStarted || startFailed || isStopping}
-              android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: false, radius: 32 }}
+              android_ripple={{
+                color: isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.2)',
+                borderless: false,
+                radius: 32,
+              }}
             >
-              <Ionicons name={isPaused ? 'play' : 'pause'} size={26} color={Colors.textPrimary} />
+              <Ionicons name={isPaused ? 'play' : 'pause'} size={26} color={colors.textPrimary} />
             </Pressable>
             <Text style={s.ctrlLbl}>{isPaused ? 'RESUME' : 'PAUSE'}</Text>
           </View>
@@ -581,150 +622,171 @@ export default function NewRecordingScreen() {
             >
               <View style={s.stopSq} />
             </Pressable>
-            <Text style={[s.ctrlLbl, { color: Colors.recordButton }]}>
+            <Text style={[s.ctrlLbl, { color: colors.recordButton }]}>
               {isStopping ? 'STOPPING…' : 'STOP'}
             </Text>
           </View>
         </View>
       </View>
 
-      <StackScreenHeader
-        title="New Recording"
-        leading={
-          <AnchoredOverflowMenu
-            align="leading"
-            items={[{ label: 'Discard', onPress: handleDiscard }]}
-            renderTrigger={(open) => (
-              <CircularIconButton
-                icon="arrow-back"
-                accessibilityLabel="Recording options"
-                onPress={open}
-                style={{ marginRight: Spacing.sm }}
-              />
-            )}
-          />
-        }
-      />
+      <StackScreenHeader title="New Recording" showBack onBack={handleBack} />
     </View>
   );
 }
 
-const s = StyleSheet.create({
-  body: { flex: 1 },
-  hintBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(255,159,10,0.12)',
-    borderRadius: BorderRadius.md,
-  },
-  hintText: {
-    flex: 1,
-    fontSize: 13,
-    color: Colors.orange,
-    lineHeight: 18,
-  },
-  recInd: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    marginBottom: Spacing.sm,
-  },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.green },
-  dotP: { backgroundColor: Colors.orange },
-  recTxt: { fontSize: 12, color: Colors.green, fontWeight: '500' },
-  pTxt: { color: Colors.orange },
-  timerC: { alignItems: 'center', paddingVertical: Spacing.lg },
-  timerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.cardXL,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.lg,
-  },
-  tBlk: { alignItems: 'center', minWidth: 60 },
-  tDig: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    fontVariant: ['tabular-nums'],
-  },
-  tLbl: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-    letterSpacing: 1,
-    marginTop: 2,
-  },
-  tSep: {
-    fontSize: 40,
-    fontWeight: '300',
-    color: Colors.textSecondary,
-    paddingBottom: 8,
-    marginHorizontal: 4,
-  },
-  wfC: { alignItems: 'center', paddingVertical: Spacing.lg },
-  lpC: {
-    flex: 1,
-    marginHorizontal: Spacing.md,
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.cardXL,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  lpCCollapsed: { flex: 0 },
-  lpH: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm },
-  lpLbl: { fontSize: 13, fontWeight: '600', color: Colors.primary, flex: 1 },
-  streamToggle: { padding: 4, marginLeft: 4 },
-  lpScroll: { flex: 1 },
-  lpHiddenHint: {
-    fontSize: 14,
-    color: Colors.textTertiary,
-    lineHeight: 20,
-    fontStyle: 'italic',
-  },
-  segBlk: { flexDirection: 'row', paddingVertical: 5, gap: 8 },
-  segTs: {
-    width: 38,
-    fontSize: 12,
-    color: Colors.textTertiary,
-    paddingTop: 3,
-    fontVariant: ['tabular-nums'],
-  },
-  segTxt: { flex: 1, fontSize: 15, color: Colors.textPrimary, lineHeight: 22 },
-  partTxt: { color: Colors.textSecondary, fontStyle: 'italic' },
-  lpPh: { fontSize: 15, color: Colors.textTertiary, lineHeight: 22, fontStyle: 'italic' },
-  ctrls: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.xxl,
-    paddingBottom: Spacing.xl,
-    paddingTop: Spacing.md,
-  },
-  ctrlItem: { alignItems: 'center', gap: Spacing.xs },
-  pauseBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stopBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Colors.recordButton,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stopSq: { width: 22, height: 22, borderRadius: 4, backgroundColor: '#fff' },
-  ctrlLbl: { fontSize: 11, fontWeight: '600', color: Colors.textSecondary, letterSpacing: 1 },
-});
+function hexAlpha(hex: string, alpha: number): string {
+  const raw = hex.replace('#', '');
+  const n =
+    raw.length === 3
+      ? raw
+          .split('')
+          .map((ch) => ch + ch)
+          .join('')
+      : raw;
+  return `rgba(${parseInt(n.slice(0, 2), 16)},${parseInt(n.slice(2, 4), 16)},${parseInt(n.slice(4, 6), 16)},${alpha})`;
+}
+
+function createNewRecordingStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    body: { flex: 1 },
+    hintBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginHorizontal: Spacing.md,
+      marginBottom: Spacing.sm,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 8,
+      backgroundColor: hexAlpha(c.orange, 0.12),
+      borderRadius: BorderRadius.md,
+    },
+    hintText: withAppFont({
+      flex: 1,
+      fontSize: 13,
+      color: c.orange,
+      lineHeight: 18,
+    }),
+    recInd: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      marginBottom: Spacing.sm,
+    },
+    dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: c.green },
+    dotP: { backgroundColor: c.orange },
+    recTxt: withAppFont({ fontSize: 12, color: c.green, fontWeight: '500' }),
+    pTxt: { color: c.orange },
+    timerC: { alignItems: 'center', paddingVertical: Spacing.lg },
+    timerCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.card,
+      borderRadius: BorderRadius.cardXL,
+      paddingHorizontal: Spacing.xl,
+      paddingVertical: Spacing.lg,
+    },
+    tBlk: { alignItems: 'center', minWidth: 60 },
+    tDig: withAppFont({
+      fontSize: 48,
+      fontWeight: '700',
+      color: c.textPrimary,
+      fontVariant: ['tabular-nums'],
+    }),
+    tLbl: withAppFont({
+      fontSize: 11,
+      fontWeight: '500',
+      color: c.textSecondary,
+      letterSpacing: 1,
+      marginTop: 2,
+    }),
+    tSep: withAppFont({
+      fontSize: 40,
+      fontWeight: '300',
+      color: c.textSecondary,
+      paddingBottom: 8,
+      marginHorizontal: 4,
+    }),
+    wfC: { alignItems: 'center', paddingVertical: Spacing.lg },
+    lpC: {
+      flex: 1,
+      marginHorizontal: Spacing.md,
+      backgroundColor: c.card,
+      borderRadius: BorderRadius.cardXL,
+      padding: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    lpCCollapsed: { flex: 0 },
+    lpH: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm },
+    lpLbl: withAppFont({ fontSize: 13, fontWeight: '600', color: c.primary, flex: 1 }),
+    streamToggle: { padding: 4, marginLeft: 4 },
+    lpScroll: { flex: 1 },
+    lpHiddenHint: withAppFont({
+      fontSize: 14,
+      color: c.textTertiary,
+      lineHeight: 20,
+      fontStyle: 'italic',
+    }),
+    segBlk: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingVertical: 5,
+      gap: 8,
+    },
+    segTs: withAppFont({
+      width: 38,
+      flexShrink: 0,
+      fontSize: 12,
+      color: c.textTertiary,
+      paddingTop: 3,
+      fontVariant: ['tabular-nums'],
+    }),
+    segTxt: withAppFont({ flex: 1, fontSize: 15, color: c.textPrimary, lineHeight: 22 }),
+    partTxt: { color: c.textSecondary, fontStyle: 'italic' },
+    lpPh: withAppFont({
+      fontSize: 15,
+      color: c.textTertiary,
+      lineHeight: 22,
+      fontStyle: 'italic',
+    }),
+    ctrlsChrome: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: 11,
+      elevation: 11,
+    },
+    ctrls: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: Spacing.xxl,
+      paddingTop: Spacing.md,
+    },
+    ctrlItem: { alignItems: 'center', gap: Spacing.xs },
+    pauseBtn: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: c.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stopBtn: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: c.recordButton,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stopSq: { width: 22, height: 22, borderRadius: 4, backgroundColor: '#FFFFFF' },
+    ctrlLbl: withAppFont({
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.textSecondary,
+      letterSpacing: 1,
+    }),
+  });
+}

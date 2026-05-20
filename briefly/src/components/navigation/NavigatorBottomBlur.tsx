@@ -2,7 +2,7 @@ import React from 'react';
 import { usePathname } from 'expo-router';
 import { BottomChromeOverlay } from './BottomChromeOverlay';
 import {
-  pathnameUsesPlaybackBarBlur,
+  pathnameUsesRecordingNavigatorBlur,
   pathnameUsesRootStackBlur,
 } from './bottomBlurRoutes';
 
@@ -22,7 +22,7 @@ export function NavigatorBottomBlur({ scope }: Props) {
   const visible =
     scope === 'tabs' ||
     scope === 'folder' ||
-    (scope === 'recording' && !pathnameUsesPlaybackBarBlur(pathname)) ||
+    (scope === 'recording' && pathnameUsesRecordingNavigatorBlur(pathname)) ||
     (scope === 'root' && pathnameUsesRootStackBlur(pathname));
 
   if (!visible) {

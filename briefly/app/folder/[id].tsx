@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { RecordingService } from '@/services/audio';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import {
@@ -15,19 +14,21 @@ import { RecordingCard } from '@/components/features/recording/RecordingCard';
 import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
 import { RecordingSectionFlashList } from '@/components/features/recording/RecordingSectionFlashList';
 import { RecordingGridFlashList } from '@/components/features/recording/RecordingGridFlashList';
-import { RecordButton } from '@/components/features/recording/RecordButton';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { FolderViewOptionsSheet } from '@/components/features/library/FolderViewOptionsSheet';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
 import { Recording } from '@/types';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
-import { Colors, Spacing, withAppFont } from '@/theme';
+import type { RecordingListGroupPosition } from '@/utils/list/flattenRecordingSections';
+import { Colors, Spacing, withAppFont, useThemedColors } from '@/theme';
 
 const LIST_BOTTOM_PADDING = 140;
 
 export default function FolderRecordingsScreen() {
+  const sl = useScreenLayoutStyles();
+  const colors = useThemedColors();
   const { scrollPaddingTop } = useTopChromeLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; folderName?: string; folderType?: string }>();
@@ -38,6 +39,7 @@ export default function FolderRecordingsScreen() {
   const deleteRecording = useRecordingStore((s) => s.deleteRecording);
   const restoreRecording = useRecordingStore((s) => s.restoreRecording);
   const permanentDelete = useRecordingStore((s) => s.permanentDelete);
+  const permanentDeleteAll = useRecordingStore((s) => s.permanentDeleteAll);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
   const folderKey = useMemo(() => `${folderType}:${folderId}`, [folderType, folderId]);
   const byFolder = useFolderBrowsePreferencesStore((s) => s.byFolder);
@@ -70,10 +72,10 @@ export default function FolderRecordingsScreen() {
 
   const afterShowFilter = useMemo(
     () =>
-      browse.favoritesOnly
-        ? filtered.filter((r) => r.deletedAt == null && !!r.isFavorite)
-        : filtered,
-    [filtered, browse.favoritesOnly]
+      isRecentlyDeleted || !browse.favoritesOnly
+        ? filtered
+        : filtered.filter((r) => r.deletedAt == null && !!r.isFavorite),
+    [filtered, browse.favoritesOnly, isRecentlyDeleted]
   );
   const sections = useMemo(
     () => buildFolderSections(afterShowFilter, browse),
@@ -99,46 +101,19 @@ export default function FolderRecordingsScreen() {
     [recordings, updateRecording]
   );
 
-  const handleRecordIntoFolder = useCallback(async () => {
-    if (isRecentlyDeleted) return;
-    const granted = await RecordingService.requestPermissions();
-    if (!granted) return;
-    if (folderType === 'user') {
-      router.push({
-        pathname: '/recording/new',
-        params: { targetFolder: 'unlisted', targetUserFolderId: folderId },
-      });
-    } else if (folderId === 'archived') {
-      router.push({ pathname: '/recording/new', params: { targetFolder: 'archived' } });
-    } else if (folderId === 'imports') {
-      router.push({
-        pathname: '/recording/new',
-        params: { targetFolder: 'unlisted', markImported: 'true' },
-      });
-    } else {
-      router.push({ pathname: '/recording/new', params: { targetFolder: 'unlisted' } });
-    }
-  }, [router, folderType, folderId, isRecentlyDeleted]);
-
   const renderListCard = useCallback(
-    (item: Recording) => (
+    (item: Recording, groupPosition: RecordingListGroupPosition) => (
       <RecordingSwipeableRow
         recording={item}
         onPress={() => router.push(`/recording/${item.id}`)}
         onDelete={
           isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
         }
+        onRename={(newTitle) => handleRename(item, newTitle)}
         onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
         isRecentlyDeleted={isRecentlyDeleted}
       >
-        <RecentsEntryCard
-          recording={item}
-          onPress={() => router.push(`/recording/${item.id}`)}
-          onDelete={
-            isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
-          }
-          onRename={(newTitle) => handleRename(item, newTitle)}
-        />
+        <RecentsEntryCard recording={item} groupPosition={groupPosition} />
       </RecordingSwipeableRow>
     ),
     [
@@ -159,21 +134,14 @@ export default function FolderRecordingsScreen() {
         onDelete={
           isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
         }
+        onRename={(newTitle) => handleRename(item, newTitle)}
         onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
         isRecentlyDeleted={isRecentlyDeleted}
       >
-        <RecordingCard
-          recording={item}
-          compact={compact}
-          onPress={() => router.push(`/recording/${item.id}`)}
-          onDelete={
-            isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
-          }
-          onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
-        />
+        <RecordingCard recording={item} compact={compact} />
       </RecordingSwipeableRow>
     ),
-    [router, isRecentlyDeleted, permanentDelete, deleteRecording, restoreRecording]
+    [router, isRecentlyDeleted, permanentDelete, deleteRecording, restoreRecording, handleRename]
   );
 
   const renderGridItem = useCallback(
@@ -184,6 +152,26 @@ export default function FolderRecordingsScreen() {
   const closeOpenSwipe = useCallback(() => {
     useActiveSwipeableStore.getState().closeActive();
   }, []);
+
+  const handleDeleteAll = useCallback(() => {
+    closeOpenSwipe();
+    const count = afterShowFilter.length;
+    if (count === 0) return;
+    Alert.alert(
+      'Delete all',
+      count === 1
+        ? 'This recording will be removed permanently and cannot be recovered.'
+        : `All ${count} recordings will be removed permanently and cannot be recovered.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete All',
+          style: 'destructive',
+          onPress: () => permanentDeleteAll(afterShowFilter.map((r) => r.id)),
+        },
+      ]
+    );
+  }, [afterShowFilter, closeOpenSwipe, permanentDeleteAll]);
 
   useFocusEffect(
     useCallback(() => {
@@ -217,16 +205,14 @@ export default function FolderRecordingsScreen() {
       )}
 
       {!isRecentlyDeleted ? (
-        <RecordButton onPress={handleRecordIntoFolder} />
+        <FolderViewOptionsSheet
+          visible={viewSheetVisible}
+          folderKey={folderKey}
+          folderId={folderId}
+          folderType={folderType}
+          onClose={() => setViewSheetVisible(false)}
+        />
       ) : null}
-
-      <FolderViewOptionsSheet
-        visible={viewSheetVisible}
-        folderKey={folderKey}
-        folderId={folderId}
-        folderType={folderType}
-        onClose={() => setViewSheetVisible(false)}
-      />
 
       <StackScreenHeader
         title={folderName}
@@ -236,11 +222,36 @@ export default function FolderRecordingsScreen() {
           router.back();
         }}
         trailing={
-          <CircularIconButton
-            icon="funnel-outline"
-            accessibilityLabel="Filters"
-            onPress={() => setViewSheetVisible(true)}
-          />
+          isRecentlyDeleted ? (
+            <Pressable
+              onPress={handleDeleteAll}
+              disabled={listEmpty}
+              accessibilityLabel="Delete all"
+              accessibilityRole="button"
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.deleteAllBtn,
+                listEmpty && styles.deleteAllBtnDisabled,
+                pressed && !listEmpty && styles.deleteAllBtnPressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.deleteAllText,
+                  { color: colors.danger },
+                  listEmpty && styles.deleteAllTextDisabled,
+                ]}
+              >
+                Delete All
+              </Text>
+            </Pressable>
+          ) : (
+            <CircularIconButton
+              icon="funnel-outline"
+              accessibilityLabel="Filters"
+              onPress={() => setViewSheetVisible(true)}
+            />
+          )
         }
       />
     </View>
@@ -266,4 +277,21 @@ const styles = StyleSheet.create({
     color: Colors.subtext,
     textAlign: 'center',
   }),
+  deleteAllBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  deleteAllBtnPressed: {
+    opacity: 0.7,
+  },
+  deleteAllBtnDisabled: {
+    opacity: 0.35,
+  },
+  deleteAllText: withAppFont({
+    fontSize: 17,
+    fontWeight: '600',
+  }),
+  deleteAllTextDisabled: {
+    opacity: 0.5,
+  },
 });

@@ -4,6 +4,7 @@ import { useSettingsStore } from '@/context/useSettingsStore';
 import {
   processRecordingFromSavedAudio,
   processRecordingToReady,
+  retrySummarization,
   RecordingProcessingResult,
 } from '@/services/recording/recordingProcessingService';
 import {
@@ -84,9 +85,15 @@ async function completeJob(
   logger.info('RECORDING', 'Background processing completed', { recordingId });
 }
 
+type BackgroundJobOptions = {
+  audioFallbackOnly: boolean;
+  /** Keep transcript, summary, and insights visible until the job finishes. */
+  preservePreviousResults?: boolean;
+};
+
 async function runJob(
   recordingId: string,
-  options: { audioFallbackOnly: boolean },
+  options: BackgroundJobOptions,
   stageRef: { current: 'transcribing' | 'summarizing' },
 ): Promise<RecordingProcessingResult | undefined> {
   const { getRecordingById, updateRecording } = useRecordingStore.getState();
@@ -123,13 +130,23 @@ async function runJob(
     onTranscriptReady: async (segments: NonNullable<typeof rec.transcript>) => {
       const job = activeJobs.get(recordingId);
       if (!job || job.cancelled) return;
-      await updateRecording(recordingId, {
-        status: 'summarizing',
-        transcript: segments,
-        transcriptionMode: settingsMode,
-        processingMode: pMode,
-        errorMessage: undefined,
-      });
+      await updateRecording(
+        recordingId,
+        options.preservePreviousResults
+          ? {
+              status: 'summarizing',
+              errorMessage: undefined,
+              processingMode: pMode,
+              transcriptionMode: settingsMode,
+            }
+          : {
+              status: 'summarizing',
+              transcript: segments,
+              transcriptionMode: settingsMode,
+              processingMode: pMode,
+              errorMessage: undefined,
+            },
+      );
     },
   };
 
@@ -139,10 +156,14 @@ async function runJob(
       errorMessage: undefined,
       processingMode: pMode,
       transcriptionMode: settingsMode,
-      transcript: undefined,
-      summary: undefined,
-      keyInsights: undefined,
-      mainEmoji: undefined,
+      ...(options.preservePreviousResults
+        ? {}
+        : {
+            transcript: undefined,
+            summary: undefined,
+            keyInsights: undefined,
+            mainEmoji: undefined,
+          }),
     });
     return processRecordingFromSavedAudio(pMode, rec.filePath, callbacks, meta);
   }
@@ -196,7 +217,7 @@ async function abortBlockedOnDeviceProcessing(recordingId: string, message: stri
 
 export function startRecordingBackgroundProcessing(
   recordingId: string,
-  options?: { audioFallbackOnly?: boolean },
+  options?: { audioFallbackOnly?: boolean; preservePreviousResults?: boolean },
 ): void {
   if (activeJobs.has(recordingId)) return;
 
@@ -209,6 +230,7 @@ export function startRecordingBackgroundProcessing(
 
   const stageRef = { current: 'transcribing' as 'transcribing' | 'summarizing' };
   const audioFallbackOnly = options?.audioFallbackOnly ?? false;
+  const preservePreviousResults = options?.preservePreviousResults ?? false;
 
   const timeoutId = setTimeout(() => {
     const job = activeJobs.get(recordingId);
@@ -228,7 +250,11 @@ export function startRecordingBackgroundProcessing(
 
   void (async () => {
     try {
-      const result = await runJob(recordingId, { audioFallbackOnly }, stageRef);
+      const result = await runJob(
+        recordingId,
+        { audioFallbackOnly, preservePreviousResults },
+        stageRef,
+      );
       const job = activeJobs.get(recordingId);
       if (!job?.cancelled && result) {
         await completeJob(recordingId, result);
@@ -249,6 +275,82 @@ export function cancelRecordingBackgroundProcessing(recordingId: string): void {
   if (!job) return;
   job.cancelled = true;
   clearJob(recordingId);
+}
+
+/** Re-summarize an existing transcript without leaving the recording detail screen. */
+export function startRecordingSummarizationRetry(
+  recordingId: string,
+  summarizationMode?: ProcessingMode,
+): void {
+  if (activeJobs.has(recordingId)) return;
+
+  const pMode = summarizationMode ?? useSettingsStore.getState().summarizationMode;
+  const blocker = getLocalLlmSummarizationBlocker(pMode);
+  if (blocker) {
+    void abortBlockedOnDeviceProcessing(recordingId, blocker);
+    return;
+  }
+
+  const stageRef = { current: 'summarizing' as const };
+
+  const timeoutId = setTimeout(() => {
+    const job = activeJobs.get(recordingId);
+    if (!job || job.cancelled) return;
+    job.cancelled = true;
+    clearJob(recordingId);
+    void failJob(
+      recordingId,
+      new Error(
+        'Summarization is taking longer than expected. Check your connection and try again.',
+      ),
+      stageRef.current,
+    );
+  }, PROCESSING_TIMEOUT_MS);
+
+  activeJobs.set(recordingId, { cancelled: false, timeoutId });
+
+  void (async () => {
+    try {
+      const { getRecordingById, updateRecording, recordings } = useRecordingStore.getState();
+      const rec = getRecordingById(recordingId);
+      if (!rec?.transcript || !hasMeaningfulTranscript(rec.transcript)) {
+        throw new Error('No transcript available to summarize.');
+      }
+
+      await updateRecording(recordingId, {
+        status: 'summarizing',
+        errorMessage: undefined,
+        processingMode: pMode,
+      });
+
+      const result = await retrySummarization(rec.transcript, pMode, {
+        onStage: () => {},
+      });
+
+      const job = activeJobs.get(recordingId);
+      if (job?.cancelled) return;
+
+      const existingTitles = recordings
+        .filter((r) => r.id !== recordingId)
+        .map((r) => r.title);
+
+      await updateRecording(recordingId, {
+        status: 'ready',
+        processingMode: pMode,
+        errorMessage: undefined,
+        ...buildRecordingReadyFromSummarization(result, { existingTitles }),
+      });
+
+      logger.info('RECORDING', 'Summarization retry completed', { recordingId });
+    } catch (err: unknown) {
+      const job = activeJobs.get(recordingId);
+      if (!job?.cancelled) {
+        await failJob(recordingId, err, stageRef.current);
+      }
+    } finally {
+      clearJob(recordingId);
+    }
+  })();
 }
 
 export function initialStatusAfterSave(

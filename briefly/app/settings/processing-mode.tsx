@@ -15,8 +15,8 @@ import { useSettingsStore } from '@/context/useSettingsStore';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import {
-  modePickerStyles as mp,
-  screenLayoutStyles as sl,
+  useModePickerStyles,
+  useScreenLayoutStyles,
 } from '@/components/navigation/screenLayout';
 import { ProcessingMode } from '@/types';
 import { processingModeDescription, processingModeTitle } from '@/utils/processing/processingMode';
@@ -47,6 +47,8 @@ const PROCESSING_MODES: ProcessingMode[] = [
 
 export default function ProcessingModePickerScreen() {
   const router = useRouter();
+  const sl = useScreenLayoutStyles();
+  const mp = useModePickerStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
   const {
     summarizationMode,

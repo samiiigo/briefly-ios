@@ -2,21 +2,23 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
-import { AnchoredOverflowMenu } from '@/components/ui/AnchoredOverflowMenu';
+import { AnchoredOverflowMenu, type AnchoredMenuItem } from '@/components/ui/AnchoredOverflowMenu';
 import {
   TOP_HEADER_BUTTON_ROW_HEIGHT,
   TOP_HEADER_PADDING_BOTTOM,
   TOP_HEADER_PADDING_TOP,
 } from '@/components/navigation/topHeaderMetrics';
 import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
-import { Colors, Spacing, BorderRadius } from '@/theme';
+import { useCreateStyles, useThemedColors, Spacing, BorderRadius } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface HeaderProps {
   onBack: () => void;
   folderLabel: string;
   onShare: () => void;
   shareDisabled?: boolean;
-  menuItems: { label: string; onPress: () => void }[];
+  menuItems: AnchoredMenuItem[];
+  menuLoading?: boolean;
 }
 
 /** Summary screen top bar (Figma mock). */
@@ -26,7 +28,9 @@ export function RecordingDetailHeader({
   onShare,
   shareDisabled,
   menuItems,
+  menuLoading = false,
 }: HeaderProps) {
+  const headerStyles = useCreateStyles(createRecordingDetailHeaderStyles);
   return (
     <TopChromeOverlay>
       <View style={headerStyles.header}>
@@ -53,11 +57,13 @@ export function RecordingDetailHeader({
           />
           <AnchoredOverflowMenu
             items={menuItems}
+            triggerLoading={menuLoading}
             renderTrigger={(open) => (
               <CircularIconButton
                 icon="ellipsis-horizontal"
                 accessibilityLabel="Recording options"
                 onPress={open}
+                loading={menuLoading}
                 style={headerStyles.secondaryButton}
               />
             )}
@@ -75,6 +81,8 @@ interface ShareFabProps {
 
 /** Floating share pill (Figma summary screen). */
 export function RecordingShareFab({ onPress, disabled }: ShareFabProps) {
+  const fabStyles = useCreateStyles(createRecordingShareFabStyles);
+  const colors = useThemedColors();
   return (
     <TouchableOpacity
       style={[fabStyles.button, disabled && fabStyles.buttonDisabled]}
@@ -84,13 +92,14 @@ export function RecordingShareFab({ onPress, disabled }: ShareFabProps) {
       accessibilityRole="button"
       accessibilityLabel="Share"
     >
-      <Ionicons name="share-outline" size={14} color={Colors.textPrimary} />
+      <Ionicons name="share-outline" size={14} color={colors.textPrimary} />
       <Text style={fabStyles.label}>Share</Text>
     </TouchableOpacity>
   );
 }
 
-const fabStyles = StyleSheet.create({
+function createRecordingShareFabStyles(c: ColorPalette) {
+  return StyleSheet.create({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -98,9 +107,9 @@ const fabStyles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: Colors.surfaceElevated,
+    borderColor: c.surfaceElevated,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -119,11 +128,13 @@ const fabStyles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 22,
     letterSpacing: 0.375,
-    color: Colors.textPrimary,
+    color: c.textPrimary,
   },
-});
+  });
+}
 
-const headerStyles = StyleSheet.create({
+function createRecordingDetailHeaderStyles(c: ColorPalette) {
+  return StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -141,7 +152,7 @@ const headerStyles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   backButton: {
-    backgroundColor: Colors.surface,
+    backgroundColor: c.surface,
     marginRight: Spacing.sm,
   },
   folderLabel: {
@@ -149,7 +160,7 @@ const headerStyles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     lineHeight: 22,
-    color: Colors.textPrimary,
+    color: c.textPrimary,
   },
   actions: {
     flexShrink: 0,
@@ -158,9 +169,10 @@ const headerStyles = StyleSheet.create({
     gap: Spacing.md,
   },
   secondaryButton: {
-    backgroundColor: Colors.headerButtonMuted,
+    backgroundColor: c.headerButtonMuted,
   },
   shareDisabled: {
     opacity: 0.6,
   },
-});
+  });
+}

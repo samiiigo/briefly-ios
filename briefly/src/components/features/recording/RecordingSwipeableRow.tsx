@@ -4,13 +4,13 @@ import React, {
   useReducer,
   useRef,
   isValidElement,
-  cloneElement,
 } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   Alert,
   Platform,
   ActionSheetIOS,
@@ -25,26 +25,32 @@ import type { Recording } from '@/types';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useUserFolderStore } from '@/context/useUserFolderStore';
+import { useExport } from '@/hooks/useExport';
 import { folderFlagsFor } from '@/utils/folders/recordingFolder';
+import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { RecordingFolder } from '@/types';
 import { BUILTIN_MOVE_ORDER, BUILT_IN_FOLDERS } from '@/constants/builtInFolders';
-import { SWIPE_ACTION_GAP , SwipeableAnimatedAction } from './SwipeableAnimatedAction';
+import { SWIPE_ACTION_GAP, SwipeableAnimatedAction } from './SwipeableAnimatedAction';
 import { SwipeableMotionCard } from './SwipeableMotionCard';
 import {
   RECORDING_SWIPE_FRICTION,
   RECORDING_SWIPE_OVERSHOOT_FRICTION,
   RECORDING_SWIPE_SPRING,
 } from './recordingSwipeSpring';
-import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import { TextInputDialog } from '@/components/ui/TextInputDialog';
+import { useCreateStyles, Spacing, BorderRadius, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface RecordingSwipeableRowProps {
   recording: Recording;
   children: React.ReactNode;
   onPress: () => void;
   onDelete: () => void;
-  /** When set (e.g. in Recently Deleted), swipe right reveals Recover and swipe left shows Delete Forever. */
+  /** When set, Rename appears in the More (⋯) menu. */
+  onRename?: (newTitle: string) => void;
+  /** When set (e.g. in Recently Deleted), Recover appears under the More (⋯) swipe action. */
   onRestore?: () => void;
-  /** When true, swipe right = Recover, swipe left = Delete Forever (same interaction pattern as elsewhere). */
+  /** Recently Deleted: no swipe-right Favorite; swipe left is Delete, Share, More (Recover). */
   isRecentlyDeleted?: boolean;
 }
 
@@ -55,9 +61,11 @@ export function RecordingSwipeableRow({
   children,
   onPress,
   onDelete,
+  onRename,
   onRestore,
   isRecentlyDeleted = false,
 }: RecordingSwipeableRowProps) {
+  const styles = useCreateStyles(createRecordingSwipeableRowStyles);
   const swipeableRef = useRef<React.ElementRef<typeof Swipeable> | null>(null);
   const swipeTranslationRef = useRef<SharedValue<number> | null>(null);
   const fallbackTranslation = useSharedValue(0);
@@ -72,6 +80,7 @@ export function RecordingSwipeableRow({
 
   const motionTranslation = swipeTranslationRef.current ?? fallbackTranslation;
   const { folders, loadFolders } = useUserFolderStore();
+  const { shareBusy, openShareMenu } = useExport(recording);
 
   const closeThisRow = useCallback(() => {
     swipeableRef.current?.close();
@@ -98,26 +107,6 @@ export function RecordingSwipeableRow({
       closeActive();
     }
   }, [recording.id]);
-
-  const wrapChildPress = useCallback(
-    (child: React.ReactNode) => {
-      if (!isValidElement<{ onPress?: () => void }>(child)) {
-        return child;
-      }
-      const childOnPress = child.props.onPress;
-      return cloneElement(child, {
-        onPress: () => {
-          useActiveSwipeableStore.getState().closeActive();
-          if (childOnPress) {
-            childOnPress();
-          } else {
-            onPress();
-          }
-        },
-      });
-    },
-    [onPress]
-  );
 
   const toggleFavorite = useCallback(() => {
     swipeableRef.current?.close();
@@ -200,6 +189,7 @@ export function RecordingSwipeableRow({
   }, [closeThisRow, loadFolders, moveDestinations, handleMoveTo]);
 
   const [moveModalVisible, setMoveModalVisible] = React.useState(false);
+  const [renameDialogVisible, setRenameDialogVisible] = React.useState(false);
   const destsForModal = moveDestinations();
   const moveModalOptions = [
     ...BUILTIN_MOVE_ORDER.map((id) => ({
@@ -231,72 +221,206 @@ export function RecordingSwipeableRow({
     onRestore?.();
   }, [onRestore]);
 
+  const handleShare = useCallback(() => {
+    swipeableRef.current?.close();
+    openShareMenu();
+  }, [openShareMenu]);
+
+  const promptRename = useCallback(() => {
+    if (!onRename) return;
+    closeThisRow();
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        'Rename Recording',
+        undefined,
+        (text) => {
+          const trimmed = text?.trim();
+          if (trimmed) onRename(trimmed);
+        },
+        'plain-text',
+        recording.title
+      );
+    } else {
+      setRenameDialogVisible(true);
+    }
+  }, [closeThisRow, onRename, recording.title]);
+
+  const showOptionsMenu = useCallback(() => {
+    closeThisRow();
+    const favoriteLabel = recording.isFavorite ? 'Unfavorite' : 'Favorite';
+    const archiveLabel = recording.isArchived ? 'Unarchive' : 'Archive';
+    const deleteLabel = isRecentlyDeleted ? 'Delete Forever' : 'Delete';
+
+    if (isRecentlyDeleted) {
+      if (Platform.OS === 'ios') {
+        const options = ['Cancel'];
+        const handlers: (() => void)[] = [];
+        if (onRename) {
+          options.push('Rename');
+          handlers.push(promptRename);
+        }
+        if (onRestore) {
+          options.push('Recover');
+          handlers.push(handleRecover);
+        }
+        options.push('Share', deleteLabel);
+        handlers.push(handleShare, handleDelete);
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options,
+            cancelButtonIndex: 0,
+            destructiveButtonIndex: options.length - 1,
+          },
+          (index) => {
+            if (index <= 0) return;
+            handlers[index - 1]?.();
+          }
+        );
+        return;
+      }
+
+      const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] =
+        [];
+      if (onRename) buttons.push({ text: 'Rename', onPress: promptRename });
+      if (onRestore) buttons.push({ text: 'Recover', onPress: handleRecover });
+      buttons.push({ text: 'Share', onPress: handleShare });
+      buttons.push({ text: deleteLabel, style: 'destructive', onPress: handleDelete });
+      buttons.push({ text: 'Cancel', style: 'cancel' });
+      Alert.alert(recording.title, undefined, buttons);
+      return;
+    }
+
+    if (Platform.OS === 'ios') {
+      const options = ['Cancel'];
+      const handlers: (() => void)[] = [];
+      options.push(favoriteLabel);
+      handlers.push(toggleFavorite);
+      options.push('Share');
+      handlers.push(handleShare);
+      if (onRename) {
+        options.push('Rename');
+        handlers.push(promptRename);
+      }
+      options.push(archiveLabel, 'Move to…', deleteLabel);
+      handlers.push(
+        () => (recording.isArchived ? removeFromArchive() : moveToArchive()),
+        showMoveSheet,
+        handleDelete
+      );
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: options.length - 1,
+        },
+        (index) => {
+          if (index <= 0) return;
+          handlers[index - 1]?.();
+        }
+      );
+      return;
+    }
+
+    const androidButtons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] =
+      [];
+    androidButtons.push({ text: favoriteLabel, onPress: toggleFavorite });
+    androidButtons.push({ text: 'Share', onPress: handleShare });
+    if (onRename) {
+      androidButtons.push({ text: 'Rename', onPress: promptRename });
+    }
+    androidButtons.push(
+      {
+        text: archiveLabel,
+        onPress: recording.isArchived ? removeFromArchive : moveToArchive,
+      },
+      { text: 'Move to…', onPress: showMoveSheet },
+      { text: deleteLabel, style: 'destructive', onPress: handleDelete },
+      { text: 'Cancel', style: 'cancel' }
+    );
+    Alert.alert(recording.title, undefined, androidButtons);
+  }, [
+    closeThisRow,
+    handleDelete,
+    handleRecover,
+    handleShare,
+    isRecentlyDeleted,
+    moveToArchive,
+    onRename,
+    onRestore,
+    promptRename,
+    recording.isArchived,
+    recording.isFavorite,
+    recording.title,
+    removeFromArchive,
+    showMoveSheet,
+    toggleFavorite,
+  ]);
+
+  const handleRowPress = useCallback(() => {
+    useActiveSwipeableStore.getState().closeActive();
+    if (isRecordingProcessing(recording)) return;
+    if (isValidElement<{ onPress?: () => void }>(children) && children.props.onPress) {
+      children.props.onPress();
+    } else {
+      onPress();
+    }
+  }, [children, onPress, recording]);
+
+  const handleRowLongPress = useCallback(() => {
+    triggerHaptic();
+    showOptionsMenu();
+  }, [showOptionsMenu]);
+
   const renderRightActions = useCallback(
     (progress: SharedValue<number>, translation: SharedValue<number>) => {
       bindSwipeTranslation(translation);
 
-      if (isRecentlyDeleted) {
-        return (
-          <View style={styles.trailingActions}>
-            <SwipeableAnimatedAction
-              progress={progress}
-              index={0}
-              count={1}
-              side="trailing"
-              backgroundColor="#FF3B30"
-              icon="trash"
-              label="Delete Forever"
-              onPress={handleDelete}
-              numberOfLines={2}
-            />
-          </View>
-        );
-      }
+      const actionCount = 3;
 
       return (
         <View style={styles.trailingActions}>
           <SwipeableAnimatedAction
             progress={progress}
             index={0}
-            count={3}
+            count={actionCount}
             side="trailing"
-            backgroundColor="#5E5CE6"
-            icon={recording.isArchived ? 'arrow-undo' : 'archive'}
-            label={recording.isArchived ? 'Unarchive' : 'Archive'}
-            onPress={recording.isArchived ? removeFromArchive : moveToArchive}
-            numberOfLines={2}
+            backgroundColor="#636366"
+            icon="ellipsis-horizontal"
+            label="More"
+            onPress={showOptionsMenu}
           />
           <SwipeableAnimatedAction
             progress={progress}
             index={1}
-            count={3}
+            count={actionCount}
             side="trailing"
-            backgroundColor="#34C759"
-            icon="folder-open"
-            label="Move"
-            onPress={showMoveSheet}
+            backgroundColor="#0A84FF"
+            icon="share-outline"
+            label="Share"
+            onPress={handleShare}
+            disabled={shareBusy}
           />
           <SwipeableAnimatedAction
             progress={progress}
             index={2}
-            count={3}
+            count={actionCount}
             side="trailing"
             backgroundColor="#FF3B30"
             icon="trash"
-            label="Delete"
+            label={isRecentlyDeleted ? 'Delete Forever' : 'Delete'}
             onPress={handleDelete}
+            numberOfLines={isRecentlyDeleted ? 2 : 1}
           />
         </View>
       );
     },
     [
-      handleDelete,
-      isRecentlyDeleted,
-      moveToArchive,
-      recording.isArchived,
-      removeFromArchive,
-      showMoveSheet,
       bindSwipeTranslation,
+      handleDelete,
+      handleShare,
+      isRecentlyDeleted,
+      shareBusy,
+      showOptionsMenu,
     ]
   );
 
@@ -304,21 +428,8 @@ export function RecordingSwipeableRow({
     (progress: SharedValue<number>, translation: SharedValue<number>) => {
       bindSwipeTranslation(translation);
 
-      if (isRecentlyDeleted && onRestore) {
-        return (
-          <SwipeableAnimatedAction
-            progress={progress}
-            index={0}
-            count={1}
-            side="leading"
-            backgroundColor="#0A84FF"
-            icon="arrow-undo"
-            label="Recover"
-            onPress={handleRecover}
-            marginRight={SWIPE_ACTION_GAP}
-            numberOfLines={2}
-          />
-        );
+      if (isRecentlyDeleted) {
+        return null;
       }
 
       return (
@@ -336,14 +447,7 @@ export function RecordingSwipeableRow({
         />
       );
     },
-    [
-      handleRecover,
-      isRecentlyDeleted,
-      onRestore,
-      recording.isFavorite,
-      toggleFavorite,
-      bindSwipeTranslation,
-    ]
+    [bindSwipeTranslation, isRecentlyDeleted, recording.isFavorite, toggleFavorite]
   );
 
   return (
@@ -365,7 +469,15 @@ export function RecordingSwipeableRow({
         renderLeftActions={renderLeftActions}
       >
         <SwipeableMotionCard translation={motionTranslation}>
-          {wrapChildPress(children)}
+          <Pressable
+            style={styles.rowPressable}
+            onPress={handleRowPress}
+            onLongPress={handleRowLongPress}
+            delayLongPress={450}
+            accessibilityHint="Long press for more options. Swipe for actions."
+          >
+            {children}
+          </Pressable>
         </SwipeableMotionCard>
       </Swipeable>
 
@@ -406,11 +518,31 @@ export function RecordingSwipeableRow({
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {onRename ? (
+        <TextInputDialog
+          visible={renameDialogVisible}
+          title="Rename Recording"
+          defaultValue={recording.title}
+          placeholder="Recording name"
+          submitLabel="Rename"
+          onSubmit={(text) => {
+            setRenameDialogVisible(false);
+            const trimmed = text.trim();
+            if (trimmed) onRename(trimmed);
+          }}
+          onCancel={() => setRenameDialogVisible(false)}
+        />
+      ) : null}
     </>
   );
 }
 
-const styles = StyleSheet.create({
+function createRecordingSwipeableRowStyles(c: ColorPalette) {
+  return StyleSheet.create({
+  rowPressable: {
+    width: '100%',
+  },
   trailingActions: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -425,17 +557,17 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   moveModalContent: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: BorderRadius.cardXL,
     maxHeight: 400,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
+    borderColor: c.border,
     overflow: 'hidden',
   },
   moveModalTitle: withAppFont({
     fontSize: 14,
     fontWeight: '500',
-    color: Colors.subtext,
+    color: c.subtext,
     paddingHorizontal: Spacing.md,
     paddingTop: 14,
     paddingBottom: 8,
@@ -446,17 +578,18 @@ const styles = StyleSheet.create({
   },
   moveModalRowText: withAppFont({
     fontSize: 17,
-    color: Colors.textPrimary,
+    color: c.textPrimary,
   }),
   moveModalCancel: {
     paddingVertical: 14,
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
+    borderTopColor: c.border,
   },
   moveModalCancelText: withAppFont({
     fontSize: 17,
     fontWeight: '600',
-    color: Colors.primary,
+    color: c.primary,
   }),
-});
+  });
+}

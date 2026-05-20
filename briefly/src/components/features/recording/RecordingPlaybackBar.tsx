@@ -18,7 +18,15 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { Recording } from '@/types';
 import { formatDuration } from '@/utils';
 import { BottomChromeOverlay } from '@/components/navigation/BottomChromeOverlay';
-import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import {
+  useCreateStyles,
+  useResolvedColorScheme,
+  useThemedColors,
+  Spacing,
+  BorderRadius,
+  withAppFont,
+} from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -31,6 +39,9 @@ interface Props {
 }
 
 export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Props) {
+  const styles = useCreateStyles(createRecordingPlaybackBarStyles);
+  const colors = useThemedColors();
+  const isLight = useResolvedColorScheme() === 'light';
   const [expanded, setExpanded] = useState(false);
   const expandedRef = useRef(false);
   const {
@@ -95,7 +106,7 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
       <Ionicons
         name={isPlaying ? 'pause' : 'play'}
         size={26}
-        color={Colors.textPrimary}
+        color={colors.textPrimary}
         style={!isPlaying ? styles.playIconOffset : undefined}
       />
     </TouchableOpacity>
@@ -116,16 +127,28 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
         />
       ) : null}
       <View style={[styles.wrapper, { paddingBottom }]} pointerEvents="box-none">
-        <View style={[styles.pill, expanded && styles.pillExpanded]}>
+        <View
+          style={[
+            styles.pill,
+            isLight ? styles.pillLight : styles.pillDark,
+            expanded && styles.pillExpanded,
+          ]}
+        >
           {Platform.OS === 'ios' && (
             <BlurView
               intensity={60}
-              tint="dark"
+              tint={isLight ? 'light' : 'dark'}
               style={StyleSheet.absoluteFill}
               pointerEvents="none"
             />
           )}
-          <View style={[StyleSheet.absoluteFill, styles.pillOverlay]} pointerEvents="none" />
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              isLight ? styles.pillOverlayLight : styles.pillOverlayDark,
+            ]}
+            pointerEvents="none"
+          />
 
           {expanded ? (
             <View style={styles.expandedRow} pointerEvents="box-none">
@@ -155,95 +178,118 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
   );
 }
 
-const styles = StyleSheet.create({
-  dismissBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
-    elevation: 1,
-  },
-  wrapper: {
-    alignItems: 'flex-end',
-    zIndex: 2,
-    elevation: 2,
-    paddingHorizontal: Spacing.screenHorizontal,
-  },
-  pill: {
-    borderRadius: BorderRadius.full,
-    overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(28,28,30,0.92)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  pillExpanded: {
-    alignSelf: 'flex-end',
-    width: 300,
-    maxWidth: '100%',
-    borderRadius: BorderRadius.full,
-  },
-  pillOverlay: {
-    backgroundColor: 'rgba(28,28,30,0.9)',
-  },
-  collapsedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingLeft: 6,
-    paddingRight: Spacing.md,
-    gap: Spacing.xs,
-    zIndex: 1,
-  },
-  expandedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingLeft: 6,
-    paddingRight: Spacing.md,
-    gap: Spacing.md,
-    zIndex: 1,
-  },
-  durationText: withAppFont({
-    fontSize: 13,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-    fontVariant: ['tabular-nums'],
-    minWidth: 36,
-    textAlign: 'right',
-  }),
-  playButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playIconOffset: {
-    marginLeft: 3,
-  },
-  progressTrack: {
-    flex: 1,
-    alignSelf: 'center',
-    height: 4,
-    marginHorizontal: Spacing.xs,
-    backgroundColor: Colors.border,
-    borderRadius: 2,
-    position: 'relative',
-  },
-  progressFill: {
-    height: 4,
-    backgroundColor: Colors.primary,
-    borderRadius: 2,
-  },
-  progressThumb: {
-    position: 'absolute',
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: Colors.primary,
-    top: -5,
-    marginLeft: -7,
-  },
-});
+function pillOverlayRgba(hex: string, alpha: number): string {
+  const raw = hex.replace('#', '');
+  const n =
+    raw.length === 3
+      ? raw
+          .split('')
+          .map((ch) => ch + ch)
+          .join('')
+      : raw;
+  return `rgba(${parseInt(n.slice(0, 2), 16)},${parseInt(n.slice(2, 4), 16)},${parseInt(n.slice(4, 6), 16)},${alpha})`;
+}
+
+function createRecordingPlaybackBarStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    dismissBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 1,
+      elevation: 1,
+    },
+    wrapper: {
+      alignItems: 'flex-end',
+      zIndex: 2,
+      elevation: 2,
+      paddingHorizontal: Spacing.screenHorizontal,
+    },
+    pill: {
+      borderRadius: BorderRadius.full,
+      overflow: 'hidden',
+      borderWidth: StyleSheet.hairlineWidth,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.45,
+      shadowRadius: 24,
+      elevation: 12,
+    },
+    pillDark: {
+      borderColor: 'rgba(255,255,255,0.1)',
+      backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(28,28,30,0.92)',
+    },
+    pillLight: {
+      borderColor: c.border,
+      backgroundColor: Platform.OS === 'ios' ? 'transparent' : c.surfaceElevated,
+    },
+    pillExpanded: {
+      alignSelf: 'flex-end',
+      width: 300,
+      maxWidth: '100%',
+      borderRadius: BorderRadius.full,
+    },
+    pillOverlayDark: {
+      backgroundColor: 'rgba(28,28,30,0.9)',
+    },
+    pillOverlayLight: {
+      backgroundColor: pillOverlayRgba(c.background, 0.88),
+    },
+    collapsedRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 6,
+      paddingLeft: 6,
+      paddingRight: Spacing.md,
+      gap: Spacing.xs,
+      zIndex: 1,
+    },
+    expandedRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 6,
+      paddingLeft: 6,
+      paddingRight: Spacing.md,
+      gap: Spacing.md,
+      zIndex: 1,
+    },
+    durationText: withAppFont({
+      fontSize: 13,
+      fontWeight: '500',
+      color: c.textSecondary,
+      fontVariant: ['tabular-nums'],
+      minWidth: 36,
+      textAlign: 'right',
+    }),
+    playButton: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    playIconOffset: {
+      marginLeft: 3,
+    },
+    progressTrack: {
+      flex: 1,
+      alignSelf: 'center',
+      height: 4,
+      marginHorizontal: Spacing.xs,
+      backgroundColor: c.border,
+      borderRadius: 2,
+      position: 'relative',
+    },
+    progressFill: {
+      height: 4,
+      backgroundColor: c.primary,
+      borderRadius: 2,
+    },
+    progressThumb: {
+      position: 'absolute',
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      backgroundColor: c.primary,
+      top: -5,
+      marginLeft: -7,
+    },
+  });
+}

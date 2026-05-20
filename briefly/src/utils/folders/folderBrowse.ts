@@ -44,8 +44,9 @@ export function sortRecordingsForBrowse(
 }
 
 /**
- * Groups recordings under calendar-aware labels (Today, Yesterday, This week, Last week,
- * This month, Last month, then month + year). Preserves the order of `sorted` within each section.
+ * Groups recordings under calendar-aware labels (Today, Yesterday, weekday names, This week,
+ * Last week, Past two weeks, This month, Last month, then month + year). Preserves the order
+ * of `sorted` within each section.
  */
 export function groupRecordingsIntoTimeSections(
   sorted: Recording[],

@@ -42,6 +42,16 @@ export function isRecordingFileMissing(check: RecordingAssetCheck): boolean {
   return !check.filePath?.trim();
 }
 
+/** True when the recording has a saved audio file (not transcript-only imports). */
+export function hasRecordingAudio(
+  filePath?: string | null,
+  fileSizeBytes?: number | null,
+): boolean {
+  if (!filePath?.trim()) return false;
+  if (fileSizeBytes != null && fileSizeBytes <= 0) return false;
+  return true;
+}
+
 export function validateRecordingAsset(check: RecordingAssetCheck): void {
   if (isRecordingFileMissing(check)) {
     throw new Error('No audio file was saved for this recording. Please record again.');

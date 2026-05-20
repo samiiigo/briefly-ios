@@ -1,36 +1,31 @@
-import { View, Platform, StyleSheet } from 'react-native';
+import { View, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
-import { Colors } from '@/theme';
+import { useThemedStackShell } from '@/components/navigation/themedStackLayout';
 
 export default function FolderLayout() {
+  const shell = useThemedStackShell();
+
   return (
-    <View style={styles.root}>
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: Colors.background },
-        animation: 'slide_from_right',
-        ...Platform.select({
-          ios: {
-            gestureEnabled: true,
-            gestureDirection: 'horizontal',
-          },
-          android: {
-            gestureEnabled: false,
-            animation: 'slide_from_right',
-          },
-        }),
-      }}
-    />
-    <NavigatorBottomBlur scope="folder" />
+    <View style={shell.root}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: shell.contentStyle,
+          animation: 'slide_from_right',
+          ...Platform.select({
+            ios: {
+              gestureEnabled: true,
+              gestureDirection: 'horizontal',
+            },
+            android: {
+              gestureEnabled: false,
+              animation: 'slide_from_right',
+            },
+          }),
+        }}
+      />
+      <NavigatorBottomBlur scope="folder" />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-});

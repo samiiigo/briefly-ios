@@ -1,12 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, withSerifFont } from '@/theme';
+import { useCreateStyles, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface Props {
   bullets: string[];
 }
 
 export function SummaryBulletSection({ bullets }: Props) {
+  const styles = useCreateStyles(createSummaryBulletSectionStyles);
   if (!bullets.length) return null;
 
   return (
@@ -24,37 +26,39 @@ export function SummaryBulletSection({ bullets }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  section: {
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  heading: withSerifFont({
-    fontSize: 17,
-    fontWeight: '700',
-    lineHeight: 26,
-    color: Colors.textPrimary,
-    marginBottom: 16,
-  }),
-  list: {
-    gap: 16,
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  bullet: {
-    width: 16,
-    marginTop: 6,
-    marginRight: 8,
-    fontSize: 14,
-    lineHeight: 20,
-    color: Colors.summaryMuted,
-  },
-  text: {
-    flex: 1,
-    fontSize: 15,
-    lineHeight: 21,
-    color: Colors.summaryBody,
-  },
-});
+function createSummaryBulletSectionStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    section: {
+      marginTop: 8,
+      marginBottom: 24,
+    },
+    heading: withAppFont({
+      fontSize: 22,
+      fontWeight: '700',
+      lineHeight: 30,
+      color: c.textPrimary,
+      marginBottom: 16,
+    }),
+    list: {
+      gap: 16,
+    },
+    item: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    bullet: withAppFont({
+      width: 16,
+      marginTop: 6,
+      marginRight: 8,
+      fontSize: 14,
+      lineHeight: 20,
+      color: c.summaryMuted,
+    }),
+    text: withAppFont({
+      flex: 1,
+      fontSize: 15,
+      lineHeight: 21,
+      color: c.summaryBody,
+    }),
+  });
+}

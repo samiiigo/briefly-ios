@@ -22,17 +22,37 @@ import { RecordingPlaybackBar } from '@/components/features/recording/RecordingP
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { useSettingsStore } from '@/context/useSettingsStore';
+import { builtInFolderName } from '@/constants/builtInFolders';
 import { ensureUniqueTitle } from '@/utils';
 import { getNextSummarizationFallback } from '@/utils/processing/summarizationFallback';
 import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
-import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
+import {
+  hasMeaningfulTranscript,
+  hasRecordingAudio,
+} from '@/utils/recording/recordingValidation';
+import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
-import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import {
+  cancelRecordingBackgroundProcessing,
+  startRecordingBackgroundProcessing,
+  startRecordingSummarizationRetry,
+} from '@/services/recording/recordingBackgroundProcessing';
+import {
+  Spacing,
+  BorderRadius,
+  useCreateStyles,
+  useThemedColors,
+  withAppFont,
+} from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 export default function TranscriptScreen() {
+  const st = useCreateStyles(createRecordingDetailStyles);
+  const colors = useThemedColors();
+  const sl = useScreenLayoutStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
   const { paddingBottom: playbackBottom } = usePlaybackBarLayout();
   const router = useRouter();
@@ -58,7 +78,7 @@ export default function TranscriptScreen() {
     filePath: recording?.filePath ?? '',
     transcript: recording?.transcript,
   });
-  const { isExportingPdf, openShareMenu } = useExport(recording);
+  const { shareBusy, openShareMenu } = useExport(recording);
 
   const handleRename = useCallback(() => {
     if (!recording) return;
@@ -68,53 +88,32 @@ export default function TranscriptScreen() {
     else { setRenameDialogVisible(true); }
   }, [recording, recordings, updateRecording]);
 
-  const handleTranscriptionFallback = useCallback(async () => {
+  const handleTranscriptionFallback = useCallback(() => {
     if (!recording || !recordingId) return;
-    const { summarizationMode: activeSummarizationMode } = useSettingsStore.getState();
-    await updateRecording(recording.id, {
-      status: 'transcribing',
-      errorMessage: undefined,
-      transcript: undefined,
-      summary: undefined,
-      keyInsights: undefined,
-      mainEmoji: undefined,
-      processingMode: activeSummarizationMode,
-    });
-    router.replace({
-      pathname: '/recording/summarizing',
-      params: { recordingId: recording.id, forceAudioFallback: 'true' },
-    });
-  }, [recording, recordingId, updateRecording, router]);
+    startRecordingBackgroundProcessing(recording.id, { audioFallbackOnly: true });
+  }, [recording, recordingId]);
 
   const handleSummarizationFallback = useCallback(
-    async (mode: typeof summarizationMode) => {
+    (mode: typeof summarizationMode) => {
       if (!recording || !recordingId) return;
+      if (recording.status === 'transcribing' || recording.status === 'summarizing') return;
       if (!alertIfLocalLlmNotReady(mode)) return;
-      await updateRecording(recording.id, {
-        status: 'summarizing',
-        errorMessage: undefined,
-        summary: undefined,
-        keyInsights: undefined,
-        mainEmoji: undefined,
-        processingMode: mode,
-      });
-      router.replace({
-        pathname: '/recording/summarizing',
-        params: { recordingId: recording.id, retrySummarizationMode: mode },
-      });
+      cancelRecordingBackgroundProcessing(recording.id);
+      startRecordingSummarizationRetry(recording.id, mode);
     },
-    [recording, recordingId, updateRecording, router],
+    [recording, recordingId],
   );
 
-  const handleStartProcessing = useCallback(async () => {
+  const handleStartProcessing = useCallback(() => {
     if (!recording) return;
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
-    router.replace({ pathname: '/recording/summarizing', params: { recordingId: recording.id } });
-  }, [recording, router]);
+    startRecordingBackgroundProcessing(recording.id);
+  }, [recording]);
 
-  const handleRerunSummarization = useCallback(async () => {
+  const handleRerunSummarization = useCallback(() => {
     if (!recording || !recordingId) return;
+    if (recording.status === 'transcribing' || recording.status === 'summarizing') return;
     if (!hasMeaningfulTranscript(recording.transcript)) {
       Alert.alert(
         'No transcript',
@@ -124,19 +123,9 @@ export default function TranscriptScreen() {
     }
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
-    await updateRecording(recording.id, {
-      status: 'summarizing',
-      errorMessage: undefined,
-      summary: undefined,
-      keyInsights: undefined,
-      mainEmoji: undefined,
-      processingMode: mode,
-    });
-    router.replace({
-      pathname: '/recording/summarizing',
-      params: { recordingId: recording.id, retrySummarizationMode: mode },
-    });
-  }, [recording, recordingId, updateRecording, router]);
+    cancelRecordingBackgroundProcessing(recording.id);
+    startRecordingSummarizationRetry(recording.id, mode);
+  }, [recording, recordingId]);
 
   const handleToggleFavorite = useCallback(() => {
     if (!recording) return;
@@ -146,20 +135,22 @@ export default function TranscriptScreen() {
   const handleViewTranscript = useCallback(() => {
     if (!recording) return;
     const hasTranscript = (recording.transcript?.length ?? 0) > 0;
-    if (!hasTranscript) {
-      if (recording.status === 'transcribing' || recording.status === 'summarizing') {
-        Alert.alert('Processing', 'The transcript is not ready yet.');
-      } else if (recording.status === 'saved') {
-        Alert.alert('No transcript', 'Transcribe this recording first.');
-      } else {
-        Alert.alert('No transcript', 'No transcript is available for this recording.');
-      }
+    const isTranscribing = recording.status === 'transcribing';
+    const hasAudio = hasRecordingAudio(recording.filePath, recording.fileSize);
+
+    if (hasTranscript || isTranscribing || hasAudio) {
+      router.push({
+        pathname: '/recording/transcript',
+        params: { recordingId: recording.id },
+      });
       return;
     }
-    router.push({
-      pathname: '/recording/transcript',
-      params: { recordingId: recording.id },
-    });
+
+    if (recording.status === 'saved') {
+      Alert.alert('No transcript', 'Transcribe this recording first.');
+    } else {
+      Alert.alert('No transcript', 'No transcript is available for this recording.');
+    }
   }, [recording, router]);
 
   if (!recording) {
@@ -174,8 +165,10 @@ export default function TranscriptScreen() {
     return (
       <View style={sl.container}>
         <View style={[st.deletedOverlay, { paddingTop: scrollPaddingTop }]}>
-          <Ionicons name="trash-outline" size={48} color={Colors.subtext} style={{ marginBottom: 16 }} />
-          <Text style={st.deletedOverlayTitle}>Recording in Deleted</Text>
+          <Ionicons name="trash-outline" size={48} color={colors.subtext} style={{ marginBottom: 16 }} />
+          <Text style={st.deletedOverlayTitle}>
+            Recording in {builtInFolderName('recently-deleted')}
+          </Text>
           <Text style={st.deletedOverlayMessage}>
             Restore this recording to open it.
           </Text>
@@ -183,11 +176,15 @@ export default function TranscriptScreen() {
             style={st.restoreButton}
             onPress={() => restoreRecording(recording.id).then(() => router.back())}
           >
-            <Ionicons name="arrow-undo" size={20} color={Colors.textPrimary} />
+            <Ionicons name="arrow-undo" size={20} color={colors.textPrimary} />
             <Text style={st.restoreButtonText}>Restore recording</Text>
           </TouchableOpacity>
         </View>
-        <StackScreenHeader title="Deleted" showBack onBack={() => router.back()} />
+        <StackScreenHeader
+          title={builtInFolderName('recently-deleted')}
+          showBack
+          onBack={() => router.back()}
+        />
       </View>
     );
   }
@@ -197,9 +194,17 @@ export default function TranscriptScreen() {
     recording.status === 'error' && hasMeaningfulTranscript(recording.transcript)
       ? getNextSummarizationFallback(lastSummarizationMode, [lastSummarizationMode])
       : null;
+  const hasAudio = hasRecordingAudio(recording.filePath, recording.fileSize);
+  const hasTranscript = hasMeaningfulTranscript(recording.transcript);
   const showTranscriptionFallbackOnError =
+    hasAudio &&
     recording.status === 'error' &&
-    (!hasMeaningfulTranscript(recording.transcript) || !summarizationFallback);
+    (!hasTranscript || !summarizationFallback);
+  const isTranscribing = recording.status === 'transcribing';
+  const isSummarizing = recording.status === 'summarizing';
+  const showProcessingBanner =
+    (recording.status === 'saved' || (isSummarizing && !hasTranscript)) &&
+    (hasAudio || (recording.status === 'saved' && hasTranscript));
   const overflowMenuItems = [
     { label: 'Rename', onPress: handleRename },
     {
@@ -208,10 +213,10 @@ export default function TranscriptScreen() {
     },
     { label: 'View transcript', onPress: handleViewTranscript },
     {
-      label: 'Rerun summarization',
-      onPress: () => {
-        void handleRerunSummarization();
-      },
+      label: isSummarizing ? 'Summarizing…' : 'Rerun summarization',
+      onPress: handleRerunSummarization,
+      loading: isSummarizing,
+      disabled: isSummarizing,
     },
   ];
 
@@ -219,17 +224,39 @@ export default function TranscriptScreen() {
     <View style={sl.container}>
       <ScrollView
         style={st.scroll}
-        contentContainerStyle={[st.scrollContent, { paddingTop: scrollPaddingTop }]}
+        contentContainerStyle={[
+          st.scrollContent,
+          { paddingTop: scrollPaddingTop, paddingBottom: hasAudio ? 140 : Spacing.xl },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <RecordingTitleHero recording={recording} />
-        {(recording.status === 'saved' || recording.status === 'transcribing' || recording.status === 'summarizing') && (
-          <View style={st.processingBanner}><View style={st.errorBannerTop}><Ionicons name="sparkles" size={16} color={Colors.primary} /><Text style={st.processingBannerTitle}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Summarization pending' : recording.status === 'saved' ? 'Ready to process' : 'Processing incomplete'}</Text></View><TouchableOpacity style={st.retryButton} onPress={handleStartProcessing}><Ionicons name="sparkles" size={15} color={Colors.textPrimary} /><Text style={st.retryButtonText}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Run Summarization' : 'Transcribe & Summarize'}</Text></TouchableOpacity></View>
-        )}
+        {showProcessingBanner ? (
+          <View style={st.processingBanner}>
+            <View style={st.errorBannerTop}>
+              <Ionicons name="sparkles" size={16} color={colors.primary} />
+              <Text style={st.processingBannerTitle}>
+                {recording.status === 'saved' && hasTranscript
+                  ? 'Summarization pending'
+                  : recording.status === 'saved'
+                    ? 'Ready to process'
+                    : 'Processing incomplete'}
+              </Text>
+            </View>
+            <TouchableOpacity style={st.retryButton} onPress={handleStartProcessing}>
+              <Ionicons name="sparkles" size={15} color={colors.textPrimary} />
+              <Text style={st.retryButtonText}>
+                {recording.status === 'saved' && hasTranscript
+                  ? 'Run Summarization'
+                  : 'Transcribe & Summarize'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
         {recording.status === 'error' && (
           <View style={st.errorBanner}>
             <View style={st.errorBannerTop}>
-              <Ionicons name="warning" size={16} color={Colors.orange} />
+              <Ionicons name="warning" size={16} color={colors.orange} />
               <Text style={st.errorBannerTitle}>Processing failed</Text>
             </View>
             {!!recording.errorMessage && (
@@ -242,13 +269,13 @@ export default function TranscriptScreen() {
                 style={st.retryButton}
                 onPress={() => handleSummarizationFallback(summarizationFallback.mode)}
               >
-                <Ionicons name="sparkles" size={15} color={Colors.textPrimary} />
+                <Ionicons name="sparkles" size={15} color={colors.textPrimary} />
                 <Text style={st.retryButtonText}>{summarizationFallback.buttonLabel}</Text>
               </TouchableOpacity>
             ) : null}
             {showTranscriptionFallbackOnError ? (
               <TouchableOpacity style={st.retryButton} onPress={handleTranscriptionFallback}>
-                <Ionicons name="mic-outline" size={15} color={Colors.textPrimary} />
+                <Ionicons name="mic-outline" size={15} color={colors.textPrimary} />
                 <Text style={st.retryButtonText}>Transcribe from recording</Text>
               </TouchableOpacity>
             ) : null}
@@ -264,18 +291,21 @@ export default function TranscriptScreen() {
           />
         ) : null}
       </ScrollView>
-      <RecordingPlaybackBar
-        recording={recording}
-        playback={playback}
-        paddingBottom={playbackBottom}
-      />
+      {hasAudio ? (
+        <RecordingPlaybackBar
+          recording={recording}
+          playback={playback}
+          paddingBottom={playbackBottom}
+        />
+      ) : null}
 
       <RecordingDetailHeader
         onBack={() => router.back()}
         folderLabel={folderLabel}
         onShare={openShareMenu}
-        shareDisabled={isExportingPdf}
+        shareDisabled={shareBusy}
         menuItems={overflowMenuItems}
+        menuLoading={isTranscribing || isSummarizing}
       />
       <TextInputDialog
         visible={renameDialogVisible}
@@ -296,9 +326,10 @@ export default function TranscriptScreen() {
   );
 }
 
-const st = StyleSheet.create({
+function createRecordingDetailStyles(c: ColorPalette) {
+  return StyleSheet.create({
   notFound: withAppFont({
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     padding: Spacing.md,
     fontSize: 17,
   }),
@@ -311,13 +342,13 @@ const st = StyleSheet.create({
   deletedOverlayTitle: withAppFont({
     fontSize: 22,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     marginBottom: Spacing.sm,
     textAlign: 'center',
   }),
   deletedOverlayMessage: withAppFont({
     fontSize: 15,
-    color: Colors.subtext,
+    color: c.subtext,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: Spacing.xl,
@@ -326,17 +357,17 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     paddingVertical: 14,
     paddingHorizontal: Spacing.xl,
     borderRadius: BorderRadius.cardXL,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: c.border,
   },
   restoreButtonText: withAppFont({
     fontSize: 17,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
   }),
   scroll: { flex: 1 },
   scrollContent: {
@@ -355,7 +386,7 @@ const st = StyleSheet.create({
   processingBannerTitle: withAppFont({
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
+    color: c.primary,
   }),
   errorBanner: {
     backgroundColor: 'rgba(255,159,10,0.1)',
@@ -370,11 +401,11 @@ const st = StyleSheet.create({
   errorBannerTitle: withAppFont({
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.orange,
+    color: c.orange,
   }),
   errorBannerMessage: withAppFont({
     fontSize: 13,
-    color: Colors.subtext,
+    color: c.subtext,
     lineHeight: 18,
   }),
   retryButton: {
@@ -382,7 +413,7 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: BorderRadius.md,
     paddingVertical: 10,
     paddingHorizontal: Spacing.md,
@@ -391,6 +422,7 @@ const st = StyleSheet.create({
   retryButtonText: withAppFont({
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
   }),
-});
+  });
+}

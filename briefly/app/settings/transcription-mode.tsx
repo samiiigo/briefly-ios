@@ -5,8 +5,8 @@ import { useSettingsStore } from '@/context/useSettingsStore';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import {
-  modePickerStyles as mp,
-  screenLayoutStyles as sl,
+  useModePickerStyles,
+  useScreenLayoutStyles,
 } from '@/components/navigation/screenLayout';
 import { TranscriptionMode } from '@/types';
 import {
@@ -24,6 +24,8 @@ const TRANSCRIPTION_MODES: TranscriptionMode[] = [
 export default function TranscriptionModePickerScreen() {
   const router = useRouter();
   const { scrollPaddingTop } = useTopChromeLayout();
+  const sl = useScreenLayoutStyles();
+  const mp = useModePickerStyles();
   const { transcriptionMode, setTranscriptionMode } = useSettingsStore();
   const selectedMode = normalizeTranscriptionMode(transcriptionMode);
 

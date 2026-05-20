@@ -13,10 +13,7 @@ import {
 import { FlashList, type FlashListRef, type ListRenderItem } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSearchScreen } from '@/hooks/useSearchScreen';
-import {
-  SCREEN_LIST_BOTTOM_PADDING,
-  screenLayoutStyles,
-} from '@/components/navigation/screenLayout';
+import { SCREEN_LIST_BOTTOM_PADDING } from '@/components/navigation/screenLayout';
 import { Recording } from '@/types';
 import { RECORDING_LIST_ITEM_GAP } from '@/utils/list/flattenRecordingSections';
 import { SearchTopChrome } from './SearchTopChrome';
@@ -28,7 +25,13 @@ import {
   SEARCH_LIST_HORIZONTAL_PADDING,
   getSearchScrollPaddingTop,
 } from './searchLayout';
-import { Colors, Spacing, withAppFont } from '@/theme';
+import {
+  useCreateStyles,
+  useResolvedColorScheme,
+  useThemedColors,
+  Spacing,
+  withAppFont,
+} from '@/theme';
 
 const FOLDER_CARD_WIDTH_RATIO = 0.42;
 
@@ -40,19 +43,44 @@ const LIST_KEYBOARD_DISMISS_MODE = Platform.select({
   default: 'on-drag' as const,
 });
 
-const sectionHeaderStyle = withAppFont({
-  fontSize: 14,
-  fontWeight: '500',
-  lineHeight: 16,
-  color: Colors.subtext,
-  marginBottom: 0,
-});
-
 function formatRecordingResultCount(count: number): string {
   return count === 1 ? '1 result' : `${count} results`;
 }
 
 export function SearchScreen() {
+  const colors = useThemedColors();
+  const themeExtra = useResolvedColorScheme();
+  const sectionHeaderStyle = useMemo(
+    () =>
+      withAppFont({
+        fontSize: 14,
+        fontWeight: '500',
+        lineHeight: 16,
+        color: colors.subtext,
+        marginBottom: 0,
+      }),
+    [colors.subtext],
+  );
+  const styles = useCreateStyles((c) => ({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    listHost: { flex: 1 },
+    list: { flex: 1 },
+    listContent: {
+      paddingHorizontal: SEARCH_LIST_HORIZONTAL_PADDING,
+      paddingBottom: SCREEN_LIST_BOTTOM_PADDING,
+    },
+    itemGap: { height: RECORDING_LIST_ITEM_GAP },
+    listHeader: { marginBottom: Spacing.sm, gap: 7 },
+    folderBlock: { gap: 7 },
+    recordingsSectionHeader: { marginTop: Spacing.sm },
+  }));
+  const renderResultSeparator = useCallback(
+    () => <View style={styles.itemGap} />,
+    [styles.itemGap],
+  );
   const insets = useSafeAreaInsets();
   const scrollPaddingTop = getSearchScrollPaddingTop(insets.top);
   const { width: windowWidth } = useWindowDimensions();
@@ -213,9 +241,10 @@ export function SearchScreen() {
               ref={listRef}
               style={styles.list}
               data={results.recordings}
+              extraData={themeExtra}
               renderItem={renderRecording}
               keyExtractor={keyExtractor}
-              ItemSeparatorComponent={ResultSeparator}
+              ItemSeparatorComponent={renderResultSeparator}
               ListHeaderComponent={listHeader}
               ListEmptyComponent={listEmpty}
               contentContainerStyle={listContentStyle}
@@ -253,33 +282,3 @@ export function SearchScreen() {
   );
 }
 
-function ResultSeparator() {
-  return <View style={styles.itemGap} />;
-}
-
-const styles = StyleSheet.create({
-  container: screenLayoutStyles.container,
-  listHost: {
-    flex: 1,
-  },
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    paddingHorizontal: SEARCH_LIST_HORIZONTAL_PADDING,
-    paddingBottom: SCREEN_LIST_BOTTOM_PADDING,
-  },
-  itemGap: {
-    height: RECORDING_LIST_ITEM_GAP,
-  },
-  listHeader: {
-    marginBottom: Spacing.sm,
-    gap: 7,
-  },
-  folderBlock: {
-    gap: 7,
-  },
-  recordingsSectionHeader: {
-    marginTop: Spacing.sm,
-  },
-});

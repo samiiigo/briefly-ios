@@ -8,7 +8,8 @@ import {
   useFolderBrowsePreferencesStore,
 } from '@/context/useFolderBrowsePreferencesStore';
 import { SheetModal } from '@/components/navigation/SheetModal';
-import { sheetLayoutStyles as sh, SHEET_CHECKMARK_COLOR } from '@/components/navigation/sheetLayout';
+import { useSheetLayoutStyles } from '@/components/navigation/sheetLayout';
+import { useThemedColors } from '@/theme';
 
 const SHOW_OPTIONS: { favoritesOnly: boolean; label: string }[] = [
   { favoritesOnly: false, label: 'All items' },
@@ -43,6 +44,8 @@ export function FolderViewOptionsSheet({
   folderType,
   onClose,
 }: Props) {
+  const sh = useSheetLayoutStyles();
+  const colors = useThemedColors();
   const byFolder = useFolderBrowsePreferencesStore((s) => s.byFolder);
   const setForFolder = useFolderBrowsePreferencesStore((s) => s.setForFolder);
   const resetForFolder = useFolderBrowsePreferencesStore((s) => s.resetForFolder);
@@ -83,7 +86,7 @@ export function FolderViewOptionsSheet({
                   {opt.label}
                 </Text>
                 {selected ? (
-                  <Ionicons name="checkmark" size={20} color={SHEET_CHECKMARK_COLOR} />
+                  <Ionicons name="checkmark" size={20} color={colors.textPrimary} />
                 ) : null}
               </TouchableOpacity>
             );
@@ -112,7 +115,7 @@ export function FolderViewOptionsSheet({
                       {opt.label}
                     </Text>
                     {selected ? (
-                      <Ionicons name="checkmark" size={20} color={SHEET_CHECKMARK_COLOR} />
+                      <Ionicons name="checkmark" size={20} color={colors.textPrimary} />
                     ) : null}
                   </TouchableOpacity>
                 );
@@ -141,7 +144,7 @@ export function FolderViewOptionsSheet({
                   {opt.label}
                 </Text>
                 {selected ? (
-                  <Ionicons name="checkmark" size={20} color={SHEET_CHECKMARK_COLOR} />
+                  <Ionicons name="checkmark" size={20} color={colors.textPrimary} />
                 ) : null}
               </TouchableOpacity>
             );

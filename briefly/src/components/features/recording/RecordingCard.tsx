@@ -1,109 +1,28 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  Platform,
-} from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '@/types';
 import { formatDuration, formatDate } from '@/utils';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
-import { TextInputDialog } from '@/components/ui/TextInputDialog';
-import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import { useCreateStyles, useThemedColors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface Props {
   recording: Recording;
-  onPress: () => void;
-  onDelete?: () => void;
-  onRename?: (newTitle: string) => void;
-  /** When set, card is in Recently Deleted: shows Restore and Delete permanently. */
-  onRestore?: () => void;
   /** Dense tile layout for folder grid view. */
   compact?: boolean;
 }
 
-export function RecordingCard({
-  recording,
-  onPress,
-  onDelete,
-  onRename,
-  onRestore,
-  compact,
-}: Props) {
+export function RecordingCard({ recording, compact }: Props) {
+  const styles = useCreateStyles(createRecordingCardStyles);
+  const colors = useThemedColors();
   const isFailed = recording.status === 'error';
   const isProcessing = isRecordingProcessing(recording);
   const isFavorite = !!recording.isFavorite;
   const folder = resolveRecordingFolder(recording);
   const isRecentlyDeleted = folder === 'recently-deleted';
-
-  const [renameDialogVisible, setRenameDialogVisible] = useState(false);
-
-  const promptRename = () => {
-    if (!onRename) return;
-    if (Platform.OS === 'ios') {
-      Alert.prompt(
-        'Rename Recording',
-        undefined,
-        (text) => {
-          if (text?.trim()) onRename(text.trim());
-        },
-        'plain-text',
-        recording.title
-      );
-    } else {
-      setRenameDialogVisible(true);
-    }
-  };
-
-  const handleLongPress = () => {
-    const buttons: any[] = [];
-    if (onRestore) {
-      buttons.push({ text: 'Restore', onPress: onRestore });
-      buttons.push({
-        text: 'Delete permanently',
-        style: 'destructive',
-        onPress: () =>
-          Alert.alert(
-            'Delete permanently',
-            `"${recording.title}" will be removed and cannot be recovered.`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Delete', style: 'destructive', onPress: onDelete },
-            ]
-          ),
-      });
-    } else {
-      if (onRename) {
-        buttons.push({ text: 'Rename', onPress: promptRename });
-      }
-      if (onDelete) {
-        buttons.push({
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () =>
-            Alert.alert('Delete Recording', `Delete "${recording.title}"?`, [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Delete', style: 'destructive', onPress: onDelete },
-            ]),
-        });
-      }
-    }
-    buttons.push({ text: 'Cancel', style: 'cancel' });
-    Alert.alert(recording.title, undefined, buttons);
-  };
-
-  const handlePress = () => {
-    if (onRestore) {
-      handleLongPress();
-    } else {
-      onPress();
-    }
-  };
 
   const dateText =
     isRecentlyDeleted && recording.deletedAt
@@ -114,7 +33,7 @@ export function RecordingCard({
     <View style={styles.topRightIcons}>
       {isFailed && (
         <View style={[styles.statusIcon, styles.statusIconWarning]}>
-          <Ionicons name="warning" size={compact ? 12 : 14} color={Colors.orange} />
+          <Ionicons name="warning" size={compact ? 12 : 14} color={colors.orange} />
         </View>
       )}
       {isFavorite && !isRecentlyDeleted && (
@@ -125,30 +44,9 @@ export function RecordingCard({
     </View>
   );
 
-  const renameDialog = (
-    <TextInputDialog
-      visible={renameDialogVisible}
-      title="Rename Recording"
-      defaultValue={recording.title}
-      placeholder="Recording name"
-      submitLabel="Rename"
-      onSubmit={(text) => {
-        setRenameDialogVisible(false);
-        onRename?.(text);
-      }}
-      onCancel={() => setRenameDialogVisible(false)}
-    />
-  );
-
   if (compact) {
     return (
-      <>
-        <TouchableOpacity
-          style={[styles.card, styles.cardCompact]}
-          onPress={handlePress}
-          onLongPress={handleLongPress}
-          activeOpacity={0.7}
-        >
+      <View style={[styles.card, styles.cardCompact]}>
           <RecordingAvatar recording={recording} size="compact" />
 
           <View style={styles.contentCompactInner}>
@@ -165,20 +63,12 @@ export function RecordingCard({
               <Text style={styles.durationCompact}>{formatDuration(recording.duration)}</Text>
             </View>
           </View>
-        </TouchableOpacity>
-        {renameDialog}
-      </>
+      </View>
     );
   }
 
   return (
-    <>
-      <TouchableOpacity
-        style={styles.card}
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-        activeOpacity={0.7}
-      >
+      <View style={styles.card}>
         <RecordingAvatar recording={recording} />
 
         <View style={styles.content}>
@@ -193,23 +83,22 @@ export function RecordingCard({
             <Text style={styles.duration}>{formatDuration(recording.duration)}</Text>
           </View>
         </View>
-      </TouchableOpacity>
-      {renameDialog}
-    </>
+      </View>
   );
 }
 
-const styles = StyleSheet.create({
+function createRecordingCardStyles(c: ColorPalette) {
+  return StyleSheet.create({
   card: {
     position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: BorderRadius.cardXL,
     padding: Spacing.md,
     marginBottom: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
+    borderColor: c.border,
   },
   cardCompact: {
     flexDirection: 'column',
@@ -268,7 +157,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     lineHeight: 22,
     textAlign: 'left',
   }),
@@ -277,19 +166,19 @@ const styles = StyleSheet.create({
     minWidth: 0,
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     lineHeight: 20,
     textAlign: 'left',
   }),
   date: withAppFont({
     fontSize: 14,
-    color: Colors.subtext,
+    color: c.subtext,
     textAlign: 'left',
     marginBottom: 6,
   }),
   dateCompact: withAppFont({
     fontSize: 13,
-    color: Colors.subtext,
+    color: c.subtext,
     textAlign: 'left',
     marginBottom: 6,
   }),
@@ -305,12 +194,13 @@ const styles = StyleSheet.create({
   },
   duration: withAppFont({
     fontSize: 14,
-    color: Colors.subtext,
+    color: c.subtext,
     textAlign: 'right',
   }),
   durationCompact: withAppFont({
     fontSize: 13,
-    color: Colors.subtext,
+    color: c.subtext,
     textAlign: 'right',
   }),
-});
+  });
+}

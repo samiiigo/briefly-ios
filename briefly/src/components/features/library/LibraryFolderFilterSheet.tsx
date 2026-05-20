@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, ScrollView } from 'react-native';
 import { useLibraryFolderPreferencesStore } from '@/context/useLibraryFolderPreferencesStore';
 import { SheetModal } from '@/components/navigation/SheetModal';
-import { sheetLayoutStyles as sh } from '@/components/navigation/sheetLayout';
+import { useSheetLayoutStyles } from '@/components/navigation/sheetLayout';
 import { LibraryDateScopeFilterSections } from './LibraryDateScopeFilterSections';
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
 }
 
 export function LibraryFolderFilterSheet({ visible, onClose }: Props) {
+  const sh = useSheetLayoutStyles();
   const resetFilters = useLibraryFolderPreferencesStore((s) => s.resetFilters);
 
   return (

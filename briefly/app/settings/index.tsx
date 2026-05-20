@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,16 +15,25 @@ import {
 } from '@/context/useFolderListLayoutStore';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
+import { themePreferenceTitle } from '@/utils/theme/themePreference';
 import { transcriptionModeTitle } from '@/utils/processing/transcriptionMode';
 import { processingModeTitle } from '@/utils/processing/processingMode';
-import { Colors, Spacing } from '@/theme';
+import { useThemedColors, Spacing } from '@/theme';
+import { useTranscriptBackup } from '@/hooks/useTranscriptBackup';
+import { useClearCache } from '@/hooks/useClearCache';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { scrollPaddingTop } = useTopChromeLayout();
-  const { summarizationMode, transcriptionMode } = useSettingsStore();
+  const colors = useThemedColors();
+  const sl = useScreenLayoutStyles();
+  const { summarizationMode, transcriptionMode, themePreference } = useSettingsStore();
   const folderLayout = useFolderListLayoutStore((s) => s.layout);
+  const { busy: transcriptBackupBusy, exportTranscripts, importTranscripts } =
+    useTranscriptBackup();
+  const { busy: clearCacheBusy, confirmAndClearCache } = useClearCache();
+  const storageBusy = transcriptBackupBusy || clearCacheBusy;
 
   return (
     <View style={sl.container}>
@@ -34,19 +42,19 @@ export default function SettingsScreen() {
         <View style={sl.card}>
           <TouchableOpacity
             style={sl.settingsRow}
-            onPress={() => router.push('/transcription-mode')}
+            onPress={() => router.push('/settings/transcription-mode')}
           >
             <Ionicons
               name="mic-outline"
               size={20}
-              color={Colors.textPrimary}
+              color={colors.textPrimary}
               style={sl.settingsRowIcon}
             />
             <Text style={sl.settingsRowTitle}>Transcription mode</Text>
             <Text style={sl.settingsRowValue}>
               {transcriptionModeTitle(transcriptionMode)}
             </Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -54,74 +62,64 @@ export default function SettingsScreen() {
         <View style={sl.card}>
           <TouchableOpacity
             style={sl.settingsRow}
-            onPress={() => router.push('/processing-mode')}
+            onPress={() => router.push('/settings/processing-mode')}
           >
             <Ionicons
               name="sparkles-outline"
               size={20}
-              color={Colors.textPrimary}
+              color={colors.textPrimary}
               style={sl.settingsRowIcon}
             />
             <Text style={sl.settingsRowTitle}>Summarization mode</Text>
             <Text style={sl.settingsRowValue}>
               {processingModeTitle(summarizationMode)}
             </Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
         <Text style={sl.sectionLabel}>Storage</Text>
         <View style={sl.card}>
-          <TouchableOpacity style={sl.settingsRow}>
-            <Ionicons
-              name="phone-portrait-outline"
-              size={20}
-              color={Colors.textPrimary}
-              style={sl.settingsRowIcon}
-            />
-            <Text style={sl.settingsRowTitle}>Manage local storage</Text>
-            <Text style={sl.settingsRowValue}>1.2 GB</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
-          </TouchableOpacity>
-
-          <View style={sl.cardDivider} />
-
-          <TouchableOpacity style={sl.settingsRow}>
+          <TouchableOpacity
+            style={sl.settingsRow}
+            disabled={storageBusy}
+            onPress={exportTranscripts}
+          >
             <Ionicons
               name="cloud-upload-outline"
               size={20}
-              color={Colors.textPrimary}
+              color={colors.textPrimary}
               style={sl.settingsRowIcon}
             />
             <Text style={sl.settingsRowTitle}>Export all transcripts</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
-          </TouchableOpacity>
-
-          <View style={sl.cardDivider} />
-
-          <TouchableOpacity style={sl.settingsRow}>
-            <Ionicons
-              name="cloud-download-outline"
-              size={20}
-              color={Colors.textPrimary}
-              style={sl.settingsRowIcon}
-            />
-            <Text style={sl.settingsRowTitle}>Import transcripts</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <View style={sl.cardDivider} />
 
           <TouchableOpacity
             style={sl.settingsRow}
-            onPress={() =>
-              Alert.alert('Clear Cache', 'Are you sure?', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Clear', style: 'destructive' },
-              ])
-            }
+            disabled={storageBusy}
+            onPress={importTranscripts}
           >
-            <Ionicons name="trash-outline" size={20} color={Colors.red} style={sl.settingsRowIcon} />
+            <Ionicons
+              name="cloud-download-outline"
+              size={20}
+              color={colors.textPrimary}
+              style={sl.settingsRowIcon}
+            />
+            <Text style={sl.settingsRowTitle}>Import transcripts or audio</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={sl.cardDivider} />
+
+          <TouchableOpacity
+            style={sl.settingsRow}
+            disabled={storageBusy}
+            onPress={confirmAndClearCache}
+          >
+            <Ionicons name="trash-outline" size={20} color={colors.red} style={sl.settingsRowIcon} />
             <Text style={[sl.settingsRowTitle, sl.settingsRowTitleDanger]}>Clear cache</Text>
           </TouchableOpacity>
         </View>
@@ -130,38 +128,33 @@ export default function SettingsScreen() {
         <View style={sl.card}>
           <TouchableOpacity
             style={sl.settingsRow}
-            onPress={() => router.push('/folder-layout')}
+            onPress={() => router.push('/settings/folder-layout')}
           >
             <Ionicons
               name="grid-outline"
               size={20}
-              color={Colors.textPrimary}
+              color={colors.textPrimary}
               style={sl.settingsRowIcon}
             />
             <Text style={sl.settingsRowTitle}>Folder layout</Text>
             <Text style={sl.settingsRowValue}>{folderListLayoutTitle(folderLayout)}</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
         <Text style={sl.sectionLabel}>Preferences</Text>
         <View style={sl.card}>
-          <TouchableOpacity style={sl.settingsRow}>
-            <Text style={sl.settingsRowTitle}>Language</Text>
-            <Text style={sl.settingsRowValue}>English (US)</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
-          </TouchableOpacity>
-
-          <View style={sl.cardDivider} />
-
-          <TouchableOpacity style={sl.settingsRow}>
+          <TouchableOpacity
+            style={sl.settingsRow}
+            onPress={() => router.push('/settings/theme')}
+          >
             <Text style={sl.settingsRowTitle}>Theme</Text>
-            <Text style={sl.settingsRowValue}>Dark</Text>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+            <Text style={sl.settingsRowValue}>{themePreferenceTitle(themePreference)}</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.versionText}>
+        <Text style={[sl.versionText, styles.versionText]}>
           {Constants.expoConfig?.name ?? 'Briefly'}{' '}
           {Constants.expoConfig?.version ?? '3.6.0'}
         </Text>
@@ -184,7 +177,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   versionText: {
-    ...sl.versionText,
     marginTop: 'auto',
     paddingTop: Spacing.xl,
   },

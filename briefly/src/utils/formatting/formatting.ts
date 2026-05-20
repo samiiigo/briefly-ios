@@ -30,6 +30,14 @@ function sameMonthAndYear(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 }
 
+/** Weekday name for per-day sections (e.g. "Friday") after Today / Yesterday. */
+function formatWeekdayLabel(date: Date): string {
+  return date.toLocaleDateString('en-US', { weekday: 'long' });
+}
+
+/** How many prior days in the current week get their own section before "This week". */
+const NAMED_WEEKDAY_SLOTS_AFTER_YESTERDAY = 2;
+
 export function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -65,13 +73,14 @@ export function formatDate(timestamp: number): string {
 
 /**
  * Section title for grouping recordings by created time (Home, folder browse).
- * Uses calendar-aware buckets: Today → Yesterday → This week → Last week →
+ * Buckets: Today → Yesterday → up to two weekday names in the current week →
+ * This week (older days still in the week) → Last week → Past two weeks →
  * This month → Last month → month + year for older items.
  */
-export function formatGroupLabel(timestamp: number): string {
+export function formatGroupLabel(timestamp: number, nowMs?: number): string {
   const ts = toTimestampMs(timestamp);
   const date = new Date(ts);
-  const now = new Date();
+  const now = nowMs != null ? new Date(nowMs) : new Date();
 
   const todayStart = startOfDay(now);
   const dateStart = startOfDay(date);
@@ -81,8 +90,15 @@ export function formatGroupLabel(timestamp: number): string {
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Yesterday';
 
-  if (diffDays >= 2 && sameWeek(date, now)) {
-    return 'This week';
+  if (sameWeek(date, now)) {
+    const namedThrough =
+      1 + NAMED_WEEKDAY_SLOTS_AFTER_YESTERDAY; /* diffDays 2 … 3 */
+    if (diffDays >= 2 && diffDays <= namedThrough) {
+      return formatWeekdayLabel(date);
+    }
+    if (diffDays >= 2) {
+      return 'This week';
+    }
   }
 
   const mondayThisWeek = startOfWeekMonday(now);
@@ -91,6 +107,15 @@ export function formatGroupLabel(timestamp: number): string {
 
   if (sameWeek(date, mondayLastWeek)) {
     return 'Last week';
+  }
+
+  if (
+    diffDays >= 2 &&
+    diffDays <= 14 &&
+    !sameWeek(date, now) &&
+    !sameWeek(date, mondayLastWeek)
+  ) {
+    return 'Past two weeks';
   }
 
   if (sameMonthAndYear(date, now)) {
@@ -119,27 +144,9 @@ export function formatRecentsCardDate(timestamp: number): string {
   return `${monthDay}, ${year} . ${time}`;
 }
 
-/**
- * Section titles for the recents feed: Today → Yesterday → Past 30 days → month name.
- */
+/** Section titles for the recents feed (same buckets as {@link formatGroupLabel}). */
 export function formatRecentsGroupLabel(timestamp: number): string {
-  const ts = toTimestampMs(timestamp);
-  const date = new Date(ts);
-  const now = new Date();
-
-  const todayStart = startOfDay(now);
-  const dateStart = startOfDay(date);
-  const diffMs = todayStart.getTime() - dateStart.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays >= 2 && diffDays <= 30) return 'Past 30 days';
-
-  if (date.getFullYear() === now.getFullYear()) {
-    return date.toLocaleDateString('en-US', { month: 'long' });
-  }
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  return formatGroupLabel(timestamp);
 }
 
 export function formatFileSize(bytes: number): string {

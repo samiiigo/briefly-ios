@@ -8,17 +8,21 @@ import {
   type TextStyle,
 } from 'react-native';
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
+import { useResolvedColorScheme } from '@/theme';
 import { Recording } from '@/types';
 import {
   flattenRecordingSections,
   RECORDING_LIST_HEADER_GAP,
-  RECORDING_LIST_ITEM_GAP,
   type FlatRecordingListItem,
+  type RecordingListGroupPosition,
 } from '@/utils/list/flattenRecordingSections';
 
 interface RecordingSectionFlashListProps {
   sections: ReadonlyArray<{ title: string; data: Recording[] }>;
-  renderRecording: (recording: Recording) => React.ReactElement;
+  renderRecording: (
+    recording: Recording,
+    groupPosition: RecordingListGroupPosition
+  ) => React.ReactElement;
   contentContainerStyle?: StyleProp<ViewStyle>;
   sectionHeaderStyle?: StyleProp<TextStyle>;
   onScrollBeginDrag?: () => void;
@@ -37,7 +41,7 @@ function ListSeparator({
     return <View style={styles.headerGap} />;
   }
   if (leadingItem?.kind === 'recording' && trailingItem?.kind === 'recording') {
-    return <View style={styles.itemGap} />;
+    return null;
   }
   return null;
 }
@@ -51,6 +55,7 @@ export function RecordingSectionFlashList({
   onMomentumScrollBegin,
   drawDistance = 400,
 }: RecordingSectionFlashListProps) {
+  const themeExtra = useResolvedColorScheme();
   const data = useMemo(() => flattenRecordingSections(sections), [sections]);
 
   const renderItem: ListRenderItem<FlatRecordingListItem> = useCallback(
@@ -61,7 +66,7 @@ export function RecordingSectionFlashList({
       if (item.kind === 'spacer') {
         return <View style={{ height: item.height }} />;
       }
-      return renderRecording(item.item);
+      return renderRecording(item.item, item.groupPosition);
     },
     [renderRecording, sectionHeaderStyle],
   );
@@ -74,6 +79,7 @@ export function RecordingSectionFlashList({
     <FlashList
       style={styles.list}
       data={data}
+      extraData={themeExtra}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       getItemType={getItemType}
@@ -100,8 +106,5 @@ const styles = StyleSheet.create({
   },
   headerGap: {
     height: RECORDING_LIST_HEADER_GAP,
-  },
-  itemGap: {
-    height: RECORDING_LIST_ITEM_GAP,
   },
 });

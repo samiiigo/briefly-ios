@@ -7,7 +7,8 @@ import Animated, {
   SharedValue,
   useAnimatedStyle,
 } from 'react-native-reanimated';
-import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
+import { useCreateStyles, useThemedColors, BorderRadius, Spacing, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 export const SWIPE_ACTION_SIZE = 76;
 export const SWIPE_ACTION_GAP = Spacing.sm;
@@ -26,6 +27,7 @@ interface SwipeableAnimatedActionProps {
   onPress: () => void;
   marginRight?: number;
   numberOfLines?: number;
+  disabled?: boolean;
 }
 
 export function SwipeableAnimatedAction({
@@ -39,7 +41,10 @@ export function SwipeableAnimatedAction({
   onPress,
   marginRight,
   numberOfLines = 1,
+  disabled = false,
 }: SwipeableAnimatedActionProps) {
+  const styles = useCreateStyles(createSwipeableAnimatedActionStyles);
+  const colors = useThemedColors();
   const animatedStyle = useAnimatedStyle(() => {
     const stride = 1 / count;
     // Stagger in reveal order: trailing uncovers rightmost first; leading uncovers leftmost first.
@@ -76,11 +81,13 @@ export function SwipeableAnimatedAction({
     >
       <Pressable
         onPress={onPress}
-        style={styles.pressable}
+        disabled={disabled}
+        style={[styles.pressable, disabled && styles.pressableDisabled]}
         accessibilityRole="button"
         accessibilityLabel={label}
+        accessibilityState={{ disabled }}
       >
-        <Ionicons name={icon} size={22} color={Colors.textPrimary} />
+        <Ionicons name={icon} size={22} color={colors.textPrimary} />
         <Text style={styles.label} numberOfLines={numberOfLines}>
           {label}
         </Text>
@@ -89,7 +96,8 @@ export function SwipeableAnimatedAction({
   );
 }
 
-const styles = StyleSheet.create({
+function createSwipeableAnimatedActionStyles(c: ColorPalette) {
+  return StyleSheet.create({
   actionButton: {
     width: SWIPE_ACTION_SIZE,
     alignSelf: 'stretch',
@@ -104,11 +112,15 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 4,
   },
+  pressableDisabled: {
+    opacity: 0.45,
+  },
   label: withAppFont({
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',
     letterSpacing: 0.2,
   }),
-});
+  });
+}

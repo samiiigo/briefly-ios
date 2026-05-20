@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProcessingMode, TranscriptionMode, CloudProvider } from '@/types';
+import type { ThemePreference } from '@/utils/theme/themePreference';
 import { registerLocalLlmDownloadStateSetter } from '@/services/summarization/local/localLlmDownloadState';
 
 /**
@@ -42,8 +43,10 @@ interface SettingsState {
   localLlmDownloadProgress: number | null;
   localLlmDownloadStatus: 'idle' | 'downloading' | 'ready' | 'error';
   localLlmDownloadError?: string;
+  themePreference: ThemePreference;
 
   setSummarizationMode: (mode: ProcessingMode) => void;
+  setThemePreference: (preference: ThemePreference) => void;
   setTranscriptionMode: (mode: TranscriptionMode) => void;
   setCloudProvider: (provider: CloudProvider) => void;
   setCloudApiKey: (key: string) => void;
@@ -76,8 +79,10 @@ export const useSettingsStore = create<SettingsState>()(
       localLlmDownloadProgress: null,
       localLlmDownloadStatus: 'idle',
       localLlmDownloadError: undefined,
+      themePreference: 'dark',
 
       setSummarizationMode: (mode) => set({ summarizationMode: mode }),
+      setThemePreference: (preference) => set({ themePreference: preference }),
       setTranscriptionMode: (mode) => set({ transcriptionMode: mode }),
       setCloudProvider: (provider) => set({ cloudProvider: provider }),
 

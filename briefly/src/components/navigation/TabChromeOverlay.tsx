@@ -7,6 +7,7 @@ import { tabRouteShowsRecordButton } from './tabChromeRoutes';
 import { RecordButton } from '@/components/features/recording/RecordButton';
 import { RecordingService } from '@/services/audio';
 import { ensureRecordingPrerequisites } from '@/services/audio/recordingSession';
+
 function useActiveTabRouteName(): string | undefined {
   const tabBarProps = useTabBarProps();
   if (!tabBarProps) return undefined;

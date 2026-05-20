@@ -2,7 +2,14 @@ import React, { useRef, useEffect, useCallback, useImperativeHandle, forwardRef 
 import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SEARCH_PLACEHOLDER } from '@/constants/search';
-import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
+import {
+  BorderRadius,
+  Spacing,
+  useCreateStyles,
+  useThemedColors,
+  withAppFont,
+} from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 export interface SearchFieldHandle {
   focus: () => void;
@@ -23,6 +30,8 @@ export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchF
   { value, onChangeText, onClear, onSubmit, onBlur, autoFocus = true },
   ref
 ) {
+  const styles = useCreateStyles(createSearchFieldStyles);
+  const colors = useThemedColors();
   const inputRef = useRef<TextInput>(null);
 
   useImperativeHandle(ref, () => ({
@@ -46,21 +55,21 @@ export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchF
 
   return (
     <View style={styles.field}>
-      <Ionicons name="search" size={18} color={Colors.subtext} style={styles.leadingIcon} />
+      <Ionicons name="search" size={18} color={colors.subtext} style={styles.leadingIcon} />
       <TextInput
         ref={inputRef}
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
         placeholder={SEARCH_PLACEHOLDER}
-        placeholderTextColor={Colors.textSecondary}
+        placeholderTextColor={colors.textSecondary}
         returnKeyType="search"
         onSubmitEditing={() => onSubmit?.()}
         onBlur={() => onBlur?.()}
         blurOnSubmit
         autoCorrect={false}
         autoCapitalize="none"
-        selectionColor={Colors.primary}
+        selectionColor={colors.primary}
         accessibilityLabel="Search"
       />
       {showClear ? (
@@ -71,41 +80,43 @@ export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchF
           accessibilityRole="button"
           accessibilityLabel="Clear search text"
         >
-          <Ionicons name="close" size={14} color={Colors.textPrimary} />
+          <Ionicons name="close" size={14} color={colors.textPrimary} />
         </Pressable>
       ) : null}
     </View>
   );
 });
 
-const styles = StyleSheet.create({
-  field: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.cardXL,
-    paddingLeft: Spacing.md,
-    paddingRight: Spacing.sm,
-    minHeight: 44,
-  },
-  leadingIcon: {
-    marginRight: Spacing.sm,
-  },
-  input: withAppFont({
-    flex: 1,
-    fontSize: 17,
-    color: Colors.textPrimary,
-    paddingVertical: 10,
-    paddingRight: Spacing.xs,
-  }),
-  clearButton: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: Colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 2,
-  },
-});
+function createSearchFieldStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    field: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.card,
+      borderRadius: BorderRadius.cardXL,
+      paddingLeft: Spacing.md,
+      paddingRight: Spacing.sm,
+      minHeight: 44,
+    },
+    leadingIcon: {
+      marginRight: Spacing.sm,
+    },
+    input: withAppFont({
+      flex: 1,
+      fontSize: 17,
+      color: c.textPrimary,
+      paddingVertical: 10,
+      paddingRight: Spacing.xs,
+    }),
+    clearButton: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: c.pauseButton,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 2,
+    },
+  });
+}

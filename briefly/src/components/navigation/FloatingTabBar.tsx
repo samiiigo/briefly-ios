@@ -3,7 +3,13 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { Colors, withAppFont } from '@/theme';
+import {
+  useCreateStyles,
+  useResolvedColorScheme,
+  useThemedColors,
+  withAppFont,
+} from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 import { useFloatingTabBarLayout } from './useFloatingTabBarLayout';
 import { TAB_CHROME_MAIN_ROUTES } from './tabChromeRoutes';
 
@@ -19,6 +25,10 @@ const TAB_CONFIG: Record<string, TabConfig> = {
 };
 
 export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+  const styles = useCreateStyles(createFloatingTabBarStyles);
+  const colors = useThemedColors();
+  const resolvedScheme = useResolvedColorScheme();
+  const isLight = resolvedScheme === 'light';
   const { bottomOffset, horizontalInset, androidTabBarHeight, insetsBottom } = useFloatingTabBarLayout();
   const isAndroid = Platform.OS === 'android';
 
@@ -33,9 +43,9 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               bottom: 0,
               height: androidTabBarHeight,
               paddingBottom: insetsBottom,
-              backgroundColor: Colors.card,
+              backgroundColor: colors.card,
               borderTopWidth: StyleSheet.hairlineWidth,
-              borderTopColor: 'rgba(255,255,255,0.05)',
+              borderTopColor: isLight ? colors.border : 'rgba(255,255,255,0.05)',
               justifyContent: 'space-around',
               alignItems: 'center',
             }
@@ -48,11 +58,28 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
       ]}
       pointerEvents={isAndroid ? 'auto' : 'box-none'}
     >
-      <View style={isAndroid ? styles.androidPill : styles.pill}>
+      <View
+        style={[
+          isAndroid ? styles.androidPill : styles.pill,
+          !isAndroid && (isLight ? styles.pillLight : styles.pillDark),
+          !isAndroid && (isLight ? styles.pillShadowLight : styles.pillShadowDark),
+        ]}
+      >
         {!isAndroid && Platform.OS === 'ios' && (
-          <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView
+            intensity={60}
+            tint={isLight ? 'light' : 'dark'}
+            style={StyleSheet.absoluteFill}
+          />
         )}
-        {!isAndroid && <View style={[StyleSheet.absoluteFill, styles.pillOverlay]} />}
+        {!isAndroid && (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              isLight ? styles.pillOverlayLight : styles.pillOverlay,
+            ]}
+          />
+        )}
         {visibleRoutes.map((route) => {
           const routeIndex = state.routes.findIndex((r) => r.key === route.key);
           const isFocused = state.index === routeIndex;
@@ -75,7 +102,9 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               key={route.key}
               style={[
                 isAndroid ? styles.androidTab : styles.tab,
-                isFocused && !isAndroid && styles.tabActive
+                isFocused &&
+                  !isAndroid &&
+                  (isLight ? styles.tabActiveLight : styles.tabActiveDark)
               ]}
               onPress={onPress}
               activeOpacity={0.8}
@@ -86,7 +115,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               <Ionicons
                 name={isFocused ? config.iconFocused : config.icon}
                 size={isAndroid ? 24 : 24}
-                color={isFocused ? (isAndroid ? Colors.primary : Colors.primary) : Colors.subtext}
+                color={isFocused ? colors.primary : colors.subtext}
               />
               <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive, isAndroid && { marginTop: 4, fontSize: 11 }]}>
                 {config.label}
@@ -99,7 +128,37 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+function backgroundRgba(hex: string, alpha: number): string {
+  const raw = hex.replace('#', '');
+  const n =
+    raw.length === 3
+      ? raw
+          .split('')
+          .map((ch) => ch + ch)
+          .join('')
+      : raw;
+  return `rgba(${parseInt(n.slice(0, 2), 16)},${parseInt(n.slice(2, 4), 16)},${parseInt(n.slice(4, 6), 16)},${alpha})`;
+}
+
+function createFloatingTabBarStyles(c: ColorPalette) {
+  return StyleSheet.create({
+  pillOverlayLight: {
+    backgroundColor: backgroundRgba(c.surfaceElevated, 0.82),
+  },
+  pillShadowLight: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  pillShadowDark: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 24,
+    elevation: 12,
+  },
   wrapper: {
     position: 'absolute',
     left: 0,
@@ -117,13 +176,14 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  pillDark: {
     borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(28,28,30,0.92)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    elevation: 12,
+  },
+  pillLight: {
+    borderColor: c.border,
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : c.surfaceElevated,
   },
   androidPill: {
     flex: 1,
@@ -148,16 +208,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 8,
   },
-  tabActive: {
-    backgroundColor: Colors.surfaceElevated,
+  tabActiveDark: {
+    backgroundColor: c.surfaceElevated,
+  },
+  tabActiveLight: {
+    backgroundColor: c.headerButtonMuted,
   },
   tabLabel: withAppFont({
     fontSize: 10,
     fontWeight: '500',
-    color: Colors.subtext,
+    color: c.subtext,
     marginTop: 2,
   }),
   tabLabelActive: {
-    color: Colors.primary,
+    color: c.primary,
   },
-});
+  });
+}
