@@ -3,7 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { useCreateStyles, useThemedColors, withAppFont } from '@/theme';
+import {
+  useCreateStyles,
+  useResolvedColorScheme,
+  useThemedColors,
+  withAppFont,
+} from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 import { useFloatingTabBarLayout } from './useFloatingTabBarLayout';
 import { TAB_CHROME_MAIN_ROUTES } from './tabChromeRoutes';
@@ -22,6 +27,8 @@ const TAB_CONFIG: Record<string, TabConfig> = {
 export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const styles = useCreateStyles(createFloatingTabBarStyles);
   const colors = useThemedColors();
+  const resolvedScheme = useResolvedColorScheme();
+  const isLight = resolvedScheme === 'light';
   const { bottomOffset, horizontalInset, androidTabBarHeight, insetsBottom } = useFloatingTabBarLayout();
   const isAndroid = Platform.OS === 'android';
 
@@ -38,7 +45,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               paddingBottom: insetsBottom,
               backgroundColor: colors.card,
               borderTopWidth: StyleSheet.hairlineWidth,
-              borderTopColor: 'rgba(255,255,255,0.05)',
+              borderTopColor: isLight ? colors.border : 'rgba(255,255,255,0.05)',
               justifyContent: 'space-around',
               alignItems: 'center',
             }
@@ -53,9 +60,21 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     >
       <View style={isAndroid ? styles.androidPill : styles.pill}>
         {!isAndroid && Platform.OS === 'ios' && (
-          <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView
+            intensity={60}
+            tint={isLight ? 'light' : 'dark'}
+            style={StyleSheet.absoluteFill}
+          />
         )}
-        {!isAndroid && <View style={[StyleSheet.absoluteFill, styles.pillOverlay]} />}
+        {!isAndroid && (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              styles.pillOverlay,
+              isLight && styles.pillOverlayLight,
+            ]}
+          />
+        )}
         {visibleRoutes.map((route) => {
           const routeIndex = state.routes.findIndex((r) => r.key === route.key);
           const isFocused = state.index === routeIndex;
@@ -104,6 +123,9 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
 
 function createFloatingTabBarStyles(c: ColorPalette) {
   return StyleSheet.create({
+  pillOverlayLight: {
+    backgroundColor: 'rgba(255,255,255,0.82)',
+  },
   wrapper: {
     position: 'absolute',
     left: 0,
@@ -121,8 +143,8 @@ function createFloatingTabBarStyles(c: ColorPalette) {
     borderRadius: 9999,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(28,28,30,0.92)',
+    borderColor: c.border,
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : c.surfaceElevated,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.45,
@@ -153,7 +175,7 @@ function createFloatingTabBarStyles(c: ColorPalette) {
     paddingVertical: 8,
   },
   tabActive: {
-    backgroundColor: c.surfaceElevated,
+    backgroundColor: c.surface,
   },
   tabLabel: withAppFont({
     fontSize: 10,

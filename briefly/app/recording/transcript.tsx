@@ -1,11 +1,13 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { TranscriptSegment } from '@/types';
 import { useRecordingStore } from '@/context/useRecordingStore';
-import { retranscribeRecordingFromAudio } from '@/services/recording/recordingProcessingService';
-import { cancelRecordingBackgroundProcessing } from '@/services/recording/recordingBackgroundProcessing';
-import { toProcessingFailure } from '@/utils/processing/processingErrors';
+import { useSettingsStore } from '@/context/useSettingsStore';
+import {
+  cancelRecordingBackgroundProcessing,
+  startRecordingBackgroundProcessing,
+} from '@/services/recording/recordingBackgroundProcessing';
+import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
 import { usePlayback } from '@/hooks/usePlayback';
 import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
 import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
@@ -30,63 +32,30 @@ export default function RecordingTranscriptScreen() {
   const recording = useRecordingStore((s) =>
     recordingId ? s.recordings.find((r) => r.id === recordingId) : undefined,
   );
-  const updateRecording = useRecordingStore((s) => s.updateRecording);
-  const [isRerunning, setIsRerunning] = useState(false);
-  const [rerunSegments, setRerunSegments] = useState<TranscriptSegment[] | null>(null);
 
   const playback = usePlayback({
     filePath: recording?.filePath ?? '',
-    transcript: rerunSegments ?? recording?.transcript,
+    transcript: recording?.transcript,
   });
 
   const handleRerunTranscript = useCallback(() => {
-    if (!recording || isRerunning) return;
-    if (recording.status === 'summarizing') {
-      Alert.alert('Processing', 'Summarization is in progress. Wait for it to finish.');
+    if (!recording) return;
+    if (recording.status === 'transcribing' || recording.status === 'summarizing') {
       return;
     }
     if (!recording.filePath?.trim()) {
       Alert.alert('No audio', 'No audio file is available for this recording.');
       return;
     }
+    const mode = useSettingsStore.getState().summarizationMode;
+    if (!alertIfLocalLlmNotReady(mode)) return;
 
-    const run = async () => {
-      const previousStatus = recording.status;
-      setIsRerunning(true);
-      setRerunSegments([]);
-      cancelRecordingBackgroundProcessing(recording.id);
-
-      await updateRecording(recording.id, {
-        transcript: undefined,
-        errorMessage: undefined,
-      });
-
-      try {
-        const segments = await retranscribeRecordingFromAudio(recording.filePath, {
-          durationSec: recording.duration,
-          fileSizeBytes: recording.fileSize,
-        });
-        setRerunSegments(segments);
-        await updateRecording(recording.id, {
-          transcript: segments,
-          errorMessage: undefined,
-          ...(previousStatus === 'error' ? { status: 'ready' as const } : {}),
-        });
-      } catch (err) {
-        const failure = toProcessingFailure(err, 'transcription');
-        setRerunSegments(null);
-        await updateRecording(recording.id, {
-          status: 'error',
-          errorMessage: failure.message,
-        });
-        Alert.alert('Transcription failed', failure.message);
-      } finally {
-        setIsRerunning(false);
-        setRerunSegments(null);
-      }
-    };
-    void run();
-  }, [recording, isRerunning, updateRecording]);
+    cancelRecordingBackgroundProcessing(recording.id);
+    startRecordingBackgroundProcessing(recording.id, {
+      audioFallbackOnly: true,
+      preservePreviousResults: true,
+    });
+  }, [recording]);
 
   if (!recording) {
     return (
@@ -97,10 +66,9 @@ export default function RecordingTranscriptScreen() {
   }
 
   const hasAudio = hasRecordingAudio(recording.filePath, recording.fileSize);
-  const segments = isRerunning
-    ? (rerunSegments ?? [])
-    : (recording?.transcript ?? []);
-  const isTranscribing = isRerunning || recording.status === 'summarizing';
+  const segments = recording.transcript ?? [];
+  const isProcessing =
+    recording.status === 'transcribing' || recording.status === 'summarizing';
 
   return (
     <View style={sl.container}>
@@ -125,15 +93,11 @@ export default function RecordingTranscriptScreen() {
               />
             ))}
           </View>
-        ) : (
+        ) : !isProcessing ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>
-              {isTranscribing
-                ? 'Transcribing with AssemblyAI…'
-                : 'No transcript available.'}
-            </Text>
+            <Text style={styles.emptyText}>No transcript available.</Text>
           </View>
-        )}
+        ) : null}
       </ScrollView>
 
       {hasAudio ? (
@@ -152,9 +116,9 @@ export default function RecordingTranscriptScreen() {
           hasAudio ? (
             <CircularIconButton
               icon="refresh-outline"
-              accessibilityLabel="Re-run transcription"
-              loading={isTranscribing}
-              onPress={isTranscribing ? undefined : handleRerunTranscript}
+              accessibilityLabel="Re-run transcription and summarization"
+              loading={isProcessing}
+              onPress={isProcessing ? undefined : handleRerunTranscript}
             />
           ) : undefined
         }

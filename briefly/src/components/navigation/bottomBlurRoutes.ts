@@ -29,8 +29,6 @@ export function pathnameUsesRootStackBlur(pathname: string): boolean {
   return (
     pathname === '/search' ||
     pathname === '/settings' ||
-    pathname.includes('transcription-mode') ||
-    pathname.includes('processing-mode') ||
-    pathname.includes('folder-layout')
+    pathname.startsWith('/settings/')
   );
 }

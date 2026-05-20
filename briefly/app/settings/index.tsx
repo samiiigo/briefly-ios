@@ -42,7 +42,7 @@ export default function SettingsScreen() {
         <View style={sl.card}>
           <TouchableOpacity
             style={sl.settingsRow}
-            onPress={() => router.push('/transcription-mode')}
+            onPress={() => router.push('/settings/transcription-mode')}
           >
             <Ionicons
               name="mic-outline"
@@ -62,7 +62,7 @@ export default function SettingsScreen() {
         <View style={sl.card}>
           <TouchableOpacity
             style={sl.settingsRow}
-            onPress={() => router.push('/processing-mode')}
+            onPress={() => router.push('/settings/processing-mode')}
           >
             <Ionicons
               name="sparkles-outline"
@@ -128,7 +128,7 @@ export default function SettingsScreen() {
         <View style={sl.card}>
           <TouchableOpacity
             style={sl.settingsRow}
-            onPress={() => router.push('/folder-layout')}
+            onPress={() => router.push('/settings/folder-layout')}
           >
             <Ionicons
               name="grid-outline"
@@ -146,7 +146,7 @@ export default function SettingsScreen() {
         <View style={sl.card}>
           <TouchableOpacity
             style={sl.settingsRow}
-            onPress={() => router.push('/theme')}
+            onPress={() => router.push('/settings/theme')}
           >
             <Text style={sl.settingsRowTitle}>Theme</Text>
             <Text style={sl.settingsRowValue}>{themePreferenceTitle(themePreference)}</Text>

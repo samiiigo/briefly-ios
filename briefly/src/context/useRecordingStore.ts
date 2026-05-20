@@ -24,6 +24,8 @@ interface RecordingStore {
   restoreRecording: (id: string) => Promise<void>;
   /** Permanently removes a recording (e.g. from Recently Deleted). */
   permanentDelete: (id: string) => Promise<void>;
+  /** Permanently removes multiple recordings in one persistence write. */
+  permanentDeleteAll: (ids: string[]) => Promise<void>;
   setActiveRecordingId: (id: string | null) => void;
   setLiveTranscript: (text: string) => void;
   getRecordingById: (id: string) => Recording | undefined;
@@ -197,6 +199,24 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
     set((state) => ({
       recordings: state.recordings.filter((r) => r.id !== id),
     }));
+  },
+
+  permanentDeleteAll: async (ids) => {
+    if (ids.length === 0) return;
+    mutationEpoch += 1;
+    const idSet = new Set(ids);
+    const toRemove = get().recordings.filter((r) => idSet.has(r.id));
+    await Promise.all(
+      toRemove.map((r) =>
+        r.filePath ? AudioFileService.deleteFile(r.filePath) : Promise.resolve()
+      )
+    );
+    logger.info('useRecordingStore', 'Recordings permanently deleted (bulk)', {
+      count: ids.length,
+    });
+    const remaining = get().recordings.filter((r) => !idSet.has(r.id));
+    await recordingRepository.saveAll(remaining);
+    set({ recordings: remaining });
   },
 
   setActiveRecordingId: (id) => set({ activeRecordingId: id }),

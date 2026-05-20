@@ -85,9 +85,15 @@ async function completeJob(
   logger.info('RECORDING', 'Background processing completed', { recordingId });
 }
 
+type BackgroundJobOptions = {
+  audioFallbackOnly: boolean;
+  /** Keep transcript, summary, and insights visible until the job finishes. */
+  preservePreviousResults?: boolean;
+};
+
 async function runJob(
   recordingId: string,
-  options: { audioFallbackOnly: boolean },
+  options: BackgroundJobOptions,
   stageRef: { current: 'transcribing' | 'summarizing' },
 ): Promise<RecordingProcessingResult | undefined> {
   const { getRecordingById, updateRecording } = useRecordingStore.getState();
@@ -124,13 +130,23 @@ async function runJob(
     onTranscriptReady: async (segments: NonNullable<typeof rec.transcript>) => {
       const job = activeJobs.get(recordingId);
       if (!job || job.cancelled) return;
-      await updateRecording(recordingId, {
-        status: 'summarizing',
-        transcript: segments,
-        transcriptionMode: settingsMode,
-        processingMode: pMode,
-        errorMessage: undefined,
-      });
+      await updateRecording(
+        recordingId,
+        options.preservePreviousResults
+          ? {
+              status: 'summarizing',
+              errorMessage: undefined,
+              processingMode: pMode,
+              transcriptionMode: settingsMode,
+            }
+          : {
+              status: 'summarizing',
+              transcript: segments,
+              transcriptionMode: settingsMode,
+              processingMode: pMode,
+              errorMessage: undefined,
+            },
+      );
     },
   };
 
@@ -140,10 +156,14 @@ async function runJob(
       errorMessage: undefined,
       processingMode: pMode,
       transcriptionMode: settingsMode,
-      transcript: undefined,
-      summary: undefined,
-      keyInsights: undefined,
-      mainEmoji: undefined,
+      ...(options.preservePreviousResults
+        ? {}
+        : {
+            transcript: undefined,
+            summary: undefined,
+            keyInsights: undefined,
+            mainEmoji: undefined,
+          }),
     });
     return processRecordingFromSavedAudio(pMode, rec.filePath, callbacks, meta);
   }
@@ -197,7 +217,7 @@ async function abortBlockedOnDeviceProcessing(recordingId: string, message: stri
 
 export function startRecordingBackgroundProcessing(
   recordingId: string,
-  options?: { audioFallbackOnly?: boolean },
+  options?: { audioFallbackOnly?: boolean; preservePreviousResults?: boolean },
 ): void {
   if (activeJobs.has(recordingId)) return;
 
@@ -210,6 +230,7 @@ export function startRecordingBackgroundProcessing(
 
   const stageRef = { current: 'transcribing' as 'transcribing' | 'summarizing' };
   const audioFallbackOnly = options?.audioFallbackOnly ?? false;
+  const preservePreviousResults = options?.preservePreviousResults ?? false;
 
   const timeoutId = setTimeout(() => {
     const job = activeJobs.get(recordingId);
@@ -229,7 +250,11 @@ export function startRecordingBackgroundProcessing(
 
   void (async () => {
     try {
-      const result = await runJob(recordingId, { audioFallbackOnly }, stageRef);
+      const result = await runJob(
+        recordingId,
+        { audioFallbackOnly, preservePreviousResults },
+        stageRef,
+      );
       const job = activeJobs.get(recordingId);
       if (!job?.cancelled && result) {
         await completeJob(recordingId, result);
@@ -295,9 +320,6 @@ export function startRecordingSummarizationRetry(
       await updateRecording(recordingId, {
         status: 'summarizing',
         errorMessage: undefined,
-        summary: undefined,
-        keyInsights: undefined,
-        mainEmoji: undefined,
         processingMode: pMode,
       });
 
