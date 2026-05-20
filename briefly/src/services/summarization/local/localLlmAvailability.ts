@@ -1,7 +1,10 @@
 import { ProcessingMode } from '@/types';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { LocalModelStorageService } from '@/services/storage/localModelStorageService';
-import { supportsLocalLlamaSummarization } from '@/utils/platformCapabilities';
+import {
+  supportsLocalLlamaSummarization,
+  supportsNativeOnDeviceSummarization,
+} from '@/utils/platformCapabilities';
 import { isOnDeviceSummarizationModeFor } from './localLlmMode';
 import {
   isLocalGemmaModelDownloaded,
@@ -67,18 +70,22 @@ export function refreshLocalLlmModelStateFromDisk(): void {
 }
 
 export function evaluateLocalLlmAvailability(): LocalLlmAvailability {
+  refreshLocalLlmModelStateFromDisk();
+
+  if (isLocalGemmaModelDownloaded() && supportsLocalLlamaSummarization()) {
+    return { canSummarize: true };
+  }
+
+  if (supportsNativeOnDeviceSummarization()) {
+    return { canSummarize: true };
+  }
+
   if (!supportsLocalLlamaSummarization()) {
     return {
       canSummarize: false,
       reason: 'unsupported_build',
       userMessage: LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE,
     };
-  }
-
-  refreshLocalLlmModelStateFromDisk();
-
-  if (isLocalGemmaModelDownloaded()) {
-    return { canSummarize: true };
   }
 
   if (isLocalLlmDownloadInProgress()) {

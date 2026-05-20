@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import * as SystemUI from 'expo-system-ui';
 import * as NavigationBar from 'expo-navigation-bar';
+import { isEdgeToEdge } from 'react-native-is-edge-to-edge';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -34,7 +35,10 @@ export default function RootLayout() {
 
     void SystemUI.setBackgroundColorAsync(Colors.background);
     if (Platform.OS === 'android') {
-      void NavigationBar.setBackgroundColorAsync(Colors.background);
+      // Navigation bar color APIs are no-ops (and warn) when edge-to-edge is enabled.
+      if (!isEdgeToEdge()) {
+        void NavigationBar.setBackgroundColorAsync(Colors.background);
+      }
       void NavigationBar.setButtonStyleAsync('light');
     }
 

@@ -13,6 +13,12 @@ export function hasBrieflyTranscriberModule(): boolean {
   return getBrieflyTranscriberModule() != null;
 }
 
+/** Extractive on-device summary via BrieflyTranscriber (iOS and Android dev/production builds). */
+export function supportsNativeOnDeviceSummarization(): boolean {
+  const module = getBrieflyTranscriberModule();
+  return typeof module?.summarize === 'function';
+}
+
 /** iOS on-device Speech live transcription (BrieflyTranscriber Expo module). */
 export function supportsOnDeviceLiveTranscription(): boolean {
   const module = getBrieflyTranscriberModule();

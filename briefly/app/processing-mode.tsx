@@ -30,10 +30,14 @@ import { Colors, withAppFont } from '@/theme';
 import {
   cancelLocalGemmaModelDownload,
   ensureLocalGemmaModelDownloaded,
+  LOCAL_LLM_NATIVE_FALLBACK_HINT,
   LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE,
   refreshLocalLlmModelStateFromDisk,
 } from '@/services/summarization';
-import { supportsLocalLlamaSummarization } from '@/utils/platformCapabilities';
+import {
+  supportsLocalLlamaSummarization,
+  supportsNativeOnDeviceSummarization,
+} from '@/utils/platformCapabilities';
 
 const PROCESSING_MODES: ProcessingMode[] = [
   'cloud-shared-openrouter',
@@ -64,6 +68,8 @@ export default function ProcessingModePickerScreen() {
 
   const isDownloading = localLlmDownloadStatus === 'downloading';
   const canRunLocalLlama = supportsLocalLlamaSummarization();
+  const canUseNativeExtractive = supportsNativeOnDeviceSummarization();
+  const showUnsupportedBuild = !canRunLocalLlama && !canUseNativeExtractive;
 
   const handleDownloadLocalModel = useCallback(async () => {
     if (isDownloading) return;
@@ -146,9 +152,14 @@ export default function ProcessingModePickerScreen() {
 
         {summarizationMode === 'on-device' ? (
           <>
-            {!canRunLocalLlama ? (
+            {showUnsupportedBuild ? (
               <Text style={styles.modelErrorText}>{LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE}</Text>
             ) : null}
+            {canUseNativeExtractive && !localLlmModelReady ? (
+              <Text style={sl.sectionDescription}>{LOCAL_LLM_NATIVE_FALLBACK_HINT}</Text>
+            ) : null}
+            {canRunLocalLlama ? (
+              <>
             <Text style={sl.sectionLabel}>On-device model</Text>
             <Text style={sl.sectionDescription}>
               Gemma 4 E2B (Q4) is stored in your app documents (~3.5 GB). Download once while on Wi‑Fi.
@@ -208,6 +219,8 @@ export default function ProcessingModePickerScreen() {
                 </>
               )}
             </View>
+              </>
+            ) : null}
           </>
         ) : null}
 

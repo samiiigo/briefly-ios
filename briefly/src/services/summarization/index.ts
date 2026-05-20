@@ -72,4 +72,5 @@ export {
   LOCAL_LLM_MODEL_NOT_READY_MESSAGE,
   LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE,
 } from './local/localLlmAvailability';
+export { LOCAL_LLM_NATIVE_FALLBACK_HINT } from './local/localLlmMessages';
 export type { LocalLlmAvailability, LocalLlmBlockReason } from './local/localLlmAvailability';

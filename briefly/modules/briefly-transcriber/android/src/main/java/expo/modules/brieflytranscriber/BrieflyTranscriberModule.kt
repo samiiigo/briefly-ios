@@ -1,6 +1,5 @@
 package expo.modules.brieflytranscriber
 
-import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -18,12 +17,8 @@ class BrieflyTranscriberModule : Module() {
       "onPCMChunk",
     )
 
-    AsyncFunction("summarize") { text: String, promise: Promise ->
-      promise.reject(
-        "NOT_IMPLEMENTED",
-        "On-device summarization is only available on iOS.",
-        null,
-      )
+    AsyncFunction("summarize") { text: String ->
+      BrieflyOnDeviceSummarizer.summarize(text)
     }
   }
 }

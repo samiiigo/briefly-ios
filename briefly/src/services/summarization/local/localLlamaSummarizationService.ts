@@ -58,13 +58,15 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
 }
 
 async function createContext(modelPath: string): Promise<LlamaContext> {
+  // Android emulators/devices often lack OpenCL; 99 "GPU" layers on CPU is very slow.
+  const nGpuLayers = Platform.OS === 'android' ? 0 : LOCAL_GEMMA_N_GPU_LAYERS;
   const params = {
     model: modelPath,
     n_ctx: LOCAL_GEMMA_N_CTX,
-    n_gpu_layers: LOCAL_GEMMA_N_GPU_LAYERS,
+    n_gpu_layers: nGpuLayers,
     use_mlock: false,
     use_mmap: true,
-    n_threads: Math.max(2, (Platform.OS === 'ios' ? 4 : 3)),
+    n_threads: Math.max(2, Platform.OS === 'ios' ? 4 : 6),
   };
 
   logger.info('SUMMARY', 'Initializing llama context', {
@@ -91,7 +93,7 @@ async function runCompletion(
 ): Promise<SummarizationResult> {
   const result = await context.completion({
     messages: buildGemmaSummarizationMessages(transcript),
-    n_predict: 1400,
+    n_predict: Platform.OS === 'android' ? 900 : 1400,
     temperature: 0.25,
     top_p: 0.9,
     stop: LOCAL_GEMMA_STOP_WORDS,

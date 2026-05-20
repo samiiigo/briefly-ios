@@ -5,4 +5,7 @@ export const LOCAL_LLM_MODEL_NOT_READY_MESSAGE =
   'The on-device model is not downloaded yet. Open Settings → Summarization to download Gemma 4 E2B (~3.5 GB), then try again.';
 
 export const LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE =
-  'On-device Gemma summarization requires a development or production build with llama.rn. Expo Go does not include this native module. Rebuild with: npx expo prebuild --clean && npx expo run:ios';
+  'On-device summarization is not available in Expo Go. Create a development build: npx expo prebuild --clean, then npx expo run:ios or npx expo run:android.';
+
+export const LOCAL_LLM_NATIVE_FALLBACK_HINT =
+  'Basic offline summaries work without the Gemma download. Download Gemma 4 E2B below for richer, structured summaries (~3.5 GB).';
