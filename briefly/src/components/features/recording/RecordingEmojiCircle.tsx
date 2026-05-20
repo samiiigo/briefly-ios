@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform, View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Colors, BorderRadius } from '@/theme';
+import { BorderRadius, useCreateStyles } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 type Size = 'md' | 'lg';
 
@@ -17,6 +18,7 @@ interface Props {
 
 /** Circular emoji badge (Figma: Background+Border, 56×56). */
 export function RecordingEmojiCircle({ emoji, size = 'lg', style }: Props) {
+  const styles = useCreateStyles(createRecordingEmojiCircleStyles);
   const { dim, fontSize } = SIZE_CONFIG[size];
 
   return (
@@ -44,24 +46,26 @@ export function RecordingEmojiCircle({ emoji, size = 'lg', style }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  circle: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.emojiCircleBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emoji: {
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    ...Platform.select({
-      ios: { fontFamily: 'Apple Color Emoji' },
-      android: {
-        includeFontPadding: false,
-        textAlignVertical: 'center',
-      },
-      default: {},
-    }),
-  },
-});
+function createRecordingEmojiCircleStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    circle: {
+      backgroundColor: c.emojiCircleBackground,
+      borderWidth: 1,
+      borderColor: c.emojiCircleBorder,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emoji: {
+      color: c.textPrimary,
+      textAlign: 'center',
+      ...Platform.select({
+        ios: { fontFamily: 'Apple Color Emoji' },
+        android: {
+          includeFontPadding: false,
+          textAlignVertical: 'center',
+        },
+        default: {},
+      }),
+    },
+  });
+}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, withAppFont } from '@/theme';
+import { useCreateStyles, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 import { SummaryMarkdownContent } from './SummaryMarkdownContent';
 import { prepareSummaryMarkdownBlocks } from '@/utils/summary/parseSummaryMarkdown';
 
@@ -11,6 +12,7 @@ interface Props {
 
 /** Renders the AI summary as formatted Markdown (headings, bullets, bold). */
 export function SummaryMarkdownSection({ markdown, hasKeyInsights = false }: Props) {
+  const styles = useCreateStyles(createSummaryMarkdownSectionStyles);
   const trimmed = markdown.trim();
   const blocks = prepareSummaryMarkdownBlocks(trimmed, { hasKeyInsights });
   if (!trimmed || blocks.length === 0) return null;
@@ -23,16 +25,18 @@ export function SummaryMarkdownSection({ markdown, hasKeyInsights = false }: Pro
   );
 }
 
-const styles = StyleSheet.create({
-  section: {
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  heading: withAppFont({
-    fontSize: 22,
-    fontWeight: '700',
-    lineHeight: 30,
-    color: Colors.textPrimary,
-    marginBottom: 16,
-  }),
-});
+function createSummaryMarkdownSectionStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    section: {
+      marginTop: 8,
+      marginBottom: 24,
+    },
+    heading: withAppFont({
+      fontSize: 22,
+      fontWeight: '700',
+      lineHeight: 30,
+      color: c.textPrimary,
+      marginBottom: 16,
+    }),
+  });
+}

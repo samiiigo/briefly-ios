@@ -5,7 +5,8 @@ import { Recording } from '@/types';
 import { formatRecentsCardDate } from '@/utils';
 import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
 import { HighlightedText } from './HighlightedText';
-import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
+import { useCreateStyles, useThemedColors, BorderRadius, Spacing, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface Props {
   recording: Recording;
@@ -14,6 +15,9 @@ interface Props {
 }
 
 function SearchResultItemComponent({ recording, query, onPress }: Props) {
+  const styles = useCreateStyles(createSearchResultItemStyles);
+  const colors = useThemedColors();
+
   return (
     <TouchableOpacity
       style={styles.card}
@@ -35,43 +39,45 @@ function SearchResultItemComponent({ recording, query, onPress }: Props) {
           </Text>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={Colors.subtext} />
+      <Ionicons name="chevron-forward" size={16} color={colors.subtext} />
     </TouchableOpacity>
   );
 }
 
 export const SearchResultItem = memo(SearchResultItemComponent);
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.cardXL,
-    padding: Spacing.md,
-  },
-  leading: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    minWidth: 0,
-    marginRight: Spacing.sm,
-  },
-  textBlock: {
-    flex: 1,
-    minWidth: 0,
-  },
-  title: withAppFont({
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    lineHeight: 22,
-    marginBottom: 4,
-  }),
-  subtitle: withAppFont({
-    fontSize: 14,
-    color: Colors.subtext,
-  }),
-});
+function createSearchResultItemStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: c.card,
+      borderRadius: BorderRadius.cardXL,
+      padding: Spacing.md,
+    },
+    leading: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
+      minWidth: 0,
+      marginRight: Spacing.sm,
+    },
+    textBlock: {
+      flex: 1,
+      minWidth: 0,
+    },
+    title: withAppFont({
+      fontSize: 18,
+      fontWeight: '600',
+      color: c.textPrimary,
+      lineHeight: 22,
+      marginBottom: 4,
+    }),
+    subtitle: withAppFont({
+      fontSize: 14,
+      color: c.subtext,
+    }),
+  });
+}

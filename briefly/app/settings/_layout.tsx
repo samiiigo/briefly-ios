@@ -1,14 +1,16 @@
-import { View, Platform, StyleSheet } from 'react-native';
+import { View, Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import { Colors } from '@/theme';
+import { useThemedStackShell } from '@/components/navigation/themedStackLayout';
 
 export default function SettingsLayout() {
+  const shell = useThemedStackShell();
+
   return (
-    <View style={styles.root}>
+    <View style={shell.root}>
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: Colors.background },
+          contentStyle: shell.contentStyle,
           animation: 'slide_from_right',
           ...Platform.select({
             ios: {
@@ -25,10 +27,3 @@ export default function SettingsLayout() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-});

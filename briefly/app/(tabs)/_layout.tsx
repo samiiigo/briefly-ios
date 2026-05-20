@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
@@ -9,17 +10,21 @@ import type { ColorPalette } from '@/theme/colorPalettes';
 export default function TabsLayout() {
   const styles = useCreateStyles(createTabsLayoutStyles);
   const colors = useThemedColors();
+  const screenOptions = useMemo(
+    () => ({
+      headerShown: false,
+      tabBarStyle: { display: 'none' as const },
+      sceneStyle: { backgroundColor: colors.background },
+      animation: 'fade' as const,
+    }),
+    [colors.background],
+  );
 
   return (
     <View style={styles.root}>
       <Tabs
         tabBar={(props) => <TabBarPropsReporter {...props} />}
-        screenOptions={{
-          headerShown: false,
-          tabBarStyle: { display: 'none' },
-          sceneStyle: { backgroundColor: colors.background },
-          animation: 'fade',
-        }}
+        screenOptions={screenOptions}
       >
         <Tabs.Screen name="index" options={{ title: 'Recents' }} />
         <Tabs.Screen name="history" options={{ title: 'Library' }} />

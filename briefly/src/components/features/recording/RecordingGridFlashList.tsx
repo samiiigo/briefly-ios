@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
+import { useResolvedColorScheme } from '@/theme';
 import { Recording } from '@/types';
 
 interface RecordingGridFlashListProps {
@@ -20,6 +21,7 @@ export function RecordingGridFlashList({
   onMomentumScrollBegin,
   drawDistance = 400,
 }: RecordingGridFlashListProps) {
+  const themeExtra = useResolvedColorScheme();
   const renderRow: ListRenderItem<Recording> = useCallback(
     ({ item }) => <View style={styles.gridCell}>{renderItem(item)}</View>,
     [renderItem],
@@ -29,6 +31,7 @@ export function RecordingGridFlashList({
     <FlashList
       style={styles.list}
       data={data}
+      extraData={themeExtra}
       numColumns={2}
       renderItem={renderRow}
       keyExtractor={(item) => item.id}

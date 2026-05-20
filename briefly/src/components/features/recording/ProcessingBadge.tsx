@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProcessingMode } from '@/types';
-import { Colors, BorderRadius } from '@/theme';
+import { useCreateStyles, useThemedColors, BorderRadius } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface Props {
   mode: ProcessingMode;
@@ -15,6 +16,8 @@ interface Props {
 }
 
 export function ProcessingBadge({ mode, size = 'md', showLabel = true }: Props) {
+  const styles = useCreateStyles(createProcessingBadgeStyles);
+  const colors = useThemedColors();
   const isCloud = mode !== 'on-device';
   const isSmall = size === 'sm';
 
@@ -23,7 +26,7 @@ export function ProcessingBadge({ mode, size = 'md', showLabel = true }: Props) 
       <Ionicons
         name={isCloud ? 'cloud' : 'shield-checkmark'}
         size={isSmall ? 10 : 12}
-        color={isCloud ? Colors.primary : Colors.onDeviceText}
+        color={isCloud ? colors.primary : colors.onDeviceText}
         style={[styles.icon, !showLabel && styles.iconOnly]}
       />
       {showLabel && (
@@ -41,38 +44,40 @@ export function ProcessingBadge({ mode, size = 'md', showLabel = true }: Props) 
   );
 }
 
-const styles = StyleSheet.create({
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
-  },
-  cloudBadge: {
-    backgroundColor: Colors.cloudBadge,
-  },
-  onDeviceBadge: {
-    backgroundColor: Colors.onDeviceBadge,
-  },
-  icon: {
-    marginRight: 4,
-  },
-  iconOnly: {
-    marginRight: 0,
-  },
-  text: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  textSmall: {
-    fontSize: 10,
-  },
-  cloudText: {
-    color: Colors.primary,
-  },
-  onDeviceText: {
-    color: Colors.onDeviceText,
-  },
-});
+function createProcessingBadgeStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: BorderRadius.full,
+    },
+    cloudBadge: {
+      backgroundColor: c.cloudBadge,
+    },
+    onDeviceBadge: {
+      backgroundColor: c.onDeviceBadge,
+    },
+    icon: {
+      marginRight: 4,
+    },
+    iconOnly: {
+      marginRight: 0,
+    },
+    text: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+    },
+    textSmall: {
+      fontSize: 10,
+    },
+    cloudText: {
+      color: c.primary,
+    },
+    onDeviceText: {
+      color: c.onDeviceText,
+    },
+  });
+}

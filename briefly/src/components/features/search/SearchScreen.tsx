@@ -25,7 +25,13 @@ import {
   SEARCH_LIST_HORIZONTAL_PADDING,
   getSearchScrollPaddingTop,
 } from './searchLayout';
-import { useCreateStyles, useThemedColors, Spacing, withAppFont } from '@/theme';
+import {
+  useCreateStyles,
+  useResolvedColorScheme,
+  useThemedColors,
+  Spacing,
+  withAppFont,
+} from '@/theme';
 
 const FOLDER_CARD_WIDTH_RATIO = 0.42;
 
@@ -43,6 +49,7 @@ function formatRecordingResultCount(count: number): string {
 
 export function SearchScreen() {
   const colors = useThemedColors();
+  const themeExtra = useResolvedColorScheme();
   const sectionHeaderStyle = useMemo(
     () =>
       withAppFont({
@@ -234,6 +241,7 @@ export function SearchScreen() {
               ref={listRef}
               style={styles.list}
               data={results.recordings}
+              extraData={themeExtra}
               renderItem={renderRecording}
               keyExtractor={keyExtractor}
               ItemSeparatorComponent={renderResultSeparator}

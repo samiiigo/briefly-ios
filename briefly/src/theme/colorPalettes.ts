@@ -27,7 +27,10 @@ export type ColorPalette = {
   insightAccent: string;
   summaryMuted: string;
   summaryBody: string;
+  emojiCircleBackground: string;
   emojiCircleBorder: string;
+  folderUserIcon: string;
+  folderUserIconBackground: string;
   headerButtonMuted: string;
 };
 
@@ -60,7 +63,10 @@ export const darkColors: ColorPalette = {
   insightAccent: '#0D99FF',
   summaryMuted: '#9CA3AF',
   summaryBody: '#E3E3E3',
+  emojiCircleBackground: '#2C2C2E',
   emojiCircleBorder: '#374151',
+  folderUserIcon: 'rgba(255,255,255,0.55)',
+  folderUserIconBackground: 'rgba(255,255,255,0.08)',
   headerButtonMuted: '#2B2D2D',
 };
 
@@ -94,6 +100,9 @@ export const lightColors: ColorPalette = {
   insightAccent: '#007AFF',
   summaryMuted: '#8E8E93',
   summaryBody: '#3C3C43',
+  emojiCircleBackground: '#F2F2F7',
   emojiCircleBorder: '#C6C6C8',
+  folderUserIcon: '#8E8E93',
+  folderUserIconBackground: '#F2F2F7',
   headerButtonMuted: '#E5E5EA',
 };

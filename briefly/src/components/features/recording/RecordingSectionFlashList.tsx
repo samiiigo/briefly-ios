@@ -8,6 +8,7 @@ import {
   type TextStyle,
 } from 'react-native';
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
+import { useResolvedColorScheme } from '@/theme';
 import { Recording } from '@/types';
 import {
   flattenRecordingSections,
@@ -54,6 +55,7 @@ export function RecordingSectionFlashList({
   onMomentumScrollBegin,
   drawDistance = 400,
 }: RecordingSectionFlashListProps) {
+  const themeExtra = useResolvedColorScheme();
   const data = useMemo(() => flattenRecordingSections(sections), [sections]);
 
   const renderItem: ListRenderItem<FlatRecordingListItem> = useCallback(
@@ -77,6 +79,7 @@ export function RecordingSectionFlashList({
     <FlashList
       style={styles.list}
       data={data}
+      extraData={themeExtra}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       getItemType={getItemType}

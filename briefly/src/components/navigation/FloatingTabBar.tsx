@@ -58,7 +58,13 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
       ]}
       pointerEvents={isAndroid ? 'auto' : 'box-none'}
     >
-      <View style={isAndroid ? styles.androidPill : styles.pill}>
+      <View
+        style={[
+          isAndroid ? styles.androidPill : styles.pill,
+          !isAndroid && (isLight ? styles.pillLight : styles.pillDark),
+          !isAndroid && (isLight ? styles.pillShadowLight : styles.pillShadowDark),
+        ]}
+      >
         {!isAndroid && Platform.OS === 'ios' && (
           <BlurView
             intensity={60}
@@ -70,8 +76,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
           <View
             style={[
               StyleSheet.absoluteFill,
-              styles.pillOverlay,
-              isLight && styles.pillOverlayLight,
+              isLight ? styles.pillOverlayLight : styles.pillOverlay,
             ]}
           />
         )}
@@ -97,7 +102,9 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               key={route.key}
               style={[
                 isAndroid ? styles.androidTab : styles.tab,
-                isFocused && !isAndroid && styles.tabActive
+                isFocused &&
+                  !isAndroid &&
+                  (isLight ? styles.tabActiveLight : styles.tabActiveDark)
               ]}
               onPress={onPress}
               activeOpacity={0.8}
@@ -121,10 +128,36 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
+function backgroundRgba(hex: string, alpha: number): string {
+  const raw = hex.replace('#', '');
+  const n =
+    raw.length === 3
+      ? raw
+          .split('')
+          .map((ch) => ch + ch)
+          .join('')
+      : raw;
+  return `rgba(${parseInt(n.slice(0, 2), 16)},${parseInt(n.slice(2, 4), 16)},${parseInt(n.slice(4, 6), 16)},${alpha})`;
+}
+
 function createFloatingTabBarStyles(c: ColorPalette) {
   return StyleSheet.create({
   pillOverlayLight: {
-    backgroundColor: 'rgba(255,255,255,0.82)',
+    backgroundColor: backgroundRgba(c.surfaceElevated, 0.82),
+  },
+  pillShadowLight: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  pillShadowDark: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 24,
+    elevation: 12,
   },
   wrapper: {
     position: 'absolute',
@@ -143,13 +176,14 @@ function createFloatingTabBarStyles(c: ColorPalette) {
     borderRadius: 9999,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  pillDark: {
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(28,28,30,0.92)',
+  },
+  pillLight: {
     borderColor: c.border,
     backgroundColor: Platform.OS === 'ios' ? 'transparent' : c.surfaceElevated,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    elevation: 12,
   },
   androidPill: {
     flex: 1,
@@ -174,8 +208,11 @@ function createFloatingTabBarStyles(c: ColorPalette) {
     justifyContent: 'center',
     paddingVertical: 8,
   },
-  tabActive: {
-    backgroundColor: c.surface,
+  tabActiveDark: {
+    backgroundColor: c.surfaceElevated,
+  },
+  tabActiveLight: {
+    backgroundColor: c.headerButtonMuted,
   },
   tabLabel: withAppFont({
     fontSize: 10,

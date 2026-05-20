@@ -5,13 +5,15 @@ import { getRecordingContentEmoji } from '@/utils/recording/recordingContentEmoj
 import { formatDate, formatDuration } from '@/utils';
 import { RecordingEmojiCircle } from '@/components/features/recording/RecordingEmojiCircle';
 import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
-import { Colors } from '@/theme';
+import { useCreateStyles, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface Props {
   recording: Recording;
 }
 
 export function RecordingTitleHero({ recording }: Props) {
+  const styles = useCreateStyles(createRecordingTitleHeroStyles);
   const emoji = getRecordingContentEmoji(recording);
   const meta = `${formatDate(recording.createdAt)} · ${formatDuration(recording.duration)}`;
 
@@ -26,27 +28,29 @@ export function RecordingTitleHero({ recording }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  textBlock: {
-    flex: 1,
-    marginLeft: 16,
-    gap: 3,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    lineHeight: 28,
-    color: Colors.textPrimary,
-  },
-  meta: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: Colors.summaryMuted,
-  },
-});
+function createRecordingTitleHeroStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    wrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingTop: 8,
+      paddingBottom: 16,
+    },
+    textBlock: {
+      flex: 1,
+      marginLeft: 16,
+      gap: 3,
+    },
+    title: withAppFont({
+      fontSize: 22,
+      fontWeight: '700',
+      lineHeight: 28,
+      color: c.textPrimary,
+    }),
+    meta: withAppFont({
+      fontSize: 13,
+      lineHeight: 20,
+      color: c.summaryMuted,
+    }),
+  });
+}

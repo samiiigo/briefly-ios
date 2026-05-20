@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { RecordingService } from '@/services/audio';
-import { Colors } from '@/theme';
+import { useCreateStyles } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 const SAMPLE_MS = 80;
 const MIN_SCALE = 0.05;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function WaveformVisualizer({ isActive, barCount = 20, getMetering }: Props) {
+  const styles = useCreateStyles(createWaveformVisualizerStyles);
   const animations = useRef<Animated.Value[]>(
     Array.from({ length: barCount }, () => new Animated.Value(MIN_SCALE)),
   ).current;
@@ -88,17 +90,19 @@ export function WaveformVisualizer({ isActive, barCount = 20, getMetering }: Pro
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 80,
-    gap: 3,
-  },
-  bar: {
-    width: 3,
-    height: 60,
-    borderRadius: 2,
-    backgroundColor: Colors.waveform,
-  },
-});
+function createWaveformVisualizerStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      height: 80,
+      gap: 3,
+    },
+    bar: {
+      width: 3,
+      height: 60,
+      borderRadius: 2,
+      backgroundColor: c.waveform,
+    },
+  });
+}

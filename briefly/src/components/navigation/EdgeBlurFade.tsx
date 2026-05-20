@@ -44,45 +44,43 @@ const DARK_TOP_FADE_ANDROID: GradientStops = {
   locations: [0, 0.32, 0.62, 1],
 };
 
-function lightFadeMask(background: string): GradientStops {
-  return {
-    colors: ['transparent', 'rgba(255,255,255,0.35)', 'rgba(255,255,255,0.82)', background],
-    locations: [0, 0.35, 0.72, 1],
-  };
+/** White alpha mask — RGB must not be gray or the iOS mask reads as a dark band. */
+const LIGHT_FADE_MASK: GradientStops = {
+  colors: ['transparent', 'rgba(255,255,255,0.35)', 'rgba(255,255,255,0.85)', '#FFFFFF'],
+  locations: DARK_FADE_MASK.locations,
+};
+
+const LIGHT_TOP_FADE_MASK: GradientStops = {
+  colors: ['transparent', 'rgba(255,255,255,0.5)', 'rgba(255,255,255,0.9)', '#FFFFFF'],
+  locations: DARK_TOP_FADE_MASK.locations,
+};
+
+function parseHexRgb(hex: string): [number, number, number] {
+  const raw = hex.replace('#', '');
+  const expanded =
+    raw.length === 3
+      ? raw
+          .split('')
+          .map((ch) => ch + ch)
+          .join('')
+      : raw;
+  return [
+    parseInt(expanded.slice(0, 2), 16),
+    parseInt(expanded.slice(2, 4), 16),
+    parseInt(expanded.slice(4, 6), 16),
+  ];
 }
 
-function lightFadeTint(): GradientStops {
-  return {
-    colors: ['transparent', 'rgba(255,255,255,0.45)', 'rgba(255,255,255,0.75)'],
-    locations: [0, 0.55, 1],
-  };
+function withBackgroundAlpha(hex: string, alpha: number): string {
+  const [r, g, b] = parseHexRgb(hex);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
-function lightFadeAndroid(background: string): GradientStops {
+/** Solid grouped background at the screen edge → transparent over the list. */
+function lightEdgeFade(background: string): GradientStops {
   return {
-    colors: ['transparent', 'rgba(255,255,255,0.55)', 'rgba(255,255,255,0.9)', background],
-    locations: [0, 0.35, 0.72, 1],
-  };
-}
-
-function lightTopFadeMask(background: string): GradientStops {
-  return {
-    colors: ['transparent', 'rgba(255,255,255,0.5)', 'rgba(255,255,255,0.9)', background],
-    locations: [0, 0.32, 0.62, 1],
-  };
-}
-
-function lightTopFadeTint(): GradientStops {
-  return {
-    colors: ['transparent', 'rgba(255,255,255,0.55)', 'rgba(255,255,255,0.82)'],
-    locations: [0, 0.45, 1],
-  };
-}
-
-function lightTopFadeAndroid(background: string): GradientStops {
-  return {
-    colors: ['transparent', 'rgba(255,255,255,0.62)', 'rgba(255,255,255,0.92)', background],
-    locations: [0, 0.32, 0.62, 1],
+    colors: [withBackgroundAlpha(background, 0), background],
+    locations: [0, 1],
   };
 }
 
@@ -103,37 +101,25 @@ export function EdgeBlurFade({ edge, height, style }: EdgeBlurFadeProps) {
     () =>
       isLight
         ? flipForTop
-          ? lightTopFadeMask(colors.background)
-          : lightFadeMask(colors.background)
+          ? LIGHT_TOP_FADE_MASK
+          : LIGHT_FADE_MASK
         : flipForTop
           ? DARK_TOP_FADE_MASK
           : DARK_FADE_MASK,
-    [colors.background, flipForTop, isLight],
+    [flipForTop, isLight],
   );
   const fadeTint = useMemo(
-    () =>
-      isLight
-        ? flipForTop
-          ? lightTopFadeTint()
-          : lightFadeTint()
-        : flipForTop
-          ? DARK_TOP_FADE_TINT
-          : DARK_FADE_TINT,
-    [flipForTop, isLight],
+    () => (flipForTop ? DARK_TOP_FADE_TINT : DARK_FADE_TINT),
+    [flipForTop],
   );
   const fadeAndroid = useMemo(
     () =>
-      isLight
-        ? flipForTop
-          ? lightTopFadeAndroid(colors.background)
-          : lightFadeAndroid(colors.background)
-        : flipForTop
-          ? DARK_TOP_FADE_ANDROID
-          : DARK_FADE_ANDROID,
-    [colors.background, flipForTop, isLight],
+      flipForTop ? DARK_TOP_FADE_ANDROID : DARK_FADE_ANDROID,
+    [flipForTop],
   );
+  const lightFade = useMemo(() => lightEdgeFade(colors.background), [colors.background]);
   const blurIntensity = flipForTop ? 100 : 90;
-  const blurTint = isLight ? 'light' : 'dark';
+  const useIosBlur = Platform.OS === 'ios';
 
   return (
     <View
@@ -143,17 +129,38 @@ export function EdgeBlurFade({ edge, height, style }: EdgeBlurFadeProps) {
       importantForAccessibility="no-hide-descendants"
     >
       <View style={[styles.fadeLayers, flipForTop && styles.flipVertical]}>
-        {Platform.OS === 'ios' ? (
-          <MaskedView
-            style={StyleSheet.absoluteFill}
-            maskElement={<LinearGradient {...fadeMask} style={StyleSheet.absoluteFill} />}
-          >
-            <BlurView intensity={blurIntensity} tint={blurTint} style={StyleSheet.absoluteFill} />
-          </MaskedView>
+        {useIosBlur ? (
+          isLight ? (
+            <>
+              <MaskedView
+                style={StyleSheet.absoluteFill}
+                maskElement={<LinearGradient {...fadeMask} style={StyleSheet.absoluteFill} />}
+              >
+                <BlurView
+                  intensity={blurIntensity}
+                  tint="light"
+                  style={StyleSheet.absoluteFill}
+                />
+              </MaskedView>
+              <LinearGradient {...lightFade} style={StyleSheet.absoluteFill} pointerEvents="none" />
+            </>
+          ) : (
+            <>
+              <MaskedView
+                style={StyleSheet.absoluteFill}
+                maskElement={<LinearGradient {...fadeMask} style={StyleSheet.absoluteFill} />}
+              >
+                <BlurView intensity={blurIntensity} tint="dark" style={StyleSheet.absoluteFill} />
+              </MaskedView>
+              <LinearGradient {...fadeTint} style={StyleSheet.absoluteFill} pointerEvents="none" />
+            </>
+          )
         ) : (
-          <LinearGradient {...fadeAndroid} style={StyleSheet.absoluteFill} />
+          <LinearGradient
+            {...(isLight ? lightFade : fadeAndroid)}
+            style={StyleSheet.absoluteFill}
+          />
         )}
-        <LinearGradient {...fadeTint} style={StyleSheet.absoluteFill} pointerEvents="none" />
       </View>
     </View>
   );

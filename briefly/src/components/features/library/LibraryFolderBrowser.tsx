@@ -25,6 +25,11 @@ import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { computeLibraryFolderCounts } from '@/utils/folders/folderCounts';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
 import { showUserFolderActions } from '@/utils/folders/userFolderActions';
+import {
+  folderIconBadgeBackground,
+  folderIconColor,
+  folderListIconBackground,
+} from '@/utils/folders/folderIconTheme';
 import { useCreateStyles, useThemedColors, Spacing, BorderRadius, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 import {
@@ -182,12 +187,12 @@ export function LibraryFolderBrowser({
       name: f.name,
       folderType: 'user' as const,
       icon: 'folder',
-      accent: 'rgba(255,255,255,0.55)',
+      accent: colors.folderUserIcon,
       count: countForUserFolder(f.id),
       pinned: !!f.pinned,
     }));
     return { builtInTiles: builtIn, utilityTiles: utility, userTiles: user };
-  }, [folders, mapBuiltInTile, countForUserFolder]);
+  }, [colors.folderUserIcon, folders, mapBuiltInTile, countForUserFolder]);
 
   const appendUtilitySection = useCallback(
     (s: Section[]) => {
@@ -413,12 +418,17 @@ export function LibraryFolderBrowser({
                 {
                   backgroundColor: folderIconBadgeBackground(
                     f.accent,
-                    f.folderType === 'user'
+                    f.folderType === 'user',
+                    colors,
                   ),
                 },
               ]}
             >
-              <Ionicons name={f.icon as any} size={22} color={f.accent} />
+              <Ionicons
+                name={f.icon as any}
+                size={22}
+                color={folderIconColor(f.folderType, f.accent, colors)}
+              />
             </View>
           </View>
           <Text style={styles.gridFolderName} numberOfLines={2}>
@@ -455,7 +465,7 @@ export function LibraryFolderBrowser({
         </TouchableOpacity>
       );
     },
-    [openFolder, handleToggleUserFolderPin, handleUserFolderLongPress]
+    [colors, openFolder, handleToggleUserFolderPin, handleUserFolderLongPress]
   );
 
   const renderPinnedFolderCard = useCallback(
@@ -485,14 +495,15 @@ export function LibraryFolderBrowser({
               style={[
                 styles.folderIconBadge,
                 {
-                  backgroundColor: folderIconBadgeBackground(
-                    f.accent,
-                    true
-                  ),
+                  backgroundColor: folderIconBadgeBackground(f.accent, true, colors),
                 },
               ]}
             >
-              <Ionicons name={f.icon as any} size={22} color={f.accent} />
+              <Ionicons
+                name={f.icon as any}
+                size={22}
+                color={folderIconColor(f.folderType, f.accent, colors)}
+              />
             </View>
           </View>
           <Text style={styles.gridFolderName} numberOfLines={2}>
@@ -501,7 +512,7 @@ export function LibraryFolderBrowser({
         </Pressable>
       </View>
     ),
-    [folderGridCardWidth, openFolder, handleUserFolderLongPress]
+    [colors, folderGridCardWidth, openFolder, handleUserFolderLongPress]
   );
 
   const renderPinnedRow = useCallback(
@@ -519,11 +530,11 @@ export function LibraryFolderBrowser({
     [renderPinnedFolderCard]
   );
 
-  const listIconBackground = useCallback((f: FolderTile) => {
-    if (f.folderType === 'user') return 'rgba(255,255,255,0.1)';
-    if (f.accent.startsWith('rgba')) return 'rgba(255,255,255,0.12)';
-    return `${f.accent}33`;
-  }, []);
+  const listIconBackground = useCallback(
+    (f: FolderTile) =>
+      folderListIconBackground(f.accent, f.folderType === 'user', colors),
+    [colors],
+  );
 
   const renderUtilityRow = useCallback(
     (f: FolderTile) => (
@@ -561,7 +572,7 @@ export function LibraryFolderBrowser({
             <Ionicons
               name={f.icon as any}
               size={22}
-              color={f.folderType === 'user' ? 'rgba(255,255,255,0.7)' : f.accent}
+              color={folderIconColor(f.folderType, f.accent, colors)}
             />
           </View>
           <View style={styles.folderInfo}>
@@ -608,7 +619,7 @@ export function LibraryFolderBrowser({
         </TouchableOpacity>
       );
     },
-    [openFolder, listIconBackground, handleToggleUserFolderPin, handleUserFolderLongPress, colors.subtext]
+    [colors, openFolder, listIconBackground, handleToggleUserFolderPin, handleUserFolderLongPress]
   );
 
   const listKeyExtractor = useCallback((item: FolderTile) => item.id, []);
@@ -801,18 +812,6 @@ export function LibraryFolderBrowser({
       />
     </View>
   );
-}
-
-function folderIconBadgeBackground(accent: string, isUser: boolean): string {
-  if (accent.startsWith('rgba')) {
-    return 'rgba(255,255,255,0.08)';
-  }
-  const h = accent.replace('#', '');
-  if (h.length !== 6) return 'rgba(255,255,255,0.08)';
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${isUser ? 0.1 : 0.14})`;
 }
 
 function createLibraryFolderBrowserStyles(c: ColorPalette) {

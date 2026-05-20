@@ -2,6 +2,7 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   type ReactNode,
 } from 'react';
@@ -41,9 +42,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [colors, resolvedScheme, preference],
   );
 
-  useEffect(() => {
+  // Keep legacy `Colors` in sync before children render (useEffect ran one frame late).
+  applyColorPalette(resolvedScheme);
+
+  useLayoutEffect(() => {
     Appearance.setColorScheme(preference === 'system' ? null : preference);
-    applyColorPalette(resolvedScheme);
+  }, [preference]);
+
+  useEffect(() => {
     void SystemUI.setBackgroundColorAsync(colors.background);
     if (Platform.OS === 'android' && !isEdgeToEdge()) {
       void NavigationBar.setBackgroundColorAsync(colors.background);
@@ -51,7 +57,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         resolvedScheme === 'light' ? 'dark' : 'light',
       );
     }
-  }, [preference, resolvedScheme, colors.background]);
+  }, [resolvedScheme, colors.background]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

@@ -40,9 +40,18 @@ import {
   startRecordingBackgroundProcessing,
   startRecordingSummarizationRetry,
 } from '@/services/recording/recordingBackgroundProcessing';
-import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import {
+  Spacing,
+  BorderRadius,
+  useCreateStyles,
+  useThemedColors,
+  withAppFont,
+} from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 export default function TranscriptScreen() {
+  const st = useCreateStyles(createRecordingDetailStyles);
+  const colors = useThemedColors();
   const sl = useScreenLayoutStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
   const { paddingBottom: playbackBottom } = usePlaybackBarLayout();
@@ -156,7 +165,7 @@ export default function TranscriptScreen() {
     return (
       <View style={sl.container}>
         <View style={[st.deletedOverlay, { paddingTop: scrollPaddingTop }]}>
-          <Ionicons name="trash-outline" size={48} color={Colors.subtext} style={{ marginBottom: 16 }} />
+          <Ionicons name="trash-outline" size={48} color={colors.subtext} style={{ marginBottom: 16 }} />
           <Text style={st.deletedOverlayTitle}>
             Recording in {builtInFolderName('recently-deleted')}
           </Text>
@@ -167,7 +176,7 @@ export default function TranscriptScreen() {
             style={st.restoreButton}
             onPress={() => restoreRecording(recording.id).then(() => router.back())}
           >
-            <Ionicons name="arrow-undo" size={20} color={Colors.textPrimary} />
+            <Ionicons name="arrow-undo" size={20} color={colors.textPrimary} />
             <Text style={st.restoreButtonText}>Restore recording</Text>
           </TouchableOpacity>
         </View>
@@ -225,7 +234,7 @@ export default function TranscriptScreen() {
         {showProcessingBanner ? (
           <View style={st.processingBanner}>
             <View style={st.errorBannerTop}>
-              <Ionicons name="sparkles" size={16} color={Colors.primary} />
+              <Ionicons name="sparkles" size={16} color={colors.primary} />
               <Text style={st.processingBannerTitle}>
                 {recording.status === 'saved' && hasTranscript
                   ? 'Summarization pending'
@@ -235,7 +244,7 @@ export default function TranscriptScreen() {
               </Text>
             </View>
             <TouchableOpacity style={st.retryButton} onPress={handleStartProcessing}>
-              <Ionicons name="sparkles" size={15} color={Colors.textPrimary} />
+              <Ionicons name="sparkles" size={15} color={colors.textPrimary} />
               <Text style={st.retryButtonText}>
                 {recording.status === 'saved' && hasTranscript
                   ? 'Run Summarization'
@@ -247,7 +256,7 @@ export default function TranscriptScreen() {
         {recording.status === 'error' && (
           <View style={st.errorBanner}>
             <View style={st.errorBannerTop}>
-              <Ionicons name="warning" size={16} color={Colors.orange} />
+              <Ionicons name="warning" size={16} color={colors.orange} />
               <Text style={st.errorBannerTitle}>Processing failed</Text>
             </View>
             {!!recording.errorMessage && (
@@ -260,13 +269,13 @@ export default function TranscriptScreen() {
                 style={st.retryButton}
                 onPress={() => handleSummarizationFallback(summarizationFallback.mode)}
               >
-                <Ionicons name="sparkles" size={15} color={Colors.textPrimary} />
+                <Ionicons name="sparkles" size={15} color={colors.textPrimary} />
                 <Text style={st.retryButtonText}>{summarizationFallback.buttonLabel}</Text>
               </TouchableOpacity>
             ) : null}
             {showTranscriptionFallbackOnError ? (
               <TouchableOpacity style={st.retryButton} onPress={handleTranscriptionFallback}>
-                <Ionicons name="mic-outline" size={15} color={Colors.textPrimary} />
+                <Ionicons name="mic-outline" size={15} color={colors.textPrimary} />
                 <Text style={st.retryButtonText}>Transcribe from recording</Text>
               </TouchableOpacity>
             ) : null}
@@ -317,9 +326,10 @@ export default function TranscriptScreen() {
   );
 }
 
-const st = StyleSheet.create({
+function createRecordingDetailStyles(c: ColorPalette) {
+  return StyleSheet.create({
   notFound: withAppFont({
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     padding: Spacing.md,
     fontSize: 17,
   }),
@@ -332,13 +342,13 @@ const st = StyleSheet.create({
   deletedOverlayTitle: withAppFont({
     fontSize: 22,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     marginBottom: Spacing.sm,
     textAlign: 'center',
   }),
   deletedOverlayMessage: withAppFont({
     fontSize: 15,
-    color: Colors.subtext,
+    color: c.subtext,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: Spacing.xl,
@@ -347,17 +357,17 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     paddingVertical: 14,
     paddingHorizontal: Spacing.xl,
     borderRadius: BorderRadius.cardXL,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: c.border,
   },
   restoreButtonText: withAppFont({
     fontSize: 17,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
   }),
   scroll: { flex: 1 },
   scrollContent: {
@@ -376,7 +386,7 @@ const st = StyleSheet.create({
   processingBannerTitle: withAppFont({
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
+    color: c.primary,
   }),
   errorBanner: {
     backgroundColor: 'rgba(255,159,10,0.1)',
@@ -391,11 +401,11 @@ const st = StyleSheet.create({
   errorBannerTitle: withAppFont({
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.orange,
+    color: c.orange,
   }),
   errorBannerMessage: withAppFont({
     fontSize: 13,
-    color: Colors.subtext,
+    color: c.subtext,
     lineHeight: 18,
   }),
   retryButton: {
@@ -403,7 +413,7 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: BorderRadius.md,
     paddingVertical: 10,
     paddingHorizontal: Spacing.md,
@@ -412,6 +422,7 @@ const st = StyleSheet.create({
   retryButtonText: withAppFont({
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
   }),
-});
+  });
+}

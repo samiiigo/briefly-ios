@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Text, StyleSheet, TextStyle } from 'react-native';
-import { withAppFont } from '@/theme';
+import { useThemedColors, withAppFont } from '@/theme';
 
 interface Props {
   text: string;
@@ -10,6 +10,17 @@ interface Props {
 }
 
 export function HighlightedText({ text, query, style, numberOfLines }: Props) {
+  const colors = useThemedColors();
+  const highlightStyle = useMemo(
+    () =>
+      withAppFont({
+        color: colors.textPrimary,
+        backgroundColor: colors.waveformGlow,
+        borderRadius: 4,
+      }),
+    [colors.textPrimary, colors.waveformGlow],
+  );
+
   const parts = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q || text.length === 0) return [{ value: text, highlighted: false }];
@@ -42,7 +53,7 @@ export function HighlightedText({ text, query, style, numberOfLines }: Props) {
     <Text style={style} numberOfLines={numberOfLines}>
       {parts.map((part, i) =>
         part.highlighted ? (
-          <Text key={i} style={[style, styles.highlight]}>
+          <Text key={i} style={[style, highlightStyle]}>
             {part.value}
           </Text>
         ) : (
@@ -52,11 +63,3 @@ export function HighlightedText({ text, query, style, numberOfLines }: Props) {
     </Text>
   );
 }
-
-const styles = StyleSheet.create({
-  highlight: withAppFont({
-    color: '#FFFFFF',
-    backgroundColor: 'rgba(10, 132, 255, 0.35)',
-    borderRadius: 4,
-  }),
-});
