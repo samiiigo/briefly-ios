@@ -22,6 +22,8 @@ export interface ChromeOverlayProps {
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
   zIndex?: number;
+  /** Bottom edge only: lift the fade so it sits below chrome content (e.g. recording controls). */
+  blurBottomInset?: number;
 }
 
 function defaultZIndex(edge: Edge, hasChildren: boolean): number {
@@ -44,6 +46,7 @@ export function ChromeOverlay({
   style,
   contentStyle,
   zIndex,
+  blurBottomInset,
 }: ChromeOverlayProps) {
   const sl = useScreenLayoutStyles();
   const { topInset } = useTopChromeLayout();
@@ -68,11 +71,22 @@ export function ChromeOverlay({
       style={[hostStyle, { zIndex: resolvedZIndex }, style]}
       pointerEvents={hasChildren ? 'box-none' : 'none'}
     >
-      {showBlur ? <ChromeBlurFade edge={edge} variant={variant} /> : null}
+      {showBlur ? (
+        <ChromeBlurFade
+          edge={edge}
+          variant={variant}
+          style={
+            !isTop && blurBottomInset != null && blurBottomInset > 0
+              ? { bottom: blurBottomInset }
+              : undefined
+          }
+        />
+      ) : null}
       {hasChildren ? (
         <View
           style={[
             isTop && [sl.headerOverlay, { paddingTop: insetTop }],
+            !isTop && styles.bottomChromeContent,
             contentStyle,
           ]}
           pointerEvents="box-none"
@@ -100,5 +114,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     elevation: 11,
+  },
+  /** Above {@link EdgeBlurFade} (zIndex 5) so controls stay visible on top of the fade. */
+  bottomChromeContent: {
+    zIndex: 10,
+    elevation: 12,
   },
 });

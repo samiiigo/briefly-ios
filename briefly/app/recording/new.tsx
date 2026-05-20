@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
+import { BottomChromeOverlay } from '@/components/navigation/BottomChromeOverlay';
+import { useFloatingTabBarLayout } from '@/components/navigation/useFloatingTabBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -50,9 +52,13 @@ function isPermissionError(message: string): boolean {
   return /microphone|permission|speech recognition/i.test(message);
 }
 
+/** Pause/stop row + labels (above bottom chrome fade). */
+const RECORDING_CONTROLS_HEIGHT = 96;
+
 export default function NewRecordingScreen() {
   const sl = useScreenLayoutStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
+  const { bottomOffset } = useFloatingTabBarLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{
     targetFolder?: string;
@@ -469,7 +475,15 @@ export default function NewRecordingScreen() {
 
   return (
     <View style={sl.container}>
-      <View style={[s.body, { paddingTop: scrollPaddingTop }]}>
+      <View
+        style={[
+          s.body,
+          {
+            paddingTop: scrollPaddingTop,
+            paddingBottom: bottomOffset + RECORDING_CONTROLS_HEIGHT,
+          },
+        ]}
+      >
         {interruptHint ? (
           <View style={s.hintBanner}>
             <Ionicons name="information-circle-outline" size={16} color={Colors.orange} />
@@ -566,8 +580,10 @@ export default function NewRecordingScreen() {
             )}
           </View>
         ) : null}
+      </View>
 
-        <View style={s.ctrls}>
+      <BottomChromeOverlay blurBottomInset={RECORDING_CONTROLS_HEIGHT + bottomOffset}>
+        <View style={[s.ctrls, { paddingBottom: bottomOffset }]} pointerEvents="box-none">
           <View style={s.ctrlItem}>
             <Pressable
               style={({ pressed }) => [s.pauseBtn, pressed && Platform.OS === 'ios' && { opacity: 0.75 }]}
@@ -593,7 +609,7 @@ export default function NewRecordingScreen() {
             </Text>
           </View>
         </View>
-      </View>
+      </BottomChromeOverlay>
 
       <StackScreenHeader title="New Recording" showBack onBack={handleBack} />
     </View>
@@ -696,7 +712,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing.xxl,
-    paddingBottom: Spacing.xl,
     paddingTop: Spacing.md,
   },
   ctrlItem: { alignItems: 'center', gap: Spacing.xs },
