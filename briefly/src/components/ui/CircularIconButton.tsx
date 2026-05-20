@@ -9,7 +9,8 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/theme';
+import { useCreateStyles, useThemedColors } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -28,6 +29,8 @@ export function CircularIconButton({
   style,
   loading = false,
 }: CircularIconButtonProps) {
+  const styles = useCreateStyles(createCircularIconButtonStyles);
+  const colors = useThemedColors();
   const disabled = loading || onPress == null;
 
   return (
@@ -46,24 +49,25 @@ export function CircularIconButton({
       <Ionicons
         name={icon}
         size={22}
-        color={Colors.textPrimary}
+        color={colors.textPrimary}
         style={loading ? styles.iconLoading : undefined}
       />
       {loading ? (
         <View style={styles.loadingOverlay} pointerEvents="none">
-          <ActivityIndicator size="small" color={Colors.primary} />
+          <ActivityIndicator size="small" color={colors.primary} />
         </View>
       ) : null}
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+function createCircularIconButtonStyles(c: ColorPalette) {
+  return StyleSheet.create({
   button: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -75,4 +79,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+  });
+}

@@ -1,11 +1,8 @@
 import 'react-native-gesture-handler';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { View, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import * as SystemUI from 'expo-system-ui';
-import * as NavigationBar from 'expo-navigation-bar';
-import { isEdgeToEdge } from 'react-native-is-edge-to-edge';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -15,12 +12,26 @@ import { installRealtimeTerminalLogs, logger } from '@/utils/logging/logger';
 import { checkEnvironment } from '@/utils/environment/environmentCheck';
 import { refreshLocalLlmModelStateFromDisk } from '@/services/summarization';
 import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
-import { Colors } from '@/theme';
+import { ThemeProvider, useResolvedColorScheme, useThemedColors } from '@/theme';
 import { iconFonts } from '@/theme/iconFonts';
 
-export default function RootLayout() {
+function RootLayoutContent() {
   const loadRecordings = useRecordingStore((s) => s.loadRecordings);
+  const colors = useThemedColors();
+  const resolvedScheme = useResolvedColorScheme();
   const [iconFontsLoaded, iconFontError] = useFonts(iconFonts);
+  const stackScreenOptions = useMemo(
+    () => ({
+      headerShown: false,
+      contentStyle: { backgroundColor: colors.background },
+      animation: 'slide_from_right' as const,
+      ...Platform.select({
+        ios: { gestureEnabled: true },
+        android: { gestureEnabled: false },
+      }),
+    }),
+    [colors.background],
+  );
 
   useEffect(() => {
     if (iconFontError) {
@@ -32,15 +43,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!iconFontsLoaded) return;
-
-    void SystemUI.setBackgroundColorAsync(Colors.background);
-    if (Platform.OS === 'android') {
-      // Navigation bar color APIs are no-ops (and warn) when edge-to-edge is enabled.
-      if (!isEdgeToEdge()) {
-        void NavigationBar.setBackgroundColorAsync(Colors.background);
-      }
-      void NavigationBar.setButtonStyleAsync('light');
-    }
 
     installRealtimeTerminalLogs();
     logger.info('SYSTEM', 'App startup: loading recordings from storage');
@@ -70,30 +72,18 @@ export default function RootLayout() {
     }
   }, [iconFontsLoaded, loadRecordings]);
 
+  const rootStyle = useRootBackgroundStyle();
+
   if (!iconFontsLoaded) {
-    return <View style={rootStyles.root} />;
+    return <View style={rootStyle} />;
   }
 
   return (
-    <GestureHandlerRootView style={rootStyles.root}>
+    <GestureHandlerRootView style={rootStyle}>
       <SafeAreaProvider>
-        <View style={rootStyles.root}>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: Colors.background },
-              animation: 'slide_from_right',
-              ...Platform.select({
-                ios: {
-                  gestureEnabled: true,
-                },
-                android: {
-                  gestureEnabled: false,
-                },
-              }),
-            }}
-          >
+        <View style={rootStyle}>
+          <StatusBar style={resolvedScheme === 'light' ? 'dark' : 'light'} />
+          <Stack screenOptions={stackScreenOptions}>
             <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
             <Stack.Screen name="settings" />
             <Stack.Screen name="recording" />
@@ -101,6 +91,7 @@ export default function RootLayout() {
             <Stack.Screen name="transcription-mode" />
             <Stack.Screen name="processing-mode" />
             <Stack.Screen name="folder-layout" />
+            <Stack.Screen name="theme" />
             <Stack.Screen name="search" options={{ animation: 'fade' }} />
             <Stack.Screen name="+not-found" />
           </Stack>
@@ -111,9 +102,20 @@ export default function RootLayout() {
   );
 }
 
-const rootStyles = {
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-} as const;
+function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutContent />
+    </ThemeProvider>
+  );
+}
+
+export default RootLayout;
+
+function useRootBackgroundStyle() {
+  const colors = useThemedColors();
+  return useMemo(
+    () => ({ flex: 1 as const, backgroundColor: colors.background }),
+    [colors.background],
+  );
+}

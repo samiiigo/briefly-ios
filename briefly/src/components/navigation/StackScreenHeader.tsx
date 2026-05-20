@@ -7,7 +7,8 @@ import {
   TOP_HEADER_PADDING_TOP,
 } from '@/components/navigation/topHeaderMetrics';
 import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
-import { Colors, Spacing, withAppFont } from '@/theme';
+import { useCreateStyles, Spacing, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface Props {
   title: string;
@@ -32,6 +33,7 @@ export function StackScreenHeader({
   leading,
   centerTitle,
 }: Props) {
+  const styles = useCreateStyles(createStackScreenHeaderStyles);
   const hasLeading = Boolean(leading ?? (showBack && onBack));
   const hasTrailing = Boolean(trailing);
   const shouldCenterTitle = centerTitle && !hasLeading && !hasTrailing;
@@ -62,7 +64,8 @@ export function StackScreenHeader({
   );
 }
 
-const styles = StyleSheet.create({
+function createStackScreenHeaderStyles(c: ColorPalette) {
+  return StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -94,7 +97,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 36,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     letterSpacing: -0.5,
   }),
   titleCentered: {
@@ -105,4 +108,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
-});
+  });
+}

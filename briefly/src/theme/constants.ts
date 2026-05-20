@@ -1,42 +1,13 @@
-export const Colors = {
-  background: '#000000',
-  surface: '#1C1C1E',
-  surfaceElevated: '#2C2C2E',
-  card: '#1C1C1E',
-  border: '#38383A',
+import { darkColors, lightColors, type ColorPalette } from './colorPalettes';
+import type { ResolvedColorScheme } from '@/utils/theme/themePreference';
 
-  primary: '#0A84FF',
-  primaryDark: '#0056b3',
-  red: '#FF3B30',
-  green: '#34C759',
-  orange: '#FF9F0A',
-  purple: '#BF5AF2',
+/** Live palette synced by {@link ThemeProvider}. Prefer {@link useThemedColors} in components. */
+export const Colors: ColorPalette = { ...darkColors };
 
-  textPrimary: '#FFFFFF',
-  textSecondary: '#8E8E93',
-  /** Recents feed secondary labels (matches design mock). */
-  subtext: '#98989E',
-  textTertiary: '#48484A',
-  danger: '#FF453A',
-
-  onDeviceBadge: 'rgba(52, 199, 89, 0.15)',
-  onDeviceText: '#34C759',
-  cloudBadge: '#0A2A5C',
-  cloudText: '#007AFF',
-
-  waveform: '#007AFF',
-  waveformGlow: 'rgba(0,122,255,0.3)',
-  recordButton: '#FF3B30',
-  pauseButton: '#3A3A3C',
-
-  /** Recording detail / summary screen (design mock). */
-  insightCard: '#121212',
-  insightAccent: '#0D99FF',
-  summaryMuted: '#9CA3AF',
-  summaryBody: '#E3E3E3',
-  emojiCircleBorder: '#374151',
-  headerButtonMuted: '#2B2D2D',
-};
+export function applyColorPalette(scheme: ResolvedColorScheme): void {
+  const next = scheme === 'light' ? lightColors : darkColors;
+  Object.assign(Colors, next);
+}
 
 export const Spacing = {
   xs: 4,

@@ -9,9 +9,11 @@ import {
   TOP_HEADER_PADDING_TOP,
 } from '@/components/navigation/topHeaderMetrics';
 import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
-import { Colors, Spacing, withAppFont } from '@/theme';
+import { useCreateStyles, Spacing, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 export function RecentsHeader() {
+  const styles = useCreateStyles(createRecentsHeaderStyles);
   const router = useRouter();
 
   return (
@@ -41,7 +43,8 @@ export function RecentsHeader() {
   );
 }
 
-const styles = StyleSheet.create({
+function createRecentsHeaderStyles(c: ColorPalette) {
+  return StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -54,7 +57,7 @@ const styles = StyleSheet.create({
   title: withAppFont({
     fontSize: 36,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     letterSpacing: -0.5,
   }),
   actions: {
@@ -62,4 +65,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
-});
+  });
+}

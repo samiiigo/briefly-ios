@@ -19,7 +19,7 @@ import {
 import { ProcessingMode } from '@/types';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
 import {
   normalizeTranscriptionMode,
   resolvePostRecordingPipeline,
@@ -55,6 +55,7 @@ type FailurePhase = 'transcription' | 'summarization';
 const PROCESSING_TIMEOUT_MS = 12 * 60 * 1000;
 
 export default function SummarizingScreen() {
+  const sl = useScreenLayoutStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
   const router = useRouter();
   const { recordingId, forceAudioFallback, retrySummarizationMode } = useLocalSearchParams<{

@@ -25,7 +25,8 @@ import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { computeLibraryFolderCounts } from '@/utils/folders/folderCounts';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
 import { showUserFolderActions } from '@/utils/folders/userFolderActions';
-import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import { useCreateStyles, useThemedColors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 import {
   BUILT_IN_LIBRARY_FOLDERS,
   BUILT_IN_UTILITY_FOLDERS,
@@ -106,6 +107,8 @@ export function LibraryFolderBrowser({
   stackTitle,
   folderListFilter,
 }: LibraryFolderBrowserProps) {
+  const styles = useCreateStyles(createLibraryFolderBrowserStyles);
+  const colors = useThemedColors();
   const folderGridCardWidth = useFolderGridCardWidth();
   const { scrollPaddingTop } = useTopChromeLayout();
   const router = useRouter();
@@ -531,13 +534,13 @@ export function LibraryFolderBrowser({
         accessibilityRole="button"
         accessibilityLabel={f.name}
       >
-        <Ionicons name={f.icon as any} size={22} color={Colors.subtext} />
+        <Ionicons name={f.icon as any} size={22} color={colors.subtext} />
         <Text style={styles.utilityLabel} numberOfLines={1}>
           {f.name}
         </Text>
       </TouchableOpacity>
     ),
-    [openFolder]
+    [openFolder, colors.subtext]
   );
 
   const renderListItem = useCallback(
@@ -577,7 +580,7 @@ export function LibraryFolderBrowser({
               ) : null}
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={Colors.subtext} />
+          <Ionicons name="chevron-forward" size={16} color={colors.subtext} />
         </View>
       );
 
@@ -605,7 +608,7 @@ export function LibraryFolderBrowser({
         </TouchableOpacity>
       );
     },
-    [openFolder, listIconBackground, handleToggleUserFolderPin, handleUserFolderLongPress]
+    [openFolder, listIconBackground, handleToggleUserFolderPin, handleUserFolderLongPress, colors.subtext]
   );
 
   const listKeyExtractor = useCallback((item: FolderTile) => item.id, []);
@@ -613,11 +616,11 @@ export function LibraryFolderBrowser({
   const renderNoFoldersPlaceholder = useCallback(
     (message = 'No folders') => (
       <View style={styles.emptyFoldersCard} accessibilityRole="text">
-        <Ionicons name="folder-open-outline" size={22} color={Colors.subtext} />
+        <Ionicons name="folder-open-outline" size={22} color={colors.subtext} />
         <Text style={styles.emptyFoldersText}>{message}</Text>
       </View>
     ),
-    []
+    [colors.subtext]
   );
 
   const renderSectionItem = useCallback(
@@ -812,10 +815,11 @@ function folderIconBadgeBackground(accent: string, isUser: boolean): string {
   return `rgba(${r},${g},${b},${isUser ? 0.1 : 0.14})`;
 }
 
-const styles = StyleSheet.create({
+function createLibraryFolderBrowserStyles(c: ColorPalette) {
+  return StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: c.background,
   },
   scrollView: { flex: 1 },
   gridContent: {
@@ -857,28 +861,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 16,
-    color: Colors.subtext,
+    color: c.subtext,
   }),
   seeAll: withAppFont({
     fontSize: 15,
     fontWeight: '500',
-    color: Colors.primary,
+    color: c.primary,
   }),
   emptyFoldersCard: {
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: BorderRadius.cardXL,
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
+    borderColor: c.border,
   },
   emptyFoldersText: withAppFont({
     fontSize: 15,
     fontWeight: '500',
-    color: Colors.subtext,
+    color: c.subtext,
     textAlign: 'center',
   }),
   pinnedRow: {
@@ -906,7 +910,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     minHeight: 98,
     justifyContent: 'space-between',
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
   },
   folderCardUser: {},
   folderCardPinned: {
@@ -918,7 +922,7 @@ const styles = StyleSheet.create({
     top: 12,
     right: 12,
     fontSize: 14,
-    color: Colors.subtext,
+    color: c.subtext,
     zIndex: 1,
   }),
   folderCountBadgeList: {
@@ -944,7 +948,7 @@ const styles = StyleSheet.create({
   gridFolderName: withAppFont({
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     lineHeight: 22,
     paddingRight: 40,
   }),
@@ -952,7 +956,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: BorderRadius.cardXL,
     padding: Spacing.md,
     gap: Spacing.md,
@@ -980,7 +984,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     lineHeight: 22,
   }),
   pinIconList: {
@@ -994,7 +998,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
@@ -1003,7 +1007,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 17,
     fontWeight: '400',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
   }),
   utilityItemGap: {
     height: 4,
@@ -1020,28 +1024,28 @@ const styles = StyleSheet.create({
     maxWidth: 340,
   },
   addFolderModal: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: BorderRadius.lg,
     padding: 20,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
+    borderColor: c.border,
   },
   addFolderModalTitle: withAppFont({
     fontSize: 17,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     marginBottom: 16,
   }),
   addFolderInput: withAppFont({
-    backgroundColor: Colors.surface,
+    backgroundColor: c.surface,
     borderRadius: BorderRadius.md,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     marginBottom: 20,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
+    borderColor: c.border,
   }),
   addFolderModalActions: {
     flexDirection: 'row',
@@ -1054,16 +1058,17 @@ const styles = StyleSheet.create({
   },
   addFolderModalBtnCancel: withAppFont({
     fontSize: 16,
-    color: Colors.subtext,
+    color: c.subtext,
     fontWeight: '600',
   }),
   addFolderModalBtnPrimary: {
-    backgroundColor: Colors.primary,
+    backgroundColor: c.primary,
     borderRadius: BorderRadius.md,
   },
   addFolderModalBtnPrimaryText: withAppFont({
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: '600',
   }),
-});
+  });
+}

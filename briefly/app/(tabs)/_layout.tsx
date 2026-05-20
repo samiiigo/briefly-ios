@@ -3,9 +3,13 @@ import { Tabs } from 'expo-router';
 import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
 import { TabBarPropsReporter } from '@/components/navigation/TabBarPropsReporter';
 import { TabChromeOverlay } from '@/components/navigation/TabChromeOverlay';
-import { Colors } from '@/theme';
+import { useCreateStyles, useThemedColors } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 export default function TabsLayout() {
+  const styles = useCreateStyles(createTabsLayoutStyles);
+  const colors = useThemedColors();
+
   return (
     <View style={styles.root}>
       <Tabs
@@ -13,7 +17,7 @@ export default function TabsLayout() {
         screenOptions={{
           headerShown: false,
           tabBarStyle: { display: 'none' },
-          sceneStyle: { backgroundColor: Colors.background },
+          sceneStyle: { backgroundColor: colors.background },
           animation: 'fade',
         }}
       >
@@ -26,9 +30,11 @@ export default function TabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-});
+function createTabsLayoutStyles(c: ColorPalette) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+  });
+}

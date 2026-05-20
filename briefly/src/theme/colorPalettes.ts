@@ -1,0 +1,98 @@
+export type ColorPalette = {
+  background: string;
+  surface: string;
+  surfaceElevated: string;
+  card: string;
+  border: string;
+  primary: string;
+  primaryDark: string;
+  red: string;
+  green: string;
+  orange: string;
+  purple: string;
+  textPrimary: string;
+  textSecondary: string;
+  subtext: string;
+  textTertiary: string;
+  danger: string;
+  onDeviceBadge: string;
+  onDeviceText: string;
+  cloudBadge: string;
+  cloudText: string;
+  waveform: string;
+  waveformGlow: string;
+  recordButton: string;
+  pauseButton: string;
+  insightCard: string;
+  insightAccent: string;
+  summaryMuted: string;
+  summaryBody: string;
+  emojiCircleBorder: string;
+  headerButtonMuted: string;
+};
+
+export const darkColors: ColorPalette = {
+  background: '#000000',
+  surface: '#1C1C1E',
+  surfaceElevated: '#2C2C2E',
+  card: '#1C1C1E',
+  border: '#38383A',
+  primary: '#0A84FF',
+  primaryDark: '#0056b3',
+  red: '#FF3B30',
+  green: '#34C759',
+  orange: '#FF9F0A',
+  purple: '#BF5AF2',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#8E8E93',
+  subtext: '#98989E',
+  textTertiary: '#48484A',
+  danger: '#FF453A',
+  onDeviceBadge: 'rgba(52, 199, 89, 0.15)',
+  onDeviceText: '#34C759',
+  cloudBadge: '#0A2A5C',
+  cloudText: '#007AFF',
+  waveform: '#007AFF',
+  waveformGlow: 'rgba(0,122,255,0.3)',
+  recordButton: '#FF3B30',
+  pauseButton: '#3A3A3C',
+  insightCard: '#121212',
+  insightAccent: '#0D99FF',
+  summaryMuted: '#9CA3AF',
+  summaryBody: '#E3E3E3',
+  emojiCircleBorder: '#374151',
+  headerButtonMuted: '#2B2D2D',
+};
+
+export const lightColors: ColorPalette = {
+  background: '#FFFFFF',
+  surface: '#F2F2F7',
+  surfaceElevated: '#FFFFFF',
+  card: '#FFFFFF',
+  border: '#C6C6C8',
+  primary: '#007AFF',
+  primaryDark: '#0056b3',
+  red: '#FF3B30',
+  green: '#34C759',
+  orange: '#FF9500',
+  purple: '#AF52DE',
+  textPrimary: '#000000',
+  textSecondary: '#3C3C43',
+  subtext: '#6C6C70',
+  textTertiary: '#AEAEB2',
+  danger: '#FF3B30',
+  onDeviceBadge: 'rgba(52, 199, 89, 0.12)',
+  onDeviceText: '#248A3D',
+  cloudBadge: '#E8F2FF',
+  cloudText: '#007AFF',
+  waveform: '#007AFF',
+  waveformGlow: 'rgba(0,122,255,0.25)',
+  recordButton: '#FF3B30',
+  pauseButton: '#E5E5EA',
+  insightCard: '#F2F2F7',
+  insightAccent: '#007AFF',
+  summaryMuted: '#6B7280',
+  summaryBody: '#1F2937',
+  emojiCircleBorder: '#D1D5DB',
+  headerButtonMuted: '#E5E5EA',
+};

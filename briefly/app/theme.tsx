@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSettingsStore } from '@/context/useSettingsStore';
 import {
-  FolderListLayoutMode,
-  folderListLayoutDescription,
-  folderListLayoutTitle,
-  useFolderListLayoutStore,
-} from '@/context/useFolderListLayoutStore';
+  themePreferenceDescription,
+  themePreferenceTitle,
+  type ThemePreference,
+} from '@/utils/theme/themePreference';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import {
@@ -14,15 +14,15 @@ import {
   useScreenLayoutStyles,
 } from '@/components/navigation/screenLayout';
 
-const LAYOUT_OPTIONS: FolderListLayoutMode[] = ['list', 'grid'];
+const THEME_OPTIONS: ThemePreference[] = ['system', 'light', 'dark'];
 
-export default function FolderLayoutPickerScreen() {
+export default function ThemePickerScreen() {
   const router = useRouter();
   const { scrollPaddingTop } = useTopChromeLayout();
   const sl = useScreenLayoutStyles();
   const mp = useModePickerStyles();
-  const layout = useFolderListLayoutStore((s) => s.layout);
-  const setLayout = useFolderListLayoutStore((s) => s.setLayout);
+  const themePreference = useSettingsStore((s) => s.themePreference);
+  const setThemePreference = useSettingsStore((s) => s.setThemePreference);
 
   return (
     <View style={sl.container}>
@@ -31,28 +31,28 @@ export default function FolderLayoutPickerScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={sl.sectionDescription}>
-          Choose how folders appear in your library. This applies everywhere folders are shown.
+          Choose how Briefly looks. System follows your device light or dark mode.
         </Text>
         <View style={sl.card}>
-          {LAYOUT_OPTIONS.map((mode, index) => {
-            const selected = layout === mode;
+          {THEME_OPTIONS.map((option, index) => {
+            const selected = themePreference === option;
             return (
-              <React.Fragment key={mode}>
+              <React.Fragment key={option}>
                 <TouchableOpacity
                   style={mp.optionRow}
-                  onPress={() => setLayout(mode)}
+                  onPress={() => setThemePreference(option)}
                 >
                   <View style={[mp.radio, selected && mp.radioSelected]}>
                     {selected ? <View style={mp.radioDot} /> : null}
                   </View>
                   <View style={mp.optionText}>
-                    <Text style={mp.optionTitle}>{folderListLayoutTitle(mode)}</Text>
+                    <Text style={mp.optionTitle}>{themePreferenceTitle(option)}</Text>
                     <Text style={mp.optionSubtitle}>
-                      {folderListLayoutDescription(mode)}
+                      {themePreferenceDescription(option)}
                     </Text>
                   </View>
                 </TouchableOpacity>
-                {index !== LAYOUT_OPTIONS.length - 1 ? (
+                {index !== THEME_OPTIONS.length - 1 ? (
                   <View style={mp.optionDivider} />
                 ) : null}
               </React.Fragment>
@@ -62,7 +62,7 @@ export default function FolderLayoutPickerScreen() {
       </ScrollView>
 
       <StackScreenHeader
-        title="Folder layout"
+        title="Theme"
         showBack
         onBack={() => router.back()}
       />

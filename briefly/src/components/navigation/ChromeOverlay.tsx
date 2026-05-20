@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { ChromeBlurFade } from './ChromeBlurFade';
 import { ChromeBlurVariant } from './chromeBlur';
-import { screenLayoutStyles } from './screenLayout';
+import { useScreenLayoutStyles } from './screenLayout';
 import { useTopChromeLayout } from './useTopChromeLayout';
 
 type Edge = 'top' | 'bottom';
@@ -45,6 +45,7 @@ export function ChromeOverlay({
   contentStyle,
   zIndex,
 }: ChromeOverlayProps) {
+  const sl = useScreenLayoutStyles();
   const { topInset } = useTopChromeLayout();
   const isTop = edge === 'top';
   const hasChildren = children != null;
@@ -71,7 +72,7 @@ export function ChromeOverlay({
       {hasChildren ? (
         <View
           style={[
-            isTop && [screenLayoutStyles.headerOverlay, { paddingTop: insetTop }],
+            isTop && [sl.headerOverlay, { paddingTop: insetTop }],
             contentStyle,
           ]}
           pointerEvents="box-none"

@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { Colors, withAppFont } from '@/theme';
+import { useCreateStyles, useThemedColors, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 import { useFloatingTabBarLayout } from './useFloatingTabBarLayout';
 import { TAB_CHROME_MAIN_ROUTES } from './tabChromeRoutes';
 
@@ -19,6 +20,8 @@ const TAB_CONFIG: Record<string, TabConfig> = {
 };
 
 export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+  const styles = useCreateStyles(createFloatingTabBarStyles);
+  const colors = useThemedColors();
   const { bottomOffset, horizontalInset, androidTabBarHeight, insetsBottom } = useFloatingTabBarLayout();
   const isAndroid = Platform.OS === 'android';
 
@@ -33,7 +36,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               bottom: 0,
               height: androidTabBarHeight,
               paddingBottom: insetsBottom,
-              backgroundColor: Colors.card,
+              backgroundColor: colors.card,
               borderTopWidth: StyleSheet.hairlineWidth,
               borderTopColor: 'rgba(255,255,255,0.05)',
               justifyContent: 'space-around',
@@ -86,7 +89,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               <Ionicons
                 name={isFocused ? config.iconFocused : config.icon}
                 size={isAndroid ? 24 : 24}
-                color={isFocused ? (isAndroid ? Colors.primary : Colors.primary) : Colors.subtext}
+                color={isFocused ? colors.primary : colors.subtext}
               />
               <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive, isAndroid && { marginTop: 4, fontSize: 11 }]}>
                 {config.label}
@@ -99,7 +102,8 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+function createFloatingTabBarStyles(c: ColorPalette) {
+  return StyleSheet.create({
   wrapper: {
     position: 'absolute',
     left: 0,
@@ -149,15 +153,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   tabActive: {
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: c.surfaceElevated,
   },
   tabLabel: withAppFont({
     fontSize: 10,
     fontWeight: '500',
-    color: Colors.subtext,
+    color: c.subtext,
     marginTop: 2,
   }),
   tabLabelActive: {
-    color: Colors.primary,
+    color: c.primary,
   },
-});
+  });
+}

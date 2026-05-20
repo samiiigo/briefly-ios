@@ -6,7 +6,8 @@ import {
   LibraryScopeRefinement,
   useLibraryFolderPreferencesStore,
 } from '@/context/useLibraryFolderPreferencesStore';
-import { sheetLayoutStyles as sh, SHEET_CHECKMARK_COLOR } from '@/components/navigation/sheetLayout';
+import { useSheetLayoutStyles } from '@/components/navigation/sheetLayout';
+import { useThemedColors } from '@/theme';
 
 const DATE_OPTIONS: { id: LibraryDatePreset; label: string }[] = [
   { id: 'all', label: 'All time' },
@@ -31,6 +32,8 @@ function SheetOptionGroup<T extends string>({
   selectedId: T;
   onSelect: (id: T) => void;
 }) {
+  const sh = useSheetLayoutStyles();
+  const colors = useThemedColors();
   return (
     <View style={sh.optionGroup}>
       {options.map((opt, i) => {
@@ -51,7 +54,7 @@ function SheetOptionGroup<T extends string>({
               {opt.label}
             </Text>
             {selected ? (
-              <Ionicons name="checkmark" size={20} color={SHEET_CHECKMARK_COLOR} />
+              <Ionicons name="checkmark" size={20} color={colors.textPrimary} />
             ) : null}
           </TouchableOpacity>
         );
@@ -62,6 +65,7 @@ function SheetOptionGroup<T extends string>({
 
 /** Date filter for a folder’s recording list. */
 export function FolderDateFilterSection({ spaced }: { spaced?: boolean }) {
+  const sh = useSheetLayoutStyles();
   const datePreset = useLibraryFolderPreferencesStore((s) => s.datePreset);
   const setDatePreset = useLibraryFolderPreferencesStore((s) => s.setDatePreset);
 
@@ -79,6 +83,7 @@ export function FolderDateFilterSection({ spaced }: { spaced?: boolean }) {
 
 /** Date + library scope filters (library hub sheet). */
 export function LibraryDateScopeFilterSections() {
+  const sh = useSheetLayoutStyles();
   const scopeRefinement = useLibraryFolderPreferencesStore((s) => s.scopeRefinement);
   const setScopeRefinement = useLibraryFolderPreferencesStore((s) => s.setScopeRefinement);
 

@@ -2,7 +2,10 @@ import { Easing, Platform } from 'react-native';
 import { appFont, withAppFont } from './fonts';
 import { Colors, Spacing, BorderRadius } from './constants';
 
-export { Colors, Spacing, BorderRadius } from './constants';
+export { Colors, Spacing, BorderRadius, applyColorPalette } from './constants';
+export type { ColorPalette } from './colorPalettes';
+export { ThemeProvider, useThemedColors, useResolvedColorScheme } from './ThemeProvider';
+export { useCreateStyles } from './createStyles';
 export {
   Fonts,
   fontFamilyForSize,

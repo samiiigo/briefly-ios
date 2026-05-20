@@ -27,6 +27,8 @@ interface RecordingStore {
   setActiveRecordingId: (id: string | null) => void;
   setLiveTranscript: (text: string) => void;
   getRecordingById: (id: string) => Recording | undefined;
+  /** Adds multiple imported recordings in one persistence write. */
+  importRecordings: (recordings: Recording[]) => Promise<void>;
 }
 
 let recordingRepository: RecordingRepository = RecordingStorageService;
@@ -202,4 +204,22 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   setLiveTranscript: (text) => set({ liveTranscript: text }),
 
   getRecordingById: (id) => get().recordings.find((r) => r.id === id),
+
+  importRecordings: async (incoming) => {
+    if (incoming.length === 0) return;
+    mutationEpoch += 1;
+    const epochAtStart = mutationEpoch;
+    const previous = get().recordings;
+    const merged = [...incoming, ...previous].sort((a, b) => b.createdAt - a.createdAt);
+    set({ recordings: merged });
+    try {
+      await recordingRepository.saveAll(merged);
+      logger.info('useRecordingStore', 'Recordings imported', { count: incoming.length });
+    } catch (error) {
+      if (epochAtStart === mutationEpoch) {
+        set({ recordings: previous });
+      }
+      throw error;
+    }
+  },
 }));

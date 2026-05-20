@@ -6,8 +6,11 @@
  * conventions, while sharing a common color palette and spacing scale.
  */
 
+import { useMemo } from 'react';
 import { Platform, type ViewStyle, type TextStyle } from 'react-native';
-import { Colors, Spacing, BorderRadius } from './constants';
+import { Spacing, BorderRadius } from './constants';
+import type { ColorPalette } from './colorPalettes';
+import { useThemedColors } from './ThemeProvider';
 
 // ─── Font Stacks ────────────────────────────────────────────────────────
 export const FontStack = Platform.select({
@@ -86,7 +89,7 @@ export const CornerRadius = {
 
 // ─── Full Token Set ─────────────────────────────────────────────────────
 export interface ThemeTokens {
-  colors: typeof Colors;
+  colors: ColorPalette;
   spacing: typeof Spacing;
   borderRadius: typeof BorderRadius;
   cornerRadius: typeof CornerRadius;
@@ -98,9 +101,9 @@ export interface ThemeTokens {
   };
 }
 
-function buildTokens(): ThemeTokens {
+function buildTokens(colors: ThemeTokens['colors']): ThemeTokens {
   return {
-    colors: Colors,
+    colors,
     spacing: Spacing,
     borderRadius: BorderRadius,
     cornerRadius: CornerRadius,
@@ -113,16 +116,10 @@ function buildTokens(): ThemeTokens {
   };
 }
 
-/** Singleton token set resolved once at import time. */
-const tokens: ThemeTokens = buildTokens();
-
 /**
- * Returns the platform-aware design token set.
- *
- * Safe to call as a plain function (not a hook) since
- * `Platform.OS` never changes at runtime. Named `useTheme`
- * for ergonomic consistency with hooks-based consumption.
+ * Returns the platform-aware design token set for the active color scheme.
  */
 export function useTheme(): ThemeTokens {
-  return tokens;
+  const colors = useThemedColors();
+  return useMemo(() => buildTokens(colors), [colors]);
 }

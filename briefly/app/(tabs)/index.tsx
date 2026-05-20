@@ -21,11 +21,14 @@ import {
 } from '@/utils';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
 import type { RecordingListGroupPosition } from '@/utils/list/flattenRecordingSections';
-import { Colors, Spacing, withAppFont } from '@/theme';
+import { useCreateStyles, useThemedColors, Spacing, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 const LIST_BOTTOM_PADDING = 140;
 
 export default function HomeScreen() {
+  const styles = useCreateStyles(createHomeScreenStyles);
+  const colors = useThemedColors();
   const { scrollPaddingTop } = useTopChromeLayout();
   const { recordButtonBottom, horizontalInset } = useFloatingTabBarLayout();
   const router = useRouter();
@@ -108,7 +111,7 @@ export default function HomeScreen() {
         <View style={[styles.emptyState, { paddingTop: scrollPaddingTop }]}>
           <View style={styles.emptyIconRing}>
             <View style={styles.emptyIconInner}>
-              <Ionicons name="mic" size={40} color={Colors.subtext} />
+              <Ionicons name="mic" size={40} color={colors.subtext} />
             </View>
           </View>
           <Text style={styles.emptyTitle}>No recordings yet</Text>
@@ -133,7 +136,7 @@ export default function HomeScreen() {
           <Ionicons
             name="arrow-down"
             size={28}
-            color={Colors.primary}
+            color={colors.primary}
             style={styles.recordHintArrow}
           />
         </View>
@@ -159,10 +162,11 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createHomeScreenStyles(c: ColorPalette) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: c.background,
   },
   listContent: {
     paddingHorizontal: Spacing.md,
@@ -172,7 +176,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 16,
-    color: Colors.subtext,
+    color: c.subtext,
     marginBottom: 0,
     paddingHorizontal: Spacing.sm,
   }),
@@ -188,7 +192,7 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 80,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: c.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.xl,
@@ -197,19 +201,19 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyTitle: withAppFont({
     fontSize: 22,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     marginBottom: Spacing.sm,
   }),
   emptySubtitle: withAppFont({
     fontSize: 15,
-    color: Colors.subtext,
+    color: c.subtext,
     textAlign: 'center',
     lineHeight: 22,
   }),
@@ -222,9 +226,10 @@ const styles = StyleSheet.create({
   recordHintText: withAppFont({
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
+    color: c.primary,
   }),
   recordHintArrow: {
     transform: [{ rotate: '-45deg' }],
   },
-});
+  });
+}

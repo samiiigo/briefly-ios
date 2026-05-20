@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { RecordingService, LiveTranscriptionService } from '@/services/audio';
 import { saveCapturedRecording } from '@/services/recording/saveCapturedRecording';
@@ -51,6 +51,7 @@ function isPermissionError(message: string): boolean {
 }
 
 export default function NewRecordingScreen() {
+  const sl = useScreenLayoutStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
   const router = useRouter();
   const params = useLocalSearchParams<{

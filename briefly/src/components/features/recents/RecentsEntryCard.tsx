@@ -13,7 +13,8 @@ import { formatRecentsCardDate } from '@/utils';
 import type { RecordingListGroupPosition } from '@/utils/list/flattenRecordingSections';
 import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
-import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
+import { useCreateStyles, useThemedColors, BorderRadius, Spacing, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 const AVATAR_SIZE = 48;
 
@@ -26,10 +27,10 @@ interface Props {
   groupPosition?: RecordingListGroupPosition;
 }
 
-function groupedCardStyle(position: RecordingListGroupPosition) {
+function groupedCardStyle(position: RecordingListGroupPosition, c: ColorPalette) {
   const radius = BorderRadius.cardXL;
   const shared = {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     overflow: 'hidden' as const,
   };
   switch (position) {
@@ -59,6 +60,8 @@ export function RecentsEntryCard({
   onDelete,
   groupPosition = 'only',
 }: Props) {
+  const styles = useCreateStyles(createRecentsEntryCardStyles);
+  const colors = useThemedColors();
   const [renameDialogVisible, setRenameDialogVisible] = useState(false);
   const showDivider = groupPosition === 'middle' || groupPosition === 'last';
 
@@ -101,7 +104,7 @@ export function RecentsEntryCard({
 
   return (
     <>
-      <View style={groupedCardStyle(groupPosition)}>
+      <View style={groupedCardStyle(groupPosition, colors)}>
         {showDivider ? <View style={styles.rowDivider} /> : null}
         <TouchableOpacity
           style={styles.row}
@@ -118,7 +121,7 @@ export function RecentsEntryCard({
               <Text style={styles.subtitle}>{formatRecentsCardDate(recording.createdAt)}</Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={Colors.subtext} />
+          <Ionicons name="chevron-forward" size={16} color={colors.subtext} />
         </TouchableOpacity>
       </View>
       <TextInputDialog
@@ -137,7 +140,8 @@ export function RecentsEntryCard({
   );
 }
 
-const styles = StyleSheet.create({
+function createRecentsEntryCardStyles(c: ColorPalette) {
+  return StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -146,7 +150,7 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.border,
+    backgroundColor: c.border,
     marginLeft: Spacing.md + AVATAR_SIZE + Spacing.md,
   },
   leading: {
@@ -164,12 +168,13 @@ const styles = StyleSheet.create({
   title: withAppFont({
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     lineHeight: 22,
     marginBottom: 4,
   }),
   subtitle: withAppFont({
     fontSize: 14,
-    color: Colors.subtext,
+    color: c.subtext,
   }),
-});
+  });
+}

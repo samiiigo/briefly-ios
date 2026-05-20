@@ -37,7 +37,8 @@ import {
   RECORDING_SWIPE_SPRING,
 } from './recordingSwipeSpring';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
-import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import { useCreateStyles, Spacing, BorderRadius, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface RecordingSwipeableRowProps {
   recording: Recording;
@@ -63,6 +64,7 @@ export function RecordingSwipeableRow({
   onRestore,
   isRecentlyDeleted = false,
 }: RecordingSwipeableRowProps) {
+  const styles = useCreateStyles(createRecordingSwipeableRowStyles);
   const swipeableRef = useRef<React.ElementRef<typeof Swipeable> | null>(null);
   const swipeTranslationRef = useRef<SharedValue<number> | null>(null);
   const fallbackTranslation = useSharedValue(0);
@@ -495,7 +497,8 @@ export function RecordingSwipeableRow({
   );
 }
 
-const styles = StyleSheet.create({
+function createRecordingSwipeableRowStyles(c: ColorPalette) {
+  return StyleSheet.create({
   trailingActions: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -510,17 +513,17 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   moveModalContent: {
-    backgroundColor: Colors.card,
+    backgroundColor: c.card,
     borderRadius: BorderRadius.cardXL,
     maxHeight: 400,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
+    borderColor: c.border,
     overflow: 'hidden',
   },
   moveModalTitle: withAppFont({
     fontSize: 14,
     fontWeight: '500',
-    color: Colors.subtext,
+    color: c.subtext,
     paddingHorizontal: Spacing.md,
     paddingTop: 14,
     paddingBottom: 8,
@@ -531,17 +534,18 @@ const styles = StyleSheet.create({
   },
   moveModalRowText: withAppFont({
     fontSize: 17,
-    color: Colors.textPrimary,
+    color: c.textPrimary,
   }),
   moveModalCancel: {
     paddingVertical: 14,
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
+    borderTopColor: c.border,
   },
   moveModalCancelText: withAppFont({
     fontSize: 17,
     fontWeight: '600',
-    color: Colors.primary,
+    color: c.primary,
   }),
-});
+  });
+}

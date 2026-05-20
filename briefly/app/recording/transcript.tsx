@@ -13,10 +13,11 @@ import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
 import { Colors, Spacing } from '@/theme';
 
 export default function RecordingTranscriptScreen() {
+  const sl = useScreenLayoutStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
   const { paddingBottom: playbackBottom } = usePlaybackBarLayout();
   const router = useRouter();

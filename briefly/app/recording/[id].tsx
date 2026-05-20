@@ -22,7 +22,7 @@ import { RecordingPlaybackBar } from '@/components/features/recording/RecordingP
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { ensureUniqueTitle } from '@/utils';
@@ -33,6 +33,7 @@ import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 export default function TranscriptScreen() {
+  const sl = useScreenLayoutStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
   const { paddingBottom: playbackBottom } = usePlaybackBarLayout();
   const router = useRouter();

@@ -9,7 +9,8 @@ import {
   TOP_HEADER_PADDING_TOP,
 } from '@/components/navigation/topHeaderMetrics';
 import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
-import { Colors, Spacing, BorderRadius } from '@/theme';
+import { useCreateStyles, useThemedColors, Spacing, BorderRadius } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface HeaderProps {
   onBack: () => void;
@@ -27,6 +28,7 @@ export function RecordingDetailHeader({
   shareDisabled,
   menuItems,
 }: HeaderProps) {
+  const headerStyles = useCreateStyles(createRecordingDetailHeaderStyles);
   return (
     <TopChromeOverlay>
       <View style={headerStyles.header}>
@@ -75,6 +77,8 @@ interface ShareFabProps {
 
 /** Floating share pill (Figma summary screen). */
 export function RecordingShareFab({ onPress, disabled }: ShareFabProps) {
+  const fabStyles = useCreateStyles(createRecordingShareFabStyles);
+  const colors = useThemedColors();
   return (
     <TouchableOpacity
       style={[fabStyles.button, disabled && fabStyles.buttonDisabled]}
@@ -84,13 +88,14 @@ export function RecordingShareFab({ onPress, disabled }: ShareFabProps) {
       accessibilityRole="button"
       accessibilityLabel="Share"
     >
-      <Ionicons name="share-outline" size={14} color={Colors.textPrimary} />
+      <Ionicons name="share-outline" size={14} color={colors.textPrimary} />
       <Text style={fabStyles.label}>Share</Text>
     </TouchableOpacity>
   );
 }
 
-const fabStyles = StyleSheet.create({
+function createRecordingShareFabStyles(c: ColorPalette) {
+  return StyleSheet.create({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -98,9 +103,9 @@ const fabStyles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: Colors.surfaceElevated,
+    borderColor: c.surfaceElevated,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -119,11 +124,13 @@ const fabStyles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 22,
     letterSpacing: 0.375,
-    color: Colors.textPrimary,
+    color: c.textPrimary,
   },
-});
+  });
+}
 
-const headerStyles = StyleSheet.create({
+function createRecordingDetailHeaderStyles(c: ColorPalette) {
+  return StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -141,7 +148,7 @@ const headerStyles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   backButton: {
-    backgroundColor: Colors.surface,
+    backgroundColor: c.surface,
     marginRight: Spacing.sm,
   },
   folderLabel: {
@@ -149,7 +156,7 @@ const headerStyles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     lineHeight: 22,
-    color: Colors.textPrimary,
+    color: c.textPrimary,
   },
   actions: {
     flexShrink: 0,
@@ -158,9 +165,10 @@ const headerStyles = StyleSheet.create({
     gap: Spacing.md,
   },
   secondaryButton: {
-    backgroundColor: Colors.headerButtonMuted,
+    backgroundColor: c.headerButtonMuted,
   },
   shareDisabled: {
     opacity: 0.6,
   },
-});
+  });
+}
