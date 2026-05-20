@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
-import {
-  exportAllTranscripts,
-  importTranscriptsFromPicker,
-} from '@/services/recording/transcriptBackupService';
+import { useRouter } from 'expo-router';
+import { exportAllTranscripts } from '@/services/recording/transcriptBackupService';
+import { importFromPicker } from '@/services/recording/importRecordingService';
 
 export function useTranscriptBackup() {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   const run = useCallback(async (task: () => Promise<void>) => {
@@ -27,8 +27,14 @@ export function useTranscriptBackup() {
   );
 
   const importTranscripts = useCallback(
-    () => run(importTranscriptsFromPicker),
-    [run],
+    () =>
+      run(async () => {
+        const result = await importFromPicker();
+        if (result?.kind === 'audio') {
+          router.push(`/recording/${result.recordingId}`);
+        }
+      }),
+    [run, router],
   );
 
   return { busy, exportTranscripts, importTranscripts };

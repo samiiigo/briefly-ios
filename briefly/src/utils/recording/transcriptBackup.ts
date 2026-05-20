@@ -5,6 +5,8 @@ import {
   TranscriptSegment,
   TranscriptionMode,
 } from '@/types';
+import { generateId, ensureUniqueTitle } from '@/utils/recording/recording';
+import { folderFlagsFor } from '@/utils/folders/recordingFolder';
 import { hasMeaningfulTranscript } from './recordingValidation';
 
 export const TRANSCRIPT_BACKUP_FORMAT = 'briefly-transcript-backup' as const;
@@ -190,4 +192,41 @@ export function parseTranscriptBackupJson(jsonText: string): TranscriptBackupEnt
 
 export function serializeTranscriptBackupFile(file: TranscriptBackupFile): string {
   return JSON.stringify(file, null, 2);
+}
+
+export function backupEntriesToRecordings(
+  entries: TranscriptBackupEntry[],
+  existingTitles: string[],
+  defaultProcessingMode: ProcessingMode,
+): Recording[] {
+  const titles = [...existingTitles];
+  const imported: Recording[] = [];
+
+  for (const entry of entries) {
+    const title = ensureUniqueTitle(entry.title, titles);
+    titles.push(title);
+
+    const hasContent =
+      hasMeaningfulTranscript(entry.transcript) || !!(entry.summary?.trim());
+
+    imported.push({
+      id: generateId(),
+      title,
+      createdAt: entry.createdAt,
+      duration: entry.duration,
+      filePath: '',
+      fileSize: 0,
+      processingMode: entry.processingMode ?? defaultProcessingMode,
+      ...(entry.transcriptionMode ? { transcriptionMode: entry.transcriptionMode } : {}),
+      ...folderFlagsFor('unlisted'),
+      isImported: true,
+      status: hasContent ? 'ready' : 'saved',
+      ...(entry.transcript ? { transcript: entry.transcript } : {}),
+      ...(entry.summary ? { summary: entry.summary } : {}),
+      ...(entry.keyInsights ? { keyInsights: entry.keyInsights } : {}),
+      ...(entry.mainEmoji ? { mainEmoji: entry.mainEmoji } : {}),
+    });
+  }
+
+  return imported;
 }

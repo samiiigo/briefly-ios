@@ -109,7 +109,7 @@ export default function SettingsScreen() {
               color={colors.textPrimary}
               style={sl.settingsRowIcon}
             />
-            <Text style={sl.settingsRowTitle}>Import transcripts</Text>
+            <Text style={sl.settingsRowTitle}>Import transcripts or audio</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
 
