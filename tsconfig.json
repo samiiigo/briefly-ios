@@ -1,0 +1,16 @@
+{
+  "extends": "./briefly/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "./briefly",
+    "paths": {
+      "@/*": ["./src/*", "./app/*"],
+      "@root/*": ["./*"]
+    }
+  },
+  "include": [
+    "briefly/**/*.ts",
+    "briefly/**/*.tsx",
+    "briefly/.expo/types/**/*.d.ts"
+  ],
+  "exclude": ["briefly/node_modules"]
+}
