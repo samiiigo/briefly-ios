@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { RecordingService } from '@/services/audio';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import {
@@ -15,7 +14,6 @@ import { RecordingCard } from '@/components/features/recording/RecordingCard';
 import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
 import { RecordingSectionFlashList } from '@/components/features/recording/RecordingSectionFlashList';
 import { RecordingGridFlashList } from '@/components/features/recording/RecordingGridFlashList';
-import { RecordButton } from '@/components/features/recording/RecordButton';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { FolderViewOptionsSheet } from '@/components/features/library/FolderViewOptionsSheet';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
@@ -101,27 +99,6 @@ export default function FolderRecordingsScreen() {
     [recordings, updateRecording]
   );
 
-  const handleRecordIntoFolder = useCallback(async () => {
-    if (isRecentlyDeleted) return;
-    const granted = await RecordingService.requestPermissions();
-    if (!granted) return;
-    if (folderType === 'user') {
-      router.push({
-        pathname: '/recording/new',
-        params: { targetFolder: 'unlisted', targetUserFolderId: folderId },
-      });
-    } else if (folderId === 'archived') {
-      router.push({ pathname: '/recording/new', params: { targetFolder: 'archived' } });
-    } else if (folderId === 'imports') {
-      router.push({
-        pathname: '/recording/new',
-        params: { targetFolder: 'unlisted', markImported: 'true' },
-      });
-    } else {
-      router.push({ pathname: '/recording/new', params: { targetFolder: 'unlisted' } });
-    }
-  }, [router, folderType, folderId, isRecentlyDeleted]);
-
   const renderListCard = useCallback(
     (item: Recording, groupPosition: RecordingListGroupPosition) => (
       <RecordingSwipeableRow
@@ -204,10 +181,6 @@ export default function FolderRecordingsScreen() {
           onMomentumScrollBegin={closeOpenSwipe}
         />
       )}
-
-      {!isRecentlyDeleted ? (
-        <RecordButton onPress={handleRecordIntoFolder} />
-      ) : null}
 
       <FolderViewOptionsSheet
         visible={viewSheetVisible}
