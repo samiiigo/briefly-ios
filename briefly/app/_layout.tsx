@@ -12,6 +12,7 @@ import { installRealtimeTerminalLogs, logger } from '@/utils/logging/logger';
 import { checkEnvironment } from '@/utils/environment/environmentCheck';
 import { refreshLocalLlmModelStateFromDisk } from '@/services/summarization';
 import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
+import { LibraryFabChromeOverlay } from '@/components/navigation/LibraryFabChromeOverlay';
 import { ThemeProvider, useResolvedColorScheme, useThemedColors } from '@/theme';
 import { iconFonts } from '@/theme/iconFonts';
 
@@ -88,6 +89,7 @@ function RootLayoutContent() {
             <Stack.Screen name="search" options={{ animation: 'fade' }} />
           </Stack>
           <NavigatorBottomBlur scope="root" />
+          <LibraryFabChromeOverlay />
         </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>

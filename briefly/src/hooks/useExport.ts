@@ -2,7 +2,7 @@
  * useExport hook (SRP)
  *
  * Single responsibility: PDF export, text sharing, and audio sharing for recordings.
- * Extracted from TranscriptScreen to separate export logic from UI rendering.
+ * Shared by recording detail screens for export and share actions.
  */
 
 import { useState, useCallback } from 'react';

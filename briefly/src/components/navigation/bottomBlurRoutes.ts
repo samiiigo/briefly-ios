@@ -1,6 +1,5 @@
 /** Recording routes that use {@link BottomChromeOverlay} `variant="playback"` for bottom blur. */
 export function pathnameUsesPlaybackBarBlur(pathname: string): boolean {
-  if (pathname === '/recording/transcript') return true;
   if (pathname === '/recording/new') {
     return false;
   }

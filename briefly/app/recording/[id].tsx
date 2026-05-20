@@ -25,6 +25,7 @@ import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { useSettingsStore } from '@/context/useSettingsStore';
+import { builtInFolderName } from '@/constants/builtInFolders';
 import { ensureUniqueTitle } from '@/utils';
 import { getNextSummarizationFallback } from '@/utils/processing/summarizationFallback';
 import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
@@ -117,25 +118,6 @@ export default function TranscriptScreen() {
     updateRecording(recording.id, { isFavorite: !recording.isFavorite });
   }, [recording, updateRecording]);
 
-  const handleViewTranscript = useCallback(() => {
-    if (!recording) return;
-    const hasTranscript = (recording.transcript?.length ?? 0) > 0;
-    if (!hasTranscript) {
-      if (recording.status === 'transcribing' || recording.status === 'summarizing') {
-        Alert.alert('Processing', 'The transcript is not ready yet.');
-      } else if (recording.status === 'saved') {
-        Alert.alert('No transcript', 'Transcribe this recording first.');
-      } else {
-        Alert.alert('No transcript', 'No transcript is available for this recording.');
-      }
-      return;
-    }
-    router.push({
-      pathname: '/recording/transcript',
-      params: { recordingId: recording.id },
-    });
-  }, [recording, router]);
-
   if (!recording) {
     return (
       <View style={sl.container}>
@@ -149,7 +131,9 @@ export default function TranscriptScreen() {
       <View style={sl.container}>
         <View style={[st.deletedOverlay, { paddingTop: scrollPaddingTop }]}>
           <Ionicons name="trash-outline" size={48} color={Colors.subtext} style={{ marginBottom: 16 }} />
-          <Text style={st.deletedOverlayTitle}>Recording in Deleted</Text>
+          <Text style={st.deletedOverlayTitle}>
+            Recording in {builtInFolderName('recently-deleted')}
+          </Text>
           <Text style={st.deletedOverlayMessage}>
             Restore this recording to open it.
           </Text>
@@ -161,7 +145,11 @@ export default function TranscriptScreen() {
             <Text style={st.restoreButtonText}>Restore recording</Text>
           </TouchableOpacity>
         </View>
-        <StackScreenHeader title="Deleted" showBack onBack={() => router.back()} />
+        <StackScreenHeader
+          title={builtInFolderName('recently-deleted')}
+          showBack
+          onBack={() => router.back()}
+        />
       </View>
     );
   }
@@ -189,7 +177,6 @@ export default function TranscriptScreen() {
       label: recording.isFavorite ? 'Unfavorite' : 'Favorite',
       onPress: handleToggleFavorite,
     },
-    { label: 'View transcript', onPress: handleViewTranscript },
     {
       label: isSummarizing ? 'Summarizing…' : 'Rerun summarization',
       onPress: handleRerunSummarization,
