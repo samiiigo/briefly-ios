@@ -62,7 +62,7 @@ async function importJsonBackup(
       ? ` ${skipped} duplicate${skipped === 1 ? '' : 's'} will be skipped.`
       : '';
   const confirmed = await confirmImport(
-    `Import ${entries.length} transcript${entries.length === 1 ? '' : 's'} from this backup? They will appear in Imports.${skippedNote}`,
+    `Import ${entries.length} transcript${entries.length === 1 ? '' : 's'} from this backup?${skippedNote}`,
   );
   if (!confirmed) return { count: 0, skipped };
 
@@ -124,7 +124,7 @@ async function importAudioAsset(params: {
 
   const displayName = params.name.trim() || 'Audio file';
   const confirmed = await confirmImport(
-    `Import "${displayName}" and run transcription and summarization? It will appear in Imports.`,
+    `Import "${displayName}" and run transcription and summarization?`,
   );
   if (!confirmed) return null;
 
@@ -186,7 +186,7 @@ export async function importFromPicker(): Promise<ImportRecordingResult | null> 
         : '';
     Alert.alert(
       'Import complete',
-      `Added ${count} transcript${count === 1 ? '' : 's'} to Imports.${skippedNote}`,
+      `Added ${count} transcript${count === 1 ? '' : 's'}.${skippedNote}`,
     );
     return { kind: 'json-backup', count, skipped };
   }
@@ -201,7 +201,7 @@ export async function importFromPicker(): Promise<ImportRecordingResult | null> 
     'Import started',
     audioResult.processingStarted
       ? 'Transcription and summarization are running. Open the recording to follow progress.'
-      : 'Audio saved to Imports. Set up on-device summarization in Settings to process it.',
+      : 'Audio saved. Set up on-device summarization in Settings to process it.',
   );
   return audioResult;
 }

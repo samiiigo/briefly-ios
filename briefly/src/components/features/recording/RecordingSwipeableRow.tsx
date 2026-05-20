@@ -27,6 +27,7 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { useUserFolderStore } from '@/context/useUserFolderStore';
 import { useExport } from '@/hooks/useExport';
 import { folderFlagsFor } from '@/utils/folders/recordingFolder';
+import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { RecordingFolder } from '@/types';
 import { BUILTIN_MOVE_ORDER, BUILT_IN_FOLDERS } from '@/constants/builtInFolders';
 import { SWIPE_ACTION_GAP, SwipeableAnimatedAction } from './SwipeableAnimatedAction';
@@ -357,12 +358,13 @@ export function RecordingSwipeableRow({
 
   const handleRowPress = useCallback(() => {
     useActiveSwipeableStore.getState().closeActive();
+    if (isRecordingProcessing(recording)) return;
     if (isValidElement<{ onPress?: () => void }>(children) && children.props.onPress) {
       children.props.onPress();
     } else {
       onPress();
     }
-  }, [children, onPress]);
+  }, [children, onPress, recording]);
 
   const handleRowLongPress = useCallback(() => {
     triggerHaptic();

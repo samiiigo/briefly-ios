@@ -33,6 +33,7 @@ import {
   hasMeaningfulTranscript,
   hasRecordingAudio,
 } from '@/utils/recording/recordingValidation';
+import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
 import {
   startRecordingBackgroundProcessing,
@@ -118,6 +119,25 @@ export default function TranscriptScreen() {
     updateRecording(recording.id, { isFavorite: !recording.isFavorite });
   }, [recording, updateRecording]);
 
+  const handleViewTranscript = useCallback(() => {
+    if (!recording) return;
+    const hasTranscript = (recording.transcript?.length ?? 0) > 0;
+    if (!hasTranscript) {
+      if (recording.status === 'transcribing' || recording.status === 'summarizing') {
+        Alert.alert('Processing', 'The transcript is not ready yet.');
+      } else if (recording.status === 'saved') {
+        Alert.alert('No transcript', 'Transcribe this recording first.');
+      } else {
+        Alert.alert('No transcript', 'No transcript is available for this recording.');
+      }
+      return;
+    }
+    router.push({
+      pathname: '/recording/transcript',
+      params: { recordingId: recording.id },
+    });
+  }, [recording, router]);
+
   if (!recording) {
     return (
       <View style={sl.container}>
@@ -177,6 +197,7 @@ export default function TranscriptScreen() {
       label: recording.isFavorite ? 'Unfavorite' : 'Favorite',
       onPress: handleToggleFavorite,
     },
+    { label: 'View transcript', onPress: handleViewTranscript },
     {
       label: isSummarizing ? 'Summarizing…' : 'Rerun summarization',
       onPress: handleRerunSummarization,
