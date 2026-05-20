@@ -25,10 +25,11 @@ import type { Recording } from '@/types';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useUserFolderStore } from '@/context/useUserFolderStore';
+import { useExport } from '@/hooks/useExport';
 import { folderFlagsFor } from '@/utils/folders/recordingFolder';
 import { RecordingFolder } from '@/types';
 import { BUILTIN_MOVE_ORDER, BUILT_IN_FOLDERS } from '@/constants/builtInFolders';
-import { SWIPE_ACTION_GAP , SwipeableAnimatedAction } from './SwipeableAnimatedAction';
+import { SWIPE_ACTION_GAP, SwipeableAnimatedAction } from './SwipeableAnimatedAction';
 import { SwipeableMotionCard } from './SwipeableMotionCard';
 import {
   RECORDING_SWIPE_FRICTION,
@@ -42,9 +43,9 @@ interface RecordingSwipeableRowProps {
   children: React.ReactNode;
   onPress: () => void;
   onDelete: () => void;
-  /** When set (e.g. in Recently Deleted), swipe right reveals Recover and swipe left shows Delete Forever. */
+  /** When set (e.g. in Recently Deleted), Recover appears under the More (⋯) swipe action. */
   onRestore?: () => void;
-  /** When true, swipe right = Recover, swipe left = Delete Forever (same interaction pattern as elsewhere). */
+  /** Recently Deleted: swipe left shows Delete Forever, Share, and More (Recover). */
   isRecentlyDeleted?: boolean;
 }
 
@@ -72,6 +73,7 @@ export function RecordingSwipeableRow({
 
   const motionTranslation = swipeTranslationRef.current ?? fallbackTranslation;
   const { folders, loadFolders } = useUserFolderStore();
+  const { shareBusy, openShareMenu } = useExport(recording);
 
   const closeThisRow = useCallback(() => {
     swipeableRef.current?.close();
@@ -231,118 +233,115 @@ export function RecordingSwipeableRow({
     onRestore?.();
   }, [onRestore]);
 
+  const handleShare = useCallback(() => {
+    swipeableRef.current?.close();
+    openShareMenu();
+  }, [openShareMenu]);
+
+  const showExtraOptions = useCallback(() => {
+    closeThisRow();
+    if (isRecentlyDeleted) {
+      if (!onRestore) return;
+      Alert.alert(recording.title, undefined, [
+        { text: 'Recover', onPress: handleRecover },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
+
+    const favoriteLabel = recording.isFavorite ? 'Unfavorite' : 'Favorite';
+    const archiveLabel = recording.isArchived ? 'Unarchive' : 'Archive';
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', favoriteLabel, archiveLabel, 'Move to…'],
+          cancelButtonIndex: 0,
+        },
+        (index) => {
+          if (index === 1) toggleFavorite();
+          else if (index === 2) {
+            if (recording.isArchived) removeFromArchive();
+            else moveToArchive();
+          } else if (index === 3) showMoveSheet();
+        }
+      );
+      return;
+    }
+
+    Alert.alert('More', undefined, [
+      { text: favoriteLabel, onPress: toggleFavorite },
+      {
+        text: archiveLabel,
+        onPress: recording.isArchived ? removeFromArchive : moveToArchive,
+      },
+      { text: 'Move to…', onPress: showMoveSheet },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }, [
+    closeThisRow,
+    handleRecover,
+    isRecentlyDeleted,
+    moveToArchive,
+    onRestore,
+    recording.isArchived,
+    recording.isFavorite,
+    recording.title,
+    removeFromArchive,
+    showMoveSheet,
+    toggleFavorite,
+  ]);
+
   const renderRightActions = useCallback(
     (progress: SharedValue<number>, translation: SharedValue<number>) => {
       bindSwipeTranslation(translation);
 
-      if (isRecentlyDeleted) {
-        return (
-          <View style={styles.trailingActions}>
-            <SwipeableAnimatedAction
-              progress={progress}
-              index={0}
-              count={1}
-              side="trailing"
-              backgroundColor="#FF3B30"
-              icon="trash"
-              label="Delete Forever"
-              onPress={handleDelete}
-              numberOfLines={2}
-            />
-          </View>
-        );
-      }
+      const actionCount = 3;
 
       return (
         <View style={styles.trailingActions}>
           <SwipeableAnimatedAction
             progress={progress}
             index={0}
-            count={3}
+            count={actionCount}
             side="trailing"
-            backgroundColor="#5E5CE6"
-            icon={recording.isArchived ? 'arrow-undo' : 'archive'}
-            label={recording.isArchived ? 'Unarchive' : 'Archive'}
-            onPress={recording.isArchived ? removeFromArchive : moveToArchive}
-            numberOfLines={2}
+            backgroundColor="#636366"
+            icon="ellipsis-horizontal"
+            label="More"
+            onPress={showExtraOptions}
           />
           <SwipeableAnimatedAction
             progress={progress}
             index={1}
-            count={3}
+            count={actionCount}
             side="trailing"
-            backgroundColor="#34C759"
-            icon="folder-open"
-            label="Move"
-            onPress={showMoveSheet}
+            backgroundColor="#0A84FF"
+            icon="share-outline"
+            label="Share"
+            onPress={handleShare}
+            disabled={shareBusy}
           />
           <SwipeableAnimatedAction
             progress={progress}
             index={2}
-            count={3}
+            count={actionCount}
             side="trailing"
             backgroundColor="#FF3B30"
             icon="trash"
-            label="Delete"
+            label={isRecentlyDeleted ? 'Delete Forever' : 'Delete'}
             onPress={handleDelete}
+            numberOfLines={isRecentlyDeleted ? 2 : 1}
           />
         </View>
       );
     },
     [
+      bindSwipeTranslation,
       handleDelete,
+      handleShare,
       isRecentlyDeleted,
-      moveToArchive,
-      recording.isArchived,
-      removeFromArchive,
-      showMoveSheet,
-      bindSwipeTranslation,
-    ]
-  );
-
-  const renderLeftActions = useCallback(
-    (progress: SharedValue<number>, translation: SharedValue<number>) => {
-      bindSwipeTranslation(translation);
-
-      if (isRecentlyDeleted && onRestore) {
-        return (
-          <SwipeableAnimatedAction
-            progress={progress}
-            index={0}
-            count={1}
-            side="leading"
-            backgroundColor="#0A84FF"
-            icon="arrow-undo"
-            label="Recover"
-            onPress={handleRecover}
-            marginRight={SWIPE_ACTION_GAP}
-            numberOfLines={2}
-          />
-        );
-      }
-
-      return (
-        <SwipeableAnimatedAction
-          progress={progress}
-          index={0}
-          count={1}
-          side="leading"
-          backgroundColor="#FF9F0A"
-          icon={recording.isFavorite ? 'star' : 'star-outline'}
-          label={recording.isFavorite ? 'Unfavorite' : 'Favorite'}
-          onPress={toggleFavorite}
-          marginRight={SWIPE_ACTION_GAP}
-          numberOfLines={2}
-        />
-      );
-    },
-    [
-      handleRecover,
-      isRecentlyDeleted,
-      onRestore,
-      recording.isFavorite,
-      toggleFavorite,
-      bindSwipeTranslation,
+      shareBusy,
+      showExtraOptions,
     ]
   );
 
@@ -362,7 +361,6 @@ export function RecordingSwipeableRow({
         onSwipeableClose={handleSwipeableClose}
         onSwipeableOpenStartDrag={handleSwipeableOpenStartDrag}
         renderRightActions={renderRightActions}
-        renderLeftActions={renderLeftActions}
       >
         <SwipeableMotionCard translation={motionTranslation}>
           {wrapChildPress(children)}

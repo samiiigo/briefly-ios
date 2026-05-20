@@ -58,7 +58,7 @@ export default function TranscriptScreen() {
     filePath: recording?.filePath ?? '',
     transcript: recording?.transcript,
   });
-  const { isExportingPdf, openShareMenu } = useExport(recording);
+  const { shareBusy, openShareMenu } = useExport(recording);
 
   const handleRename = useCallback(() => {
     if (!recording) return;
@@ -274,7 +274,7 @@ export default function TranscriptScreen() {
         onBack={() => router.back()}
         folderLabel={folderLabel}
         onShare={openShareMenu}
-        shareDisabled={isExportingPdf}
+        shareDisabled={shareBusy}
         menuItems={overflowMenuItems}
       />
       <TextInputDialog

@@ -12,8 +12,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { CircularIconButton } from '@/components/ui/CircularIconButton';
-import { AnchoredOverflowMenu } from '@/components/ui/AnchoredOverflowMenu';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -264,6 +262,14 @@ export default function NewRecordingScreen() {
       },
     ]);
   }, [cleanup, isStarted, router, startFailed, stopTimer, teardownCapture]);
+
+  const handleBack = useCallback(() => {
+    if (isStarted && !isStopped.current && !startFailed) {
+      handleDiscard();
+      return;
+    }
+    router.replace('/(tabs)');
+  }, [handleDiscard, isStarted, router, startFailed]);
 
   useEffect(() => {
     const onBackPress = () => {
@@ -588,23 +594,7 @@ export default function NewRecordingScreen() {
         </View>
       </View>
 
-      <StackScreenHeader
-        title="New Recording"
-        leading={
-          <AnchoredOverflowMenu
-            align="leading"
-            items={[{ label: 'Discard', onPress: handleDiscard }]}
-            renderTrigger={(open) => (
-              <CircularIconButton
-                icon="arrow-back"
-                accessibilityLabel="Recording options"
-                onPress={open}
-                style={{ marginRight: Spacing.sm }}
-              />
-            )}
-          />
-        }
-      />
+      <StackScreenHeader title="New Recording" showBack onBack={handleBack} />
     </View>
   );
 }

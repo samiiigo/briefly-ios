@@ -26,6 +26,7 @@ interface SwipeableAnimatedActionProps {
   onPress: () => void;
   marginRight?: number;
   numberOfLines?: number;
+  disabled?: boolean;
 }
 
 export function SwipeableAnimatedAction({
@@ -39,6 +40,7 @@ export function SwipeableAnimatedAction({
   onPress,
   marginRight,
   numberOfLines = 1,
+  disabled = false,
 }: SwipeableAnimatedActionProps) {
   const animatedStyle = useAnimatedStyle(() => {
     const stride = 1 / count;
@@ -76,9 +78,11 @@ export function SwipeableAnimatedAction({
     >
       <Pressable
         onPress={onPress}
-        style={styles.pressable}
+        disabled={disabled}
+        style={[styles.pressable, disabled && styles.pressableDisabled]}
         accessibilityRole="button"
         accessibilityLabel={label}
+        accessibilityState={{ disabled }}
       >
         <Ionicons name={icon} size={22} color={Colors.textPrimary} />
         <Text style={styles.label} numberOfLines={numberOfLines}>
@@ -103,6 +107,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     paddingHorizontal: 4,
+  },
+  pressableDisabled: {
+    opacity: 0.45,
   },
   label: withAppFont({
     color: Colors.textPrimary,
