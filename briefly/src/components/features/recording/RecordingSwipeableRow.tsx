@@ -4,13 +4,13 @@ import React, {
   useReducer,
   useRef,
   isValidElement,
-  cloneElement,
 } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   Alert,
   Platform,
   ActionSheetIOS,
@@ -106,26 +106,6 @@ export function RecordingSwipeableRow({
       closeActive();
     }
   }, [recording.id]);
-
-  const wrapChildPress = useCallback(
-    (child: React.ReactNode) => {
-      if (!isValidElement<{ onPress?: () => void }>(child)) {
-        return child;
-      }
-      const childOnPress = child.props.onPress;
-      return cloneElement(child, {
-        onPress: () => {
-          useActiveSwipeableStore.getState().closeActive();
-          if (childOnPress) {
-            childOnPress();
-          } else {
-            onPress();
-          }
-        },
-      });
-    },
-    [onPress]
-  );
 
   const toggleFavorite = useCallback(() => {
     swipeableRef.current?.close();
@@ -264,54 +244,86 @@ export function RecordingSwipeableRow({
     }
   }, [closeThisRow, onRename, recording.title]);
 
-  const showExtraOptions = useCallback(() => {
+  const showOptionsMenu = useCallback(() => {
     closeThisRow();
+    const favoriteLabel = recording.isFavorite ? 'Unfavorite' : 'Favorite';
+    const archiveLabel = recording.isArchived ? 'Unarchive' : 'Archive';
+    const deleteLabel = isRecentlyDeleted ? 'Delete Forever' : 'Delete';
+
     if (isRecentlyDeleted) {
-      const buttons: { text: string; style?: 'cancel'; onPress?: () => void }[] = [];
-      if (onRename) {
-        buttons.push({ text: 'Rename', onPress: promptRename });
+      if (Platform.OS === 'ios') {
+        const options = ['Cancel'];
+        const handlers: (() => void)[] = [];
+        if (onRename) {
+          options.push('Rename');
+          handlers.push(promptRename);
+        }
+        if (onRestore) {
+          options.push('Recover');
+          handlers.push(handleRecover);
+        }
+        options.push('Share', deleteLabel);
+        handlers.push(handleShare, handleDelete);
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options,
+            cancelButtonIndex: 0,
+            destructiveButtonIndex: options.length - 1,
+          },
+          (index) => {
+            if (index <= 0) return;
+            handlers[index - 1]?.();
+          }
+        );
+        return;
       }
-      if (onRestore) {
-        buttons.push({ text: 'Recover', onPress: handleRecover });
-      }
-      if (buttons.length === 0) return;
+
+      const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] =
+        [];
+      if (onRename) buttons.push({ text: 'Rename', onPress: promptRename });
+      if (onRestore) buttons.push({ text: 'Recover', onPress: handleRecover });
+      buttons.push({ text: 'Share', onPress: handleShare });
+      buttons.push({ text: deleteLabel, style: 'destructive', onPress: handleDelete });
       buttons.push({ text: 'Cancel', style: 'cancel' });
       Alert.alert(recording.title, undefined, buttons);
       return;
     }
 
-    const archiveLabel = recording.isArchived ? 'Unarchive' : 'Archive';
-    const iosOptions = ['Cancel'];
-    if (onRename) iosOptions.push('Rename');
-    iosOptions.push(archiveLabel, 'Move to…');
-
     if (Platform.OS === 'ios') {
+      const options = ['Cancel'];
+      const handlers: (() => void)[] = [];
+      options.push(favoriteLabel);
+      handlers.push(toggleFavorite);
+      options.push('Share');
+      handlers.push(handleShare);
+      if (onRename) {
+        options.push('Rename');
+        handlers.push(promptRename);
+      }
+      options.push(archiveLabel, 'Move to…', deleteLabel);
+      handlers.push(
+        () => (recording.isArchived ? removeFromArchive() : moveToArchive()),
+        showMoveSheet,
+        handleDelete
+      );
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: iosOptions,
+          options,
           cancelButtonIndex: 0,
+          destructiveButtonIndex: options.length - 1,
         },
         (index) => {
-          let cursor = 1;
-          if (onRename) {
-            if (index === cursor) {
-              promptRename();
-              return;
-            }
-            cursor += 1;
-          }
-          if (index === cursor) {
-            if (recording.isArchived) removeFromArchive();
-            else moveToArchive();
-          } else if (index === cursor + 1) {
-            showMoveSheet();
-          }
+          if (index <= 0) return;
+          handlers[index - 1]?.();
         }
       );
       return;
     }
 
-    const androidButtons: { text: string; style?: 'cancel'; onPress?: () => void }[] = [];
+    const androidButtons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] =
+      [];
+    androidButtons.push({ text: favoriteLabel, onPress: toggleFavorite });
+    androidButtons.push({ text: 'Share', onPress: handleShare });
     if (onRename) {
       androidButtons.push({ text: 'Rename', onPress: promptRename });
     }
@@ -321,22 +333,41 @@ export function RecordingSwipeableRow({
         onPress: recording.isArchived ? removeFromArchive : moveToArchive,
       },
       { text: 'Move to…', onPress: showMoveSheet },
+      { text: deleteLabel, style: 'destructive', onPress: handleDelete },
       { text: 'Cancel', style: 'cancel' }
     );
-    Alert.alert('More', undefined, androidButtons);
+    Alert.alert(recording.title, undefined, androidButtons);
   }, [
     closeThisRow,
+    handleDelete,
     handleRecover,
+    handleShare,
     isRecentlyDeleted,
     moveToArchive,
     onRename,
     onRestore,
     promptRename,
     recording.isArchived,
+    recording.isFavorite,
     recording.title,
     removeFromArchive,
     showMoveSheet,
+    toggleFavorite,
   ]);
+
+  const handleRowPress = useCallback(() => {
+    useActiveSwipeableStore.getState().closeActive();
+    if (isValidElement<{ onPress?: () => void }>(children) && children.props.onPress) {
+      children.props.onPress();
+    } else {
+      onPress();
+    }
+  }, [children, onPress]);
+
+  const handleRowLongPress = useCallback(() => {
+    triggerHaptic();
+    showOptionsMenu();
+  }, [showOptionsMenu]);
 
   const renderRightActions = useCallback(
     (progress: SharedValue<number>, translation: SharedValue<number>) => {
@@ -354,7 +385,7 @@ export function RecordingSwipeableRow({
             backgroundColor="#636366"
             icon="ellipsis-horizontal"
             label="More"
-            onPress={showExtraOptions}
+            onPress={showOptionsMenu}
           />
           <SwipeableAnimatedAction
             progress={progress}
@@ -387,7 +418,7 @@ export function RecordingSwipeableRow({
       handleShare,
       isRecentlyDeleted,
       shareBusy,
-      showExtraOptions,
+      showOptionsMenu,
     ]
   );
 
@@ -436,7 +467,15 @@ export function RecordingSwipeableRow({
         renderLeftActions={renderLeftActions}
       >
         <SwipeableMotionCard translation={motionTranslation}>
-          {wrapChildPress(children)}
+          <Pressable
+            style={styles.rowPressable}
+            onPress={handleRowPress}
+            onLongPress={handleRowLongPress}
+            delayLongPress={450}
+            accessibilityHint="Long press for more options. Swipe for actions."
+          >
+            {children}
+          </Pressable>
         </SwipeableMotionCard>
       </Swipeable>
 
@@ -499,6 +538,9 @@ export function RecordingSwipeableRow({
 
 function createRecordingSwipeableRowStyles(c: ColorPalette) {
   return StyleSheet.create({
+  rowPressable: {
+    width: '100%',
+  },
   trailingActions: {
     flexDirection: 'row',
     alignItems: 'stretch',

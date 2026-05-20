@@ -1,18 +1,10 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  Platform,
-} from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '@/types';
 import { formatRecentsCardDate } from '@/utils';
 import type { RecordingListGroupPosition } from '@/utils/list/flattenRecordingSections';
 import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
-import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { useCreateStyles, useThemedColors, BorderRadius, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 
@@ -20,9 +12,6 @@ const AVATAR_SIZE = 48;
 
 interface Props {
   recording: Recording;
-  onPress: () => void;
-  onRename?: (newTitle: string) => void;
-  onDelete?: () => void;
   /** Position within a time-grouped card (Today, Yesterday, …). */
   groupPosition?: RecordingListGroupPosition;
 }
@@ -53,65 +42,15 @@ function groupedCardStyle(position: RecordingListGroupPosition, c: ColorPalette)
   }
 }
 
-export function RecentsEntryCard({
-  recording,
-  onPress,
-  onRename,
-  onDelete,
-  groupPosition = 'only',
-}: Props) {
+export function RecentsEntryCard({ recording, groupPosition = 'only' }: Props) {
   const styles = useCreateStyles(createRecentsEntryCardStyles);
   const colors = useThemedColors();
-  const [renameDialogVisible, setRenameDialogVisible] = useState(false);
   const showDivider = groupPosition === 'middle' || groupPosition === 'last';
 
-  const handleLongPress = () => {
-    const buttons: { text: string; style?: 'destructive' | 'cancel'; onPress?: () => void }[] = [];
-    if (onRename) {
-      buttons.push({
-        text: 'Rename',
-        onPress: () => {
-          if (Platform.OS === 'ios') {
-            Alert.prompt(
-              'Rename Recording',
-              undefined,
-              (text) => {
-                if (text?.trim()) onRename(text.trim());
-              },
-              'plain-text',
-              recording.title
-            );
-          } else {
-            setRenameDialogVisible(true);
-          }
-        },
-      });
-    }
-    if (onDelete) {
-      buttons.push({
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () =>
-          Alert.alert('Delete Recording', `Delete "${recording.title}"?`, [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete', style: 'destructive', onPress: onDelete },
-          ]),
-      });
-    }
-    buttons.push({ text: 'Cancel', style: 'cancel' });
-    Alert.alert(recording.title, undefined, buttons);
-  };
-
   return (
-    <>
       <View style={groupedCardStyle(groupPosition, colors)}>
         {showDivider ? <View style={styles.rowDivider} /> : null}
-        <TouchableOpacity
-          style={styles.row}
-          onPress={onPress}
-          onLongPress={handleLongPress}
-          activeOpacity={0.85}
-        >
+        <View style={styles.row}>
           <View style={styles.leading}>
             <RecordingAvatar recording={recording} trailingSpacing={false} />
             <View style={styles.textBlock}>
@@ -122,21 +61,8 @@ export function RecentsEntryCard({
             </View>
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.subtext} />
-        </TouchableOpacity>
+        </View>
       </View>
-      <TextInputDialog
-        visible={renameDialogVisible}
-        title="Rename Recording"
-        defaultValue={recording.title}
-        placeholder="Recording name"
-        submitLabel="Rename"
-        onSubmit={(text) => {
-          setRenameDialogVisible(false);
-          onRename?.(text);
-        }}
-        onCancel={() => setRenameDialogVisible(false)}
-      />
-    </>
   );
 }
 

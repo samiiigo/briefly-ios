@@ -134,15 +134,7 @@ export default function FolderRecordingsScreen() {
         onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
         isRecentlyDeleted={isRecentlyDeleted}
       >
-        <RecentsEntryCard
-          recording={item}
-          groupPosition={groupPosition}
-          onPress={() => router.push(`/recording/${item.id}`)}
-          onDelete={
-            isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
-          }
-          onRename={(newTitle) => handleRename(item, newTitle)}
-        />
+        <RecentsEntryCard recording={item} groupPosition={groupPosition} />
       </RecordingSwipeableRow>
     ),
     [
@@ -167,15 +159,7 @@ export default function FolderRecordingsScreen() {
         onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
         isRecentlyDeleted={isRecentlyDeleted}
       >
-        <RecordingCard
-          recording={item}
-          compact={compact}
-          onPress={() => router.push(`/recording/${item.id}`)}
-          onDelete={
-            isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
-          }
-          onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
-        />
+        <RecordingCard recording={item} compact={compact} />
       </RecordingSwipeableRow>
     ),
     [router, isRecentlyDeleted, permanentDelete, deleteRecording, restoreRecording, handleRename]

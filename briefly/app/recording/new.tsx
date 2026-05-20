@@ -696,9 +696,15 @@ const s = StyleSheet.create({
     lineHeight: 20,
     fontStyle: 'italic',
   },
-  segBlk: { flexDirection: 'row', paddingVertical: 5, gap: 8 },
+  segBlk: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 5,
+    gap: 8,
+  },
   segTs: {
     width: 38,
+    flexShrink: 0,
     fontSize: 12,
     color: Colors.textTertiary,
     paddingTop: 3,

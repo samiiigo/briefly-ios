@@ -25,23 +25,20 @@ export function TranscriptSegmentView({ segment, isActive }: Props) {
 
   return (
     <View style={[styles.container, isActive && styles.active]}>
-      <View style={styles.left}>
-        {segment.speakerInitial ? (
+      {segment.speakerInitial ? (
+        <View style={styles.avatarColumn}>
           <View style={[styles.avatar, { backgroundColor: color + '33' }]}>
             <Text style={[styles.avatarText, { color }]}>{segment.speakerInitial}</Text>
           </View>
-        ) : (
-          <View style={styles.avatarPlaceholder} />
-        )}
-      </View>
+        </View>
+      ) : null}
+
+      <Text style={styles.timestamp}>{formatTimestamp(segment.startTime)}</Text>
 
       <View style={styles.content}>
-        <View style={styles.meta}>
-          {segment.speaker && (
-            <Text style={[styles.speaker, { color }]}>{segment.speaker}</Text>
-          )}
-          <Text style={styles.timestamp}>{formatTimestamp(segment.startTime)}</Text>
-        </View>
+        {segment.speaker ? (
+          <Text style={[styles.speaker, { color }]}>{segment.speaker}</Text>
+        ) : null}
         <Text style={styles.text}>{segment.text}</Text>
       </View>
     </View>
@@ -51,6 +48,8 @@ export function TranscriptSegmentView({ segment, isActive }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
     paddingVertical: Spacing.sm,
     marginBottom: 2,
   },
@@ -58,11 +57,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderRadius: BorderRadius.cardXL,
   },
-  left: {
-    width: 36,
-    marginRight: Spacing.sm,
-    alignItems: 'center',
-    paddingTop: 2,
+  avatarColumn: {
+    width: 32,
+    flexShrink: 0,
   },
   avatar: {
     width: 32,
@@ -71,30 +68,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarPlaceholder: {
-    width: 32,
-    height: 32,
-  },
   avatarText: withAppFont({
     fontSize: 14,
     fontWeight: '700',
   }),
+  timestamp: withAppFont({
+    width: 38,
+    flexShrink: 0,
+    fontSize: 12,
+    color: Colors.textTertiary,
+    paddingTop: 3,
+    fontVariant: ['tabular-nums'],
+  }),
   content: {
     flex: 1,
-  },
-  meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: 2,
+    minWidth: 0,
   },
   speaker: withAppFont({
     fontSize: 13,
     fontWeight: '600',
-  }),
-  timestamp: withAppFont({
-    fontSize: 12,
-    color: Colors.textTertiary,
+    marginBottom: 2,
   }),
   text: withAppFont({
     fontSize: 15,
