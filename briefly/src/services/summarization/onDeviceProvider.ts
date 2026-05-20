@@ -1,22 +1,27 @@
 /**
- * OnDeviceProvider — on-device summarization strategy (SRP)
+ * OnDeviceProvider — on-device summarization (SRP)
  *
- * Single responsibility: invoke the native BrieflyTranscriber module for
- * local inference, falling back to extractive summarization.
+ * Prefers Gemma via llama.rn when the GGUF is on disk; otherwise uses extractive
+ * summarization (JS on Android; native then JS on iOS).
  */
 
-import { Platform, NativeModules } from 'react-native';
+import { Platform } from 'react-native';
 import { TranscriptSegment } from '@/types';
 import { SummarizationProvider, SummarizationResult } from './summarizationProvider';
-import {
-  segmentsToText,
-  generateId,
-  extractiveSummarize,
-  normalizeSummarizationResult,
-} from './summarizationUtils';
+import { segmentsToText } from './summarizationUtils';
+import { isLocalGemmaModelDownloaded, isLocalLlmDownloadInProgress } from './local/gemmaModelDownload';
+import { summarizeWithLocalLlama } from './local/localLlamaSummarizationService';
+import { summarizeExtractiveOnDevice } from './local/nativeExtractiveSummarization';
+import { supportsLocalLlamaSummarization } from '@/utils/platformCapabilities';
 import { logger } from '@/utils/logging/logger';
 
-const { BrieflyTranscriber } = NativeModules;
+function canUseGemmaSummarization(): boolean {
+  return (
+    supportsLocalLlamaSummarization() &&
+    isLocalGemmaModelDownloaded() &&
+    !isLocalLlmDownloadInProgress()
+  );
+}
 
 export class OnDeviceProvider implements SummarizationProvider {
   readonly name = 'on-device';
@@ -27,33 +32,26 @@ export class OnDeviceProvider implements SummarizationProvider {
       segmentCount: segments.length,
       chars: text.length,
       platform: Platform.OS,
-      hasNativeModule: !!BrieflyTranscriber?.summarize,
+      gemma: canUseGemmaSummarization(),
     });
 
-    if (Platform.OS === 'ios' && BrieflyTranscriber?.summarize) {
+    if (canUseGemmaSummarization()) {
       try {
-        const result = await BrieflyTranscriber.summarize(text);
-        logger.info('SUMMARY', 'On-device native summarization completed', {
-          keyInsightCount: (result.keyInsights as string[])?.length ?? 0,
+        const result = await summarizeWithLocalLlama(segments);
+        logger.info('SUMMARY', 'On-device Gemma summarization completed', {
+          keyInsightCount: result.keyInsights.length,
+          hasTitle: !!result.title,
         });
-        return normalizeSummarizationResult(
-          {
-            summary: result.summary,
-            keyInsights: (result.keyInsights as string[]).map((t) => ({
-              id: generateId(),
-              text: t,
-            })),
-          },
-          text
-        );
-      } catch (error: any) {
-        logger.warn('SUMMARY', 'Native on-device summarization failed; using extractive fallback', {
-          error: error?.message ?? String(error),
+        return result;
+      } catch (error: unknown) {
+        logger.warn('SUMMARY', 'Gemma summarization failed; using extractive fallback', {
+          error: error instanceof Error ? error.message : String(error),
         });
+        return summarizeExtractiveOnDevice(text);
       }
     }
 
-    logger.info('SUMMARY', 'Using extractive summarization fallback');
-    return extractiveSummarize(text);
+    logger.info('SUMMARY', 'Using extractive on-device summarization');
+    return summarizeExtractiveOnDevice(text);
   }
 }

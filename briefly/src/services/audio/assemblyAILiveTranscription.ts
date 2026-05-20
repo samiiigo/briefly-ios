@@ -1,9 +1,11 @@
 import Constants from 'expo-constants';
-import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import {
+  addBrieflyTranscriberListener,
+  getBrieflyTranscriberModule,
+} from '../../../modules/briefly-transcriber';
 import { supportsOnDeviceLiveTranscription } from '@/utils/platformCapabilities';
 import { AssemblyAIConfig, getAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
-
-const { BrieflyTranscriber } = NativeModules;
 
 export type AssemblyAIConnectionState =
   | 'idle'
@@ -78,15 +80,7 @@ function resolveDefaultApiKey(): string | undefined {
 }
 
 export class AssemblyAILiveTranscriptionClient {
-  private emitter: NativeEventEmitter | null = null;
   private readonly listeners: AssemblyAILiveListeners;
-
-  private getEmitter(): NativeEventEmitter {
-    if (!this.emitter) {
-      this.emitter = new NativeEventEmitter(BrieflyTranscriber);
-    }
-    return this.emitter;
-  }
   private subscriptions: { remove: () => void }[] = [];
   private mode: AssemblyAILiveMode = 'cloud';
 
@@ -95,7 +89,7 @@ export class AssemblyAILiveTranscriptionClient {
   }
 
   static get isSupported(): boolean {
-    return (Platform.OS === 'ios' || Platform.OS === 'android') && !!BrieflyTranscriber;
+    return (Platform.OS === 'ios' || Platform.OS === 'android') && getBrieflyTranscriberModule() != null;
   }
 
   static get isOnDeviceSupported(): boolean {
@@ -105,6 +99,11 @@ export class AssemblyAILiveTranscriptionClient {
   async start(options: AssemblyAILiveStartOptions = {}): Promise<AssemblyAILiveStartResult> {
     if (!AssemblyAILiveTranscriptionClient.isSupported) {
       throw new Error('AssemblyAI live transcription is not available on this platform.');
+    }
+
+    const module = getBrieflyTranscriberModule();
+    if (!module) {
+      throw new Error('BrieflyTranscriber native module is not available.');
     }
 
     this.attachListeners();
@@ -120,10 +119,10 @@ export class AssemblyAILiveTranscriptionClient {
       };
 
       if (mode === 'on-device') {
-        return await BrieflyTranscriber.startOnDeviceLiveTranscription(payload);
+        return await module.startOnDeviceLiveTranscription(payload);
       }
 
-      return await BrieflyTranscriber.startLiveTranscription(payload);
+      return await module.startLiveTranscription(payload);
     } catch (error) {
       this.detachListeners();
       throw error;
@@ -131,27 +130,33 @@ export class AssemblyAILiveTranscriptionClient {
   }
 
   async pause(): Promise<void> {
+    const module = getBrieflyTranscriberModule();
+    if (!module) return;
     if (this.mode === 'on-device') {
-      await BrieflyTranscriber.pauseOnDeviceLiveTranscription();
+      await module.pauseOnDeviceLiveTranscription();
     } else {
-      await BrieflyTranscriber.pauseLiveTranscription();
+      await module.pauseLiveTranscription();
     }
   }
 
   async resume(): Promise<void> {
+    const module = getBrieflyTranscriberModule();
+    if (!module) return;
     if (this.mode === 'on-device') {
-      await BrieflyTranscriber.resumeOnDeviceLiveTranscription();
+      await module.resumeOnDeviceLiveTranscription();
     } else {
-      await BrieflyTranscriber.resumeLiveTranscription();
+      await module.resumeLiveTranscription();
     }
   }
 
   async stop(): Promise<AssemblyAILiveStopResult> {
+    const module = getBrieflyTranscriberModule();
+    if (!module) return { uri: '', duration: 0 };
     try {
       if (this.mode === 'on-device') {
-        return await BrieflyTranscriber.stopOnDeviceLiveTranscription();
+        return await module.stopOnDeviceLiveTranscription();
       }
-      return await BrieflyTranscriber.stopLiveTranscription();
+      return await module.stopLiveTranscription();
     } finally {
       this.detachListeners();
     }
@@ -164,8 +169,11 @@ export class AssemblyAILiveTranscriptionClient {
   private attachListeners(): void {
     this.detachListeners();
 
+    const module = getBrieflyTranscriberModule();
+    if (!module) return;
+
     this.subscriptions.push(
-      this.getEmitter().addListener('onPartialTranscript', (e: { text: string }) => {
+      addBrieflyTranscriberListener('onPartialTranscript', (e: { text: string }) => {
         const text = e?.text ?? '';
         this.listeners.onPartial?.(text);
         this.listeners.onEvent?.({ type: 'partial', text });
@@ -173,7 +181,7 @@ export class AssemblyAILiveTranscriptionClient {
     );
 
     this.subscriptions.push(
-      this.getEmitter().addListener('onFinalTranscript', (e: { text: string }) => {
+      addBrieflyTranscriberListener('onFinalTranscript', (e: { text: string }) => {
         const text = e?.text ?? '';
         this.listeners.onFinal?.(text);
         this.listeners.onEvent?.({ type: 'final', text });
@@ -181,16 +189,16 @@ export class AssemblyAILiveTranscriptionClient {
     );
 
     this.subscriptions.push(
-      this.getEmitter().addListener('onStreamingState', (e: { state: AssemblyAIConnectionState; reason?: string }) => {
-        const state = e?.state ?? 'idle';
-        const reason = e?.reason;
+      addBrieflyTranscriberListener('onStreamingState', (e: { state: string; reason?: string | null }) => {
+        const state = (e?.state ?? 'idle') as AssemblyAIConnectionState;
+        const reason = e?.reason ?? undefined;
         this.listeners.onConnectionState?.(state, reason);
         this.listeners.onEvent?.({ type: 'connection', state, reason });
       })
     );
 
     this.subscriptions.push(
-      this.getEmitter().addListener('onTranscriptionError', (e: { message: string }) => {
+      addBrieflyTranscriberListener('onTranscriptionError', (e: { message: string }) => {
         const message = e?.message ?? 'Unknown transcription error';
         this.listeners.onError?.(message);
         this.listeners.onEvent?.({ type: 'error', message });

@@ -19,6 +19,7 @@ import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { RecordingService, LiveTranscriptionService } from '@/services/audio';
 import { saveCapturedRecording } from '@/services/recording/saveCapturedRecording';
+import { interceptOnDeviceSummarizationIfBlocked } from '@/utils/processing/localLlmSummarizationGate';
 import { RecordingFolder } from '@/types';
 import { WaveformVisualizer } from '@/components/features/recording/WaveformVisualizer';
 import { Colors, Spacing, BorderRadius } from '@/theme';
@@ -364,7 +365,7 @@ export default function NewRecordingScreen() {
       liveSegments.current.length > 0 ? liveSegments.current : undefined;
 
     try {
-      await saveCapturedRecording({
+      const { summarizationBlocked } = await saveCapturedRecording({
         duration: stoppedDurationSec,
         filePath,
         fileSize,
@@ -373,6 +374,9 @@ export default function NewRecordingScreen() {
         markImported: params.markImported === 'true',
         preTranscript,
       });
+      if (summarizationBlocked) {
+        interceptOnDeviceSummarizationIfBlocked(useSettingsStore.getState().summarizationMode);
+      }
       router.replace('/(tabs)');
     } catch {
       isStopped.current = false;

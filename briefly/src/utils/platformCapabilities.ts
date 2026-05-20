@@ -3,20 +3,26 @@
  * Used by environment checks and transcription routing.
  */
 
-import { NativeModules } from 'react-native';
+import { TurboModuleRegistry } from 'react-native';
+import { getBrieflyTranscriberModule } from '../../modules/briefly-transcriber';
 import { NativeAudioCapture } from '@/services/audio/nativeAudioCapture';
 import { ExpoAudioStreamingCapture } from '@/services/audio/expoAudioStreamingCapture';
 import { isIOS, isAndroid } from './platform';
 
-const { BrieflyTranscriber } = NativeModules;
-
 export function hasBrieflyTranscriberModule(): boolean {
-  return BrieflyTranscriber != null;
+  return getBrieflyTranscriberModule() != null;
 }
 
-/** iOS on-device Speech live transcription (BrieflyTranscriber native module). */
+/** Extractive on-device summary via BrieflyTranscriber (iOS and Android dev/production builds). */
+export function supportsNativeOnDeviceSummarization(): boolean {
+  const module = getBrieflyTranscriberModule();
+  return typeof module?.summarize === 'function';
+}
+
+/** iOS on-device Speech live transcription (BrieflyTranscriber Expo module). */
 export function supportsOnDeviceLiveTranscription(): boolean {
-  return isIOS && typeof BrieflyTranscriber?.startOnDeviceLiveTranscription === 'function';
+  const module = getBrieflyTranscriberModule();
+  return isIOS && typeof module?.startOnDeviceLiveTranscription === 'function';
 }
 
 /** Low-latency PCM capture via native module (dev client builds). */
@@ -42,4 +48,13 @@ export function supportsBackgroundRecording(): boolean {
 /** Android 13+ notification permission is only relevant on Android. */
 export function needsAndroidRecordingNotificationPermission(): boolean {
   return isAndroid;
+}
+
+/** On-device Gemma summarization via llama.rn (dev client / production build only). */
+export function supportsLocalLlamaSummarization(): boolean {
+  try {
+    return TurboModuleRegistry.get('RNLlama') != null;
+  } catch {
+    return false;
+  }
 }

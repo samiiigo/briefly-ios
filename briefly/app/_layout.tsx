@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import * as SystemUI from 'expo-system-ui';
 import * as NavigationBar from 'expo-navigation-bar';
+import { isEdgeToEdge } from 'react-native-is-edge-to-edge';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -12,6 +13,7 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { installRealtimeTerminalLogs, logger } from '@/utils/logging/logger';
 import { checkEnvironment } from '@/utils/environment/environmentCheck';
+import { refreshLocalLlmModelStateFromDisk } from '@/services/summarization';
 import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
 import { Colors } from '@/theme';
 import { iconFonts } from '@/theme/iconFonts';
@@ -33,7 +35,10 @@ export default function RootLayout() {
 
     void SystemUI.setBackgroundColorAsync(Colors.background);
     if (Platform.OS === 'android') {
-      void NavigationBar.setBackgroundColorAsync(Colors.background);
+      // Navigation bar color APIs are no-ops (and warn) when edge-to-edge is enabled.
+      if (!isEdgeToEdge()) {
+        void NavigationBar.setBackgroundColorAsync(Colors.background);
+      }
       void NavigationBar.setButtonStyleAsync('light');
     }
 
@@ -42,6 +47,7 @@ export default function RootLayout() {
     loadRecordings();
 
     const runEnvCheck = () => {
+      refreshLocalLlmModelStateFromDisk();
       const env = checkEnvironment();
       logger.info('SYSTEM', 'Environment check', {
         hasNative: env.hasNativeModule,

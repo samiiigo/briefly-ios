@@ -16,7 +16,7 @@
  * the reference design from the v3 streaming spec.
  */
 
-import { NativeModules } from 'react-native';
+import { getBrieflyTranscriberModule } from '../../../modules/briefly-transcriber';
 import { getPathInfo } from '@/utils/fileSystem/pathInfo';
 import { normalizeDbMetering } from './audioMetering';
 import { AssemblyAIConfig, requireAssemblyAISharedApiKey } from '@/constants/api/assemblyAI';
@@ -170,10 +170,12 @@ class LiveTranscriptionServiceClass {
     if (a.kind === 'native-js') return a.capture.getMetering();
     if (a.kind === 'expo-js') return a.capture.getMetering();
 
-    const { BrieflyTranscriber } = NativeModules;
-    if (typeof BrieflyTranscriber?.getAudioCaptureMetering === 'function') {
+    const optionalMetering = getBrieflyTranscriberModule() as {
+      getAudioCaptureMetering?: () => number;
+    } | null;
+    if (optionalMetering && typeof optionalMetering.getAudioCaptureMetering === 'function') {
       try {
-        const db = BrieflyTranscriber.getAudioCaptureMetering();
+        const db = optionalMetering.getAudioCaptureMetering();
         if (typeof db === 'number') return normalizeDbMetering(db);
       } catch {
         // optional native API

@@ -8,6 +8,7 @@ import {
   initialStatusAfterSave,
   startRecordingBackgroundProcessing,
 } from '@/services/recording/recordingBackgroundProcessing';
+import { getLocalLlmSummarizationBlocker } from '@/services/summarization';
 
 export type SaveCapturedRecordingParams = {
   duration: number;
@@ -20,7 +21,14 @@ export type SaveCapturedRecordingParams = {
   title?: string;
 };
 
-export async function saveCapturedRecording(params: SaveCapturedRecordingParams): Promise<string> {
+export type SaveCapturedRecordingResult = {
+  id: string;
+  summarizationBlocked: boolean;
+};
+
+export async function saveCapturedRecording(
+  params: SaveCapturedRecordingParams,
+): Promise<SaveCapturedRecordingResult> {
   const { addRecording, recordings } = useRecordingStore.getState();
   const existingTitles = recordings.map((r) => r.title);
   const { summarizationMode, transcriptionMode } = useSettingsStore.getState();
@@ -29,6 +37,7 @@ export async function saveCapturedRecording(params: SaveCapturedRecordingParams)
   const targetFolder = params.targetFolder ?? 'unlisted';
   const baseTitle = params.title?.trim() || generateTitle();
   const safeTitle = ensureUniqueTitle(baseTitle, existingTitles);
+  const summarizationBlocked = !!getLocalLlmSummarizationBlocker(summarizationMode);
 
   await addRecording({
     id,
@@ -43,10 +52,14 @@ export async function saveCapturedRecording(params: SaveCapturedRecordingParams)
     ...folderFlagsFor(targetFolder),
     ...(params.markImported ? { isImported: true } : {}),
     userFolderId: params.targetUserFolderId,
-    status: initialStatusAfterSave(transcriptionMode, params.preTranscript),
+    status: summarizationBlocked
+      ? 'saved'
+      : initialStatusAfterSave(transcriptionMode, params.preTranscript),
     transcript: params.preTranscript,
   });
 
-  startRecordingBackgroundProcessing(id);
-  return id;
+  if (!summarizationBlocked) {
+    startRecordingBackgroundProcessing(id);
+  }
+  return { id, summarizationBlocked };
 }

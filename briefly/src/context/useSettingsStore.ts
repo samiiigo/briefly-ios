@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProcessingMode, TranscriptionMode, CloudProvider } from '@/types';
+import { registerLocalLlmDownloadStateSetter } from '@/services/summarization/local/localLlmDownloadState';
 
 /**
  * Provider API key field mapping (OCP).
@@ -36,6 +37,12 @@ interface SettingsState {
    */
   hasCompletedEnvSetup: boolean;
 
+  /** Local Gemma GGUF download state (on-device summarization). */
+  localLlmModelReady: boolean;
+  localLlmDownloadProgress: number | null;
+  localLlmDownloadStatus: 'idle' | 'downloading' | 'ready' | 'error';
+  localLlmDownloadError?: string;
+
   setSummarizationMode: (mode: ProcessingMode) => void;
   setTranscriptionMode: (mode: TranscriptionMode) => void;
   setCloudProvider: (provider: CloudProvider) => void;
@@ -49,6 +56,9 @@ interface SettingsState {
    * setup as complete. Subsequent calls are no-ops (idempotent).
    */
   applyEnvironmentDefaults: (recommendedMode: TranscriptionMode) => void;
+
+  /** Deletes the on-device GGUF and resets download state to idle. */
+  deleteLocalLlmModel: () => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -62,6 +72,10 @@ export const useSettingsStore = create<SettingsState>()(
       openaiApiKey: '',
       geminiApiKey: '',
       hasCompletedEnvSetup: false,
+      localLlmModelReady: false,
+      localLlmDownloadProgress: null,
+      localLlmDownloadStatus: 'idle',
+      localLlmDownloadError: undefined,
 
       setSummarizationMode: (mode) => set({ summarizationMode: mode }),
       setTranscriptionMode: (mode) => set({ transcriptionMode: mode }),
@@ -105,10 +119,28 @@ export const useSettingsStore = create<SettingsState>()(
           hasCompletedEnvSetup: true,
         });
       },
+
+      deleteLocalLlmModel: async () => {
+        const { deleteLocalGemmaModel } = await import(
+          '@/services/summarization/local/gemmaModelDownload'
+        );
+        await deleteLocalGemmaModel();
+      },
     }),
     {
       name: '@briefly/settings',
       storage: createJSONStorage(() => AsyncStorage),
     },
   ),
+);
+
+registerLocalLlmDownloadStateSetter(
+  (patch) => useSettingsStore.setState(patch),
+  () => {
+    const state = useSettingsStore.getState();
+    return {
+      localLlmDownloadStatus: state.localLlmDownloadStatus,
+      localLlmDownloadProgress: state.localLlmDownloadProgress,
+    };
+  },
 );

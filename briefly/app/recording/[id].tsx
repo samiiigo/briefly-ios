@@ -27,6 +27,7 @@ import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { ensureUniqueTitle } from '@/utils';
 import { getNextSummarizationFallback } from '@/utils/processing/summarizationFallback';
+import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
 import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
 import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
@@ -88,6 +89,7 @@ export default function TranscriptScreen() {
   const handleSummarizationFallback = useCallback(
     async (mode: typeof summarizationMode) => {
       if (!recording || !recordingId) return;
+      if (!alertIfLocalLlmNotReady(mode)) return;
       await updateRecording(recording.id, {
         status: 'summarizing',
         errorMessage: undefined,
@@ -106,6 +108,8 @@ export default function TranscriptScreen() {
 
   const handleStartProcessing = useCallback(async () => {
     if (!recording) return;
+    const mode = useSettingsStore.getState().summarizationMode;
+    if (!alertIfLocalLlmNotReady(mode)) return;
     router.replace({ pathname: '/recording/summarizing', params: { recordingId: recording.id } });
   }, [recording, router]);
 
@@ -119,6 +123,7 @@ export default function TranscriptScreen() {
       return;
     }
     const mode = useSettingsStore.getState().summarizationMode;
+    if (!alertIfLocalLlmNotReady(mode)) return;
     await updateRecording(recording.id, {
       status: 'summarizing',
       errorMessage: undefined,
