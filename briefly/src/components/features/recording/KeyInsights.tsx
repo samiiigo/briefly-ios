@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyInsight } from '@/types';
 import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
-import { Colors } from '@/theme';
+import { Colors, withAppFont } from '@/theme';
 
 interface Props {
   insights: KeyInsight[];
@@ -47,12 +47,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  headerText: {
+  headerText: withAppFont({
     fontSize: 15,
     fontWeight: '700',
     lineHeight: 20,
     color: Colors.textPrimary,
-  },
+  }),
   list: {
     gap: 12,
   },
@@ -60,22 +60,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  bullet: {
+  bullet: withAppFont({
     width: 20,
     marginTop: 5,
     marginRight: 12,
     fontSize: 13,
     lineHeight: 16,
     color: Colors.insightAccent,
-  },
-  text: {
+  }),
+  text: withAppFont({
     flex: 1,
     fontSize: 15,
     lineHeight: 22,
     color: Colors.summaryBody,
-  },
-  textStrong: {
+  }),
+  textStrong: withAppFont({
     fontWeight: '700',
     color: Colors.textPrimary,
-  },
+  }),
 });

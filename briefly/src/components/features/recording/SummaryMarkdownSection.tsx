@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, withSerifFont } from '@/theme';
+import { Colors, withAppFont } from '@/theme';
 import { SummaryMarkdownContent } from './SummaryMarkdownContent';
 import { prepareSummaryMarkdownBlocks } from '@/utils/summary/parseSummaryMarkdown';
 
@@ -28,10 +28,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 24,
   },
-  heading: withSerifFont({
-    fontSize: 20,
+  heading: withAppFont({
+    fontSize: 22,
     fontWeight: '700',
-    lineHeight: 28,
+    lineHeight: 30,
     color: Colors.textPrimary,
     marginBottom: 16,
   }),

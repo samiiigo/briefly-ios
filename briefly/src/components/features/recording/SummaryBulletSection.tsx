@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, withSerifFont } from '@/theme';
+import { Colors, withAppFont } from '@/theme';
 
 interface Props {
   bullets: string[];
@@ -29,10 +29,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 24,
   },
-  heading: withSerifFont({
-    fontSize: 17,
+  heading: withAppFont({
+    fontSize: 22,
     fontWeight: '700',
-    lineHeight: 26,
+    lineHeight: 30,
     color: Colors.textPrimary,
     marginBottom: 16,
   }),
@@ -43,18 +43,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  bullet: {
+  bullet: withAppFont({
     width: 16,
     marginTop: 6,
     marginRight: 8,
     fontSize: 14,
     lineHeight: 20,
     color: Colors.summaryMuted,
-  },
-  text: {
+  }),
+  text: withAppFont({
     flex: 1,
     fontSize: 15,
     lineHeight: 21,
     color: Colors.summaryBody,
-  },
+  }),
 });

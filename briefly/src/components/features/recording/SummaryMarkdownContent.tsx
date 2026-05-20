@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TextStyle } from 'react-native';
-import { Colors, withAppFont, withSerifFont } from '@/theme';
+import { Colors, withAppFont } from '@/theme';
 import { SummaryMarkdownBlock } from '@/utils/summary/parseSummaryMarkdown';
 import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
 
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   container: {
     gap: 0,
   },
-  h2: withSerifFont({
+  h2: withAppFont({
     fontSize: 19,
     fontWeight: '700',
     lineHeight: 28,
@@ -104,14 +104,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  bullet: {
+  bullet: withAppFont({
     width: 18,
     marginTop: 7,
     marginRight: 8,
     fontSize: 16,
     lineHeight: 22,
     color: Colors.summaryMuted,
-  },
+  }),
   listItemText: {
     flex: 1,
   },

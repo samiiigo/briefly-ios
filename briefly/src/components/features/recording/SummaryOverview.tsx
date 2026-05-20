@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, withSerifFont } from '@/theme';
+import { Colors, withAppFont } from '@/theme';
 
 interface Props {
   text: string;
@@ -23,16 +23,16 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 20,
   },
-  heading: withSerifFont({
-    fontSize: 17,
+  heading: withAppFont({
+    fontSize: 22,
     fontWeight: '700',
-    lineHeight: 26,
+    lineHeight: 30,
     color: Colors.textPrimary,
     marginBottom: 12,
   }),
-  body: {
+  body: withAppFont({
     fontSize: 15,
     lineHeight: 22,
     color: Colors.summaryBody,
-  },
+  }),
 });
