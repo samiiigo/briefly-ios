@@ -82,6 +82,7 @@ export default function HomeScreen() {
         recording={item}
         onPress={() => router.push(`/recording/${item.id}`)}
         onDelete={() => deleteRecording(item.id)}
+        onRename={(newTitle) => handleRename(item, newTitle)}
       >
         <RecentsEntryCard
           recording={item}

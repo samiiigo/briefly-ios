@@ -129,6 +129,7 @@ export default function FolderRecordingsScreen() {
         onDelete={
           isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
         }
+        onRename={(newTitle) => handleRename(item, newTitle)}
         onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
         isRecentlyDeleted={isRecentlyDeleted}
       >
@@ -161,6 +162,7 @@ export default function FolderRecordingsScreen() {
         onDelete={
           isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)
         }
+        onRename={(newTitle) => handleRename(item, newTitle)}
         onRestore={isRecentlyDeleted ? () => restoreRecording(item.id) : undefined}
         isRecentlyDeleted={isRecentlyDeleted}
       >
@@ -175,7 +177,7 @@ export default function FolderRecordingsScreen() {
         />
       </RecordingSwipeableRow>
     ),
-    [router, isRecentlyDeleted, permanentDelete, deleteRecording, restoreRecording]
+    [router, isRecentlyDeleted, permanentDelete, deleteRecording, restoreRecording, handleRename]
   );
 
   const renderGridItem = useCallback(

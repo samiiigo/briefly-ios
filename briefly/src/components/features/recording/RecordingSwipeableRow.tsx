@@ -36,6 +36,7 @@ import {
   RECORDING_SWIPE_OVERSHOOT_FRICTION,
   RECORDING_SWIPE_SPRING,
 } from './recordingSwipeSpring';
+import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 interface RecordingSwipeableRowProps {
@@ -43,9 +44,11 @@ interface RecordingSwipeableRowProps {
   children: React.ReactNode;
   onPress: () => void;
   onDelete: () => void;
+  /** When set, Rename appears in the More (⋯) menu. */
+  onRename?: (newTitle: string) => void;
   /** When set (e.g. in Recently Deleted), Recover appears under the More (⋯) swipe action. */
   onRestore?: () => void;
-  /** Recently Deleted: swipe left shows Delete Forever, Share, and More (Recover). */
+  /** Recently Deleted: no swipe-right Favorite; swipe left is Delete, Share, More (Recover). */
   isRecentlyDeleted?: boolean;
 }
 
@@ -56,6 +59,7 @@ export function RecordingSwipeableRow({
   children,
   onPress,
   onDelete,
+  onRename,
   onRestore,
   isRecentlyDeleted = false,
 }: RecordingSwipeableRowProps) {
@@ -202,6 +206,7 @@ export function RecordingSwipeableRow({
   }, [closeThisRow, loadFolders, moveDestinations, handleMoveTo]);
 
   const [moveModalVisible, setMoveModalVisible] = React.useState(false);
+  const [renameDialogVisible, setRenameDialogVisible] = React.useState(false);
   const destsForModal = moveDestinations();
   const moveModalOptions = [
     ...BUILTIN_MOVE_ORDER.map((id) => ({
@@ -238,58 +243,97 @@ export function RecordingSwipeableRow({
     openShareMenu();
   }, [openShareMenu]);
 
+  const promptRename = useCallback(() => {
+    if (!onRename) return;
+    closeThisRow();
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        'Rename Recording',
+        undefined,
+        (text) => {
+          const trimmed = text?.trim();
+          if (trimmed) onRename(trimmed);
+        },
+        'plain-text',
+        recording.title
+      );
+    } else {
+      setRenameDialogVisible(true);
+    }
+  }, [closeThisRow, onRename, recording.title]);
+
   const showExtraOptions = useCallback(() => {
     closeThisRow();
     if (isRecentlyDeleted) {
-      if (!onRestore) return;
-      Alert.alert(recording.title, undefined, [
-        { text: 'Recover', onPress: handleRecover },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
+      const buttons: { text: string; style?: 'cancel'; onPress?: () => void }[] = [];
+      if (onRename) {
+        buttons.push({ text: 'Rename', onPress: promptRename });
+      }
+      if (onRestore) {
+        buttons.push({ text: 'Recover', onPress: handleRecover });
+      }
+      if (buttons.length === 0) return;
+      buttons.push({ text: 'Cancel', style: 'cancel' });
+      Alert.alert(recording.title, undefined, buttons);
       return;
     }
 
-    const favoriteLabel = recording.isFavorite ? 'Unfavorite' : 'Favorite';
     const archiveLabel = recording.isArchived ? 'Unarchive' : 'Archive';
+    const iosOptions = ['Cancel'];
+    if (onRename) iosOptions.push('Rename');
+    iosOptions.push(archiveLabel, 'Move to…');
 
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancel', favoriteLabel, archiveLabel, 'Move to…'],
+          options: iosOptions,
           cancelButtonIndex: 0,
         },
         (index) => {
-          if (index === 1) toggleFavorite();
-          else if (index === 2) {
+          let cursor = 1;
+          if (onRename) {
+            if (index === cursor) {
+              promptRename();
+              return;
+            }
+            cursor += 1;
+          }
+          if (index === cursor) {
             if (recording.isArchived) removeFromArchive();
             else moveToArchive();
-          } else if (index === 3) showMoveSheet();
+          } else if (index === cursor + 1) {
+            showMoveSheet();
+          }
         }
       );
       return;
     }
 
-    Alert.alert('More', undefined, [
-      { text: favoriteLabel, onPress: toggleFavorite },
+    const androidButtons: { text: string; style?: 'cancel'; onPress?: () => void }[] = [];
+    if (onRename) {
+      androidButtons.push({ text: 'Rename', onPress: promptRename });
+    }
+    androidButtons.push(
       {
         text: archiveLabel,
         onPress: recording.isArchived ? removeFromArchive : moveToArchive,
       },
       { text: 'Move to…', onPress: showMoveSheet },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+      { text: 'Cancel', style: 'cancel' }
+    );
+    Alert.alert('More', undefined, androidButtons);
   }, [
     closeThisRow,
     handleRecover,
     isRecentlyDeleted,
     moveToArchive,
+    onRename,
     onRestore,
+    promptRename,
     recording.isArchived,
-    recording.isFavorite,
     recording.title,
     removeFromArchive,
     showMoveSheet,
-    toggleFavorite,
   ]);
 
   const renderRightActions = useCallback(
@@ -345,6 +389,32 @@ export function RecordingSwipeableRow({
     ]
   );
 
+  const renderLeftActions = useCallback(
+    (progress: SharedValue<number>, translation: SharedValue<number>) => {
+      bindSwipeTranslation(translation);
+
+      if (isRecentlyDeleted) {
+        return null;
+      }
+
+      return (
+        <SwipeableAnimatedAction
+          progress={progress}
+          index={0}
+          count={1}
+          side="leading"
+          backgroundColor="#FF9F0A"
+          icon={recording.isFavorite ? 'star' : 'star-outline'}
+          label={recording.isFavorite ? 'Unfavorite' : 'Favorite'}
+          onPress={toggleFavorite}
+          marginRight={SWIPE_ACTION_GAP}
+          numberOfLines={2}
+        />
+      );
+    },
+    [bindSwipeTranslation, isRecentlyDeleted, recording.isFavorite, toggleFavorite]
+  );
+
   return (
     <>
       <Swipeable
@@ -361,6 +431,7 @@ export function RecordingSwipeableRow({
         onSwipeableClose={handleSwipeableClose}
         onSwipeableOpenStartDrag={handleSwipeableOpenStartDrag}
         renderRightActions={renderRightActions}
+        renderLeftActions={renderLeftActions}
       >
         <SwipeableMotionCard translation={motionTranslation}>
           {wrapChildPress(children)}
@@ -404,6 +475,22 @@ export function RecordingSwipeableRow({
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {onRename ? (
+        <TextInputDialog
+          visible={renameDialogVisible}
+          title="Rename Recording"
+          defaultValue={recording.title}
+          placeholder="Recording name"
+          submitLabel="Rename"
+          onSubmit={(text) => {
+            setRenameDialogVisible(false);
+            const trimmed = text.trim();
+            if (trimmed) onRename(trimmed);
+          }}
+          onCancel={() => setRenameDialogVisible(false)}
+        />
+      ) : null}
     </>
   );
 }
