@@ -28,7 +28,10 @@ import { useSettingsStore } from '@/context/useSettingsStore';
 import { ensureUniqueTitle } from '@/utils';
 import { getNextSummarizationFallback } from '@/utils/processing/summarizationFallback';
 import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
-import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
+import {
+  hasMeaningfulTranscript,
+  hasRecordingAudio,
+} from '@/utils/recording/recordingValidation';
 import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
@@ -198,9 +201,17 @@ export default function TranscriptScreen() {
     recording.status === 'error' && hasMeaningfulTranscript(recording.transcript)
       ? getNextSummarizationFallback(lastSummarizationMode, [lastSummarizationMode])
       : null;
+  const hasAudio = hasRecordingAudio(recording.filePath, recording.fileSize);
+  const hasTranscript = hasMeaningfulTranscript(recording.transcript);
   const showTranscriptionFallbackOnError =
+    hasAudio &&
     recording.status === 'error' &&
-    (!hasMeaningfulTranscript(recording.transcript) || !summarizationFallback);
+    (!hasTranscript || !summarizationFallback);
+  const showProcessingBanner =
+    (recording.status === 'saved' ||
+      recording.status === 'transcribing' ||
+      recording.status === 'summarizing') &&
+    (hasAudio || (recording.status === 'saved' && hasTranscript));
   const overflowMenuItems = [
     { label: 'Rename', onPress: handleRename },
     {
@@ -220,13 +231,35 @@ export default function TranscriptScreen() {
     <View style={sl.container}>
       <ScrollView
         style={st.scroll}
-        contentContainerStyle={[st.scrollContent, { paddingTop: scrollPaddingTop }]}
+        contentContainerStyle={[
+          st.scrollContent,
+          { paddingTop: scrollPaddingTop, paddingBottom: hasAudio ? 140 : Spacing.xl },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <RecordingTitleHero recording={recording} />
-        {(recording.status === 'saved' || recording.status === 'transcribing' || recording.status === 'summarizing') && (
-          <View style={st.processingBanner}><View style={st.errorBannerTop}><Ionicons name="sparkles" size={16} color={Colors.primary} /><Text style={st.processingBannerTitle}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Summarization pending' : recording.status === 'saved' ? 'Ready to process' : 'Processing incomplete'}</Text></View><TouchableOpacity style={st.retryButton} onPress={handleStartProcessing}><Ionicons name="sparkles" size={15} color={Colors.textPrimary} /><Text style={st.retryButtonText}>{recording.status === 'saved' && (recording.transcript?.length ?? 0) > 0 ? 'Run Summarization' : 'Transcribe & Summarize'}</Text></TouchableOpacity></View>
-        )}
+        {showProcessingBanner ? (
+          <View style={st.processingBanner}>
+            <View style={st.errorBannerTop}>
+              <Ionicons name="sparkles" size={16} color={Colors.primary} />
+              <Text style={st.processingBannerTitle}>
+                {recording.status === 'saved' && hasTranscript
+                  ? 'Summarization pending'
+                  : recording.status === 'saved'
+                    ? 'Ready to process'
+                    : 'Processing incomplete'}
+              </Text>
+            </View>
+            <TouchableOpacity style={st.retryButton} onPress={handleStartProcessing}>
+              <Ionicons name="sparkles" size={15} color={Colors.textPrimary} />
+              <Text style={st.retryButtonText}>
+                {recording.status === 'saved' && hasTranscript
+                  ? 'Run Summarization'
+                  : 'Transcribe & Summarize'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
         {recording.status === 'error' && (
           <View style={st.errorBanner}>
             <View style={st.errorBannerTop}>
@@ -265,11 +298,13 @@ export default function TranscriptScreen() {
           />
         ) : null}
       </ScrollView>
-      <RecordingPlaybackBar
-        recording={recording}
-        playback={playback}
-        paddingBottom={playbackBottom}
-      />
+      {hasAudio ? (
+        <RecordingPlaybackBar
+          recording={recording}
+          playback={playback}
+          paddingBottom={playbackBottom}
+        />
+      ) : null}
 
       <RecordingDetailHeader
         onBack={() => router.back()}

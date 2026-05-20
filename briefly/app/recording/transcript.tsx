@@ -14,6 +14,7 @@ import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
+import { hasRecordingAudio } from '@/utils/recording/recordingValidation';
 import { Colors, Spacing } from '@/theme';
 
 export default function RecordingTranscriptScreen() {
@@ -96,6 +97,7 @@ export default function RecordingTranscriptScreen() {
     );
   }
 
+  const hasAudio = hasRecordingAudio(recording.filePath, recording.fileSize);
   const segments = isRerunning
     ? (rerunSegments ?? [])
     : (recording?.transcript ?? []);
@@ -105,7 +107,13 @@ export default function RecordingTranscriptScreen() {
     <View style={sl.container}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: scrollPaddingTop }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: scrollPaddingTop,
+            paddingBottom: hasAudio ? 160 : Spacing.xl,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {segments.length > 0 ? (
@@ -129,23 +137,27 @@ export default function RecordingTranscriptScreen() {
         )}
       </ScrollView>
 
-      <RecordingPlaybackBar
-        recording={recording}
-        playback={playback}
-        paddingBottom={playbackBottom}
-      />
+      {hasAudio ? (
+        <RecordingPlaybackBar
+          recording={recording}
+          playback={playback}
+          paddingBottom={playbackBottom}
+        />
+      ) : null}
 
       <StackScreenHeader
         title="Transcript"
         showBack
         onBack={() => router.back()}
         trailing={
-          <CircularIconButton
-            icon="refresh-outline"
-            accessibilityLabel="Re-run transcription"
-            loading={isTranscribing}
-            onPress={isTranscribing ? undefined : handleRerunTranscript}
-          />
+          hasAudio ? (
+            <CircularIconButton
+              icon="refresh-outline"
+              accessibilityLabel="Re-run transcription"
+              loading={isTranscribing}
+              onPress={isTranscribing ? undefined : handleRerunTranscript}
+            />
+          ) : undefined
         }
       />
     </View>

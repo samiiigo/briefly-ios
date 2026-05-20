@@ -85,15 +85,7 @@ function RootLayoutContent() {
           <StatusBar style={resolvedScheme === 'light' ? 'dark' : 'light'} />
           <Stack screenOptions={stackScreenOptions}>
             <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-            <Stack.Screen name="settings" />
-            <Stack.Screen name="recording" />
-            <Stack.Screen name="folder" />
-            <Stack.Screen name="transcription-mode" />
-            <Stack.Screen name="processing-mode" />
-            <Stack.Screen name="folder-layout" />
-            <Stack.Screen name="theme" />
             <Stack.Screen name="search" options={{ animation: 'fade' }} />
-            <Stack.Screen name="+not-found" />
           </Stack>
           <NavigatorBottomBlur scope="root" />
         </View>
