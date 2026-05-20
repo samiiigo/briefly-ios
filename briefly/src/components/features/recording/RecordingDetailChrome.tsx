@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
-import { AnchoredOverflowMenu } from '@/components/ui/AnchoredOverflowMenu';
+import { AnchoredOverflowMenu, type AnchoredMenuItem } from '@/components/ui/AnchoredOverflowMenu';
 import {
   TOP_HEADER_BUTTON_ROW_HEIGHT,
   TOP_HEADER_PADDING_BOTTOM,
@@ -17,7 +17,8 @@ interface HeaderProps {
   folderLabel: string;
   onShare: () => void;
   shareDisabled?: boolean;
-  menuItems: { label: string; onPress: () => void }[];
+  menuItems: AnchoredMenuItem[];
+  menuLoading?: boolean;
 }
 
 /** Summary screen top bar (Figma mock). */
@@ -27,6 +28,7 @@ export function RecordingDetailHeader({
   onShare,
   shareDisabled,
   menuItems,
+  menuLoading = false,
 }: HeaderProps) {
   const headerStyles = useCreateStyles(createRecordingDetailHeaderStyles);
   return (
@@ -55,11 +57,13 @@ export function RecordingDetailHeader({
           />
           <AnchoredOverflowMenu
             items={menuItems}
+            triggerLoading={menuLoading}
             renderTrigger={(open) => (
               <CircularIconButton
                 icon="ellipsis-horizontal"
                 accessibilityLabel="Recording options"
                 onPress={open}
+                loading={menuLoading}
                 style={headerStyles.secondaryButton}
               />
             )}

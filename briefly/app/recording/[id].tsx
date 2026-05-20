@@ -33,6 +33,10 @@ import {
   hasRecordingAudio,
 } from '@/utils/recording/recordingValidation';
 import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
+import {
+  startRecordingBackgroundProcessing,
+  startRecordingSummarizationRetry,
+} from '@/services/recording/recordingBackgroundProcessing';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
 export default function TranscriptScreen() {
@@ -72,53 +76,30 @@ export default function TranscriptScreen() {
     else { setRenameDialogVisible(true); }
   }, [recording, recordings, updateRecording]);
 
-  const handleTranscriptionFallback = useCallback(async () => {
+  const handleTranscriptionFallback = useCallback(() => {
     if (!recording || !recordingId) return;
-    const { summarizationMode: activeSummarizationMode } = useSettingsStore.getState();
-    await updateRecording(recording.id, {
-      status: 'transcribing',
-      errorMessage: undefined,
-      transcript: undefined,
-      summary: undefined,
-      keyInsights: undefined,
-      mainEmoji: undefined,
-      processingMode: activeSummarizationMode,
-    });
-    router.replace({
-      pathname: '/recording/summarizing',
-      params: { recordingId: recording.id, forceAudioFallback: 'true' },
-    });
-  }, [recording, recordingId, updateRecording, router]);
+    startRecordingBackgroundProcessing(recording.id, { audioFallbackOnly: true });
+  }, [recording, recordingId]);
 
   const handleSummarizationFallback = useCallback(
-    async (mode: typeof summarizationMode) => {
+    (mode: typeof summarizationMode) => {
       if (!recording || !recordingId) return;
       if (!alertIfLocalLlmNotReady(mode)) return;
-      await updateRecording(recording.id, {
-        status: 'summarizing',
-        errorMessage: undefined,
-        summary: undefined,
-        keyInsights: undefined,
-        mainEmoji: undefined,
-        processingMode: mode,
-      });
-      router.replace({
-        pathname: '/recording/summarizing',
-        params: { recordingId: recording.id, retrySummarizationMode: mode },
-      });
+      startRecordingSummarizationRetry(recording.id, mode);
     },
-    [recording, recordingId, updateRecording, router],
+    [recording, recordingId],
   );
 
-  const handleStartProcessing = useCallback(async () => {
+  const handleStartProcessing = useCallback(() => {
     if (!recording) return;
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
-    router.replace({ pathname: '/recording/summarizing', params: { recordingId: recording.id } });
-  }, [recording, router]);
+    startRecordingBackgroundProcessing(recording.id);
+  }, [recording]);
 
-  const handleRerunSummarization = useCallback(async () => {
+  const handleRerunSummarization = useCallback(() => {
     if (!recording || !recordingId) return;
+    if (recording.status === 'summarizing') return;
     if (!hasMeaningfulTranscript(recording.transcript)) {
       Alert.alert(
         'No transcript',
@@ -128,19 +109,8 @@ export default function TranscriptScreen() {
     }
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
-    await updateRecording(recording.id, {
-      status: 'summarizing',
-      errorMessage: undefined,
-      summary: undefined,
-      keyInsights: undefined,
-      mainEmoji: undefined,
-      processingMode: mode,
-    });
-    router.replace({
-      pathname: '/recording/summarizing',
-      params: { recordingId: recording.id, retrySummarizationMode: mode },
-    });
-  }, [recording, recordingId, updateRecording, router]);
+    startRecordingSummarizationRetry(recording.id, mode);
+  }, [recording, recordingId]);
 
   const handleToggleFavorite = useCallback(() => {
     if (!recording) return;
@@ -207,10 +177,11 @@ export default function TranscriptScreen() {
     hasAudio &&
     recording.status === 'error' &&
     (!hasTranscript || !summarizationFallback);
+  const isSummarizing = recording.status === 'summarizing';
   const showProcessingBanner =
     (recording.status === 'saved' ||
       recording.status === 'transcribing' ||
-      recording.status === 'summarizing') &&
+      (isSummarizing && !hasTranscript)) &&
     (hasAudio || (recording.status === 'saved' && hasTranscript));
   const overflowMenuItems = [
     { label: 'Rename', onPress: handleRename },
@@ -220,10 +191,10 @@ export default function TranscriptScreen() {
     },
     { label: 'View transcript', onPress: handleViewTranscript },
     {
-      label: 'Rerun summarization',
-      onPress: () => {
-        void handleRerunSummarization();
-      },
+      label: isSummarizing ? 'Summarizing…' : 'Rerun summarization',
+      onPress: handleRerunSummarization,
+      loading: isSummarizing,
+      disabled: isSummarizing,
     },
   ];
 
@@ -312,6 +283,7 @@ export default function TranscriptScreen() {
         onShare={openShareMenu}
         shareDisabled={shareBusy}
         menuItems={overflowMenuItems}
+        menuLoading={isSummarizing}
       />
       <TextInputDialog
         visible={renameDialogVisible}

@@ -8,6 +8,7 @@ import {
   Dimensions,
   LayoutRectangle,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
 
@@ -15,6 +16,7 @@ export type AnchoredMenuItem = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  loading?: boolean;
 };
 
 const MENU_MIN_WIDTH = 220;
@@ -25,6 +27,8 @@ interface AnchoredOverflowMenuProps {
   renderTrigger: (open: () => void) => React.ReactNode;
   /** Menu horizontal alignment relative to the trigger. */
   align?: 'leading' | 'trailing';
+  /** Shows a spinner on the trigger (e.g. while a menu action runs). */
+  triggerLoading?: boolean;
 }
 
 /** Context menu anchored below the trigger. */
@@ -32,6 +36,7 @@ export function AnchoredOverflowMenu({
   items,
   renderTrigger,
   align = 'trailing',
+  triggerLoading = false,
 }: AnchoredOverflowMenuProps) {
   const anchorRef = useRef<View>(null);
   const [visible, setVisible] = useState(false);
@@ -80,12 +85,22 @@ export function AnchoredOverflowMenu({
                       item.onPress();
                     }
                   }}
-                  disabled={item.disabled}
+                  disabled={item.disabled || item.loading}
                   accessibilityRole="menuitem"
-                  accessibilityState={{ disabled: item.disabled }}
+                  accessibilityState={{ disabled: item.disabled || item.loading, busy: item.loading }}
                   android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
                 >
-                  <Text style={[styles.label, item.disabled && styles.labelDisabled]}>{item.label}</Text>
+                  {item.loading ? (
+                    <ActivityIndicator size="small" color={Colors.primary} style={styles.rowSpinner} />
+                  ) : null}
+                  <Text
+                    style={[
+                      styles.label,
+                      (item.disabled || item.loading) && styles.labelDisabled,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
                 </Pressable>
               ))}
             </View>
@@ -121,8 +136,14 @@ const styles = StyleSheet.create({
     }),
   },
   row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: 14,
+  },
+  rowSpinner: {
+    width: 20,
   },
   rowBorder: {
     borderTopWidth: StyleSheet.hairlineWidth,

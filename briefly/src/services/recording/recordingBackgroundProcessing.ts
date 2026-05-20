@@ -4,6 +4,7 @@ import { useSettingsStore } from '@/context/useSettingsStore';
 import {
   processRecordingFromSavedAudio,
   processRecordingToReady,
+  retrySummarization,
   RecordingProcessingResult,
 } from '@/services/recording/recordingProcessingService';
 import {
@@ -249,6 +250,85 @@ export function cancelRecordingBackgroundProcessing(recordingId: string): void {
   if (!job) return;
   job.cancelled = true;
   clearJob(recordingId);
+}
+
+/** Re-summarize an existing transcript without leaving the recording detail screen. */
+export function startRecordingSummarizationRetry(
+  recordingId: string,
+  summarizationMode?: ProcessingMode,
+): void {
+  if (activeJobs.has(recordingId)) return;
+
+  const pMode = summarizationMode ?? useSettingsStore.getState().summarizationMode;
+  const blocker = getLocalLlmSummarizationBlocker(pMode);
+  if (blocker) {
+    void abortBlockedOnDeviceProcessing(recordingId, blocker);
+    return;
+  }
+
+  const stageRef = { current: 'summarizing' as const };
+
+  const timeoutId = setTimeout(() => {
+    const job = activeJobs.get(recordingId);
+    if (!job || job.cancelled) return;
+    job.cancelled = true;
+    clearJob(recordingId);
+    void failJob(
+      recordingId,
+      new Error(
+        'Summarization is taking longer than expected. Check your connection and try again.',
+      ),
+      stageRef.current,
+    );
+  }, PROCESSING_TIMEOUT_MS);
+
+  activeJobs.set(recordingId, { cancelled: false, timeoutId });
+
+  void (async () => {
+    try {
+      const { getRecordingById, updateRecording, recordings } = useRecordingStore.getState();
+      const rec = getRecordingById(recordingId);
+      if (!rec?.transcript || !hasMeaningfulTranscript(rec.transcript)) {
+        throw new Error('No transcript available to summarize.');
+      }
+
+      await updateRecording(recordingId, {
+        status: 'summarizing',
+        errorMessage: undefined,
+        summary: undefined,
+        keyInsights: undefined,
+        mainEmoji: undefined,
+        processingMode: pMode,
+      });
+
+      const result = await retrySummarization(rec.transcript, pMode, {
+        onStage: () => {},
+      });
+
+      const job = activeJobs.get(recordingId);
+      if (job?.cancelled) return;
+
+      const existingTitles = recordings
+        .filter((r) => r.id !== recordingId)
+        .map((r) => r.title);
+
+      await updateRecording(recordingId, {
+        status: 'ready',
+        processingMode: pMode,
+        errorMessage: undefined,
+        ...buildRecordingReadyFromSummarization(result, { existingTitles }),
+      });
+
+      logger.info('RECORDING', 'Summarization retry completed', { recordingId });
+    } catch (err: unknown) {
+      const job = activeJobs.get(recordingId);
+      if (!job?.cancelled) {
+        await failJob(recordingId, err, stageRef.current);
+      }
+    } finally {
+      clearJob(recordingId);
+    }
+  })();
 }
 
 export function initialStatusAfterSave(
