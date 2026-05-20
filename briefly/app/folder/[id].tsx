@@ -23,6 +23,7 @@ import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { screenLayoutStyles as sl } from '@/components/navigation/screenLayout';
 import { Recording } from '@/types';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
+import type { RecordingListGroupPosition } from '@/utils/list/flattenRecordingSections';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
 const LIST_BOTTOM_PADDING = 140;
@@ -121,7 +122,7 @@ export default function FolderRecordingsScreen() {
   }, [router, folderType, folderId, isRecentlyDeleted]);
 
   const renderListCard = useCallback(
-    (item: Recording) => (
+    (item: Recording, groupPosition: RecordingListGroupPosition) => (
       <RecordingSwipeableRow
         recording={item}
         onPress={() => router.push(`/recording/${item.id}`)}
@@ -133,6 +134,7 @@ export default function FolderRecordingsScreen() {
       >
         <RecentsEntryCard
           recording={item}
+          groupPosition={groupPosition}
           onPress={() => router.push(`/recording/${item.id}`)}
           onDelete={
             isRecentlyDeleted ? () => permanentDelete(item.id) : () => deleteRecording(item.id)

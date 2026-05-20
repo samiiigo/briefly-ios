@@ -12,13 +12,16 @@ import { Recording } from '@/types';
 import {
   flattenRecordingSections,
   RECORDING_LIST_HEADER_GAP,
-  RECORDING_LIST_ITEM_GAP,
   type FlatRecordingListItem,
+  type RecordingListGroupPosition,
 } from '@/utils/list/flattenRecordingSections';
 
 interface RecordingSectionFlashListProps {
   sections: ReadonlyArray<{ title: string; data: Recording[] }>;
-  renderRecording: (recording: Recording) => React.ReactElement;
+  renderRecording: (
+    recording: Recording,
+    groupPosition: RecordingListGroupPosition
+  ) => React.ReactElement;
   contentContainerStyle?: StyleProp<ViewStyle>;
   sectionHeaderStyle?: StyleProp<TextStyle>;
   onScrollBeginDrag?: () => void;
@@ -37,7 +40,7 @@ function ListSeparator({
     return <View style={styles.headerGap} />;
   }
   if (leadingItem?.kind === 'recording' && trailingItem?.kind === 'recording') {
-    return <View style={styles.itemGap} />;
+    return null;
   }
   return null;
 }
@@ -61,7 +64,7 @@ export function RecordingSectionFlashList({
       if (item.kind === 'spacer') {
         return <View style={{ height: item.height }} />;
       }
-      return renderRecording(item.item);
+      return renderRecording(item.item, item.groupPosition);
     },
     [renderRecording, sectionHeaderStyle],
   );
@@ -100,8 +103,5 @@ const styles = StyleSheet.create({
   },
   headerGap: {
     height: RECORDING_LIST_HEADER_GAP,
-  },
-  itemGap: {
-    height: RECORDING_LIST_ITEM_GAP,
   },
 });

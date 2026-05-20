@@ -5,10 +5,24 @@ export const RECORDING_LIST_ITEM_GAP = 8;
 export const RECORDING_LIST_HEADER_GAP = 7;
 export const RECORDING_LIST_SECTION_GAP = 8;
 
+export type RecordingListGroupPosition = 'only' | 'first' | 'middle' | 'last';
+
 export type FlatRecordingListItem =
   | { kind: 'header'; id: string; title: string }
-  | { kind: 'recording'; id: string; item: Recording }
+  | {
+      kind: 'recording';
+      id: string;
+      item: Recording;
+      groupPosition: RecordingListGroupPosition;
+    }
   | { kind: 'spacer'; id: string; height: number };
+
+function groupPositionForIndex(index: number, count: number): RecordingListGroupPosition {
+  if (count <= 1) return 'only';
+  if (index === 0) return 'first';
+  if (index === count - 1) return 'last';
+  return 'middle';
+}
 
 /** Flattens SectionList-style sections into rows for FlashList. */
 export function flattenRecordingSections(
@@ -34,9 +48,14 @@ export function flattenRecordingSections(
       });
     }
 
-    for (const item of section.data) {
-      rows.push({ kind: 'recording', id: item.id, item });
-    }
+    section.data.forEach((item, index) => {
+      rows.push({
+        kind: 'recording',
+        id: item.id,
+        item,
+        groupPosition: groupPositionForIndex(index, section.data.length),
+      });
+    });
   });
 
   return rows;

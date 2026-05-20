@@ -20,6 +20,7 @@ import {
   formatRecentsGroupLabel,
 } from '@/utils';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
+import type { RecordingListGroupPosition } from '@/utils/list/flattenRecordingSections';
 import { Colors, Spacing, withAppFont } from '@/theme';
 
 const LIST_BOTTOM_PADDING = 140;
@@ -76,7 +77,7 @@ export default function HomeScreen() {
   }, []);
 
   const renderRecording = useCallback(
-    (item: Recording) => (
+    (item: Recording, groupPosition: RecordingListGroupPosition) => (
       <RecordingSwipeableRow
         recording={item}
         onPress={() => router.push(`/recording/${item.id}`)}
@@ -84,6 +85,7 @@ export default function HomeScreen() {
       >
         <RecentsEntryCard
           recording={item}
+          groupPosition={groupPosition}
           onPress={() => router.push(`/recording/${item.id}`)}
           onDelete={() => deleteRecording(item.id)}
           onRename={(newTitle) => handleRename(item, newTitle)}

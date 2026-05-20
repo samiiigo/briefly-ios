@@ -10,19 +10,57 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Recording } from '@/types';
 import { formatRecentsCardDate } from '@/utils';
+import type { RecordingListGroupPosition } from '@/utils/list/flattenRecordingSections';
 import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { Colors, BorderRadius, Spacing, withAppFont } from '@/theme';
+
+const AVATAR_SIZE = 48;
 
 interface Props {
   recording: Recording;
   onPress: () => void;
   onRename?: (newTitle: string) => void;
   onDelete?: () => void;
+  /** Position within a time-grouped card (Today, Yesterday, …). */
+  groupPosition?: RecordingListGroupPosition;
 }
 
-export function RecentsEntryCard({ recording, onPress, onRename, onDelete }: Props) {
+function groupedCardStyle(position: RecordingListGroupPosition) {
+  const radius = BorderRadius.cardXL;
+  const shared = {
+    backgroundColor: Colors.card,
+    overflow: 'hidden' as const,
+  };
+  switch (position) {
+    case 'only':
+      return { ...shared, borderRadius: radius };
+    case 'first':
+      return {
+        ...shared,
+        borderTopLeftRadius: radius,
+        borderTopRightRadius: radius,
+      };
+    case 'middle':
+      return shared;
+    case 'last':
+      return {
+        ...shared,
+        borderBottomLeftRadius: radius,
+        borderBottomRightRadius: radius,
+      };
+  }
+}
+
+export function RecentsEntryCard({
+  recording,
+  onPress,
+  onRename,
+  onDelete,
+  groupPosition = 'only',
+}: Props) {
   const [renameDialogVisible, setRenameDialogVisible] = useState(false);
+  const showDivider = groupPosition === 'middle' || groupPosition === 'last';
 
   const handleLongPress = () => {
     const buttons: { text: string; style?: 'destructive' | 'cancel'; onPress?: () => void }[] = [];
@@ -63,23 +101,26 @@ export function RecentsEntryCard({ recording, onPress, onRename, onDelete }: Pro
 
   return (
     <>
-      <TouchableOpacity
-        style={styles.card}
-        onPress={onPress}
-        onLongPress={handleLongPress}
-        activeOpacity={0.85}
-      >
-        <View style={styles.leading}>
-          <RecordingAvatar recording={recording} trailingSpacing={false} />
-          <View style={styles.textBlock}>
-            <Text style={styles.title} numberOfLines={1}>
-              {recording.title}
-            </Text>
-            <Text style={styles.subtitle}>{formatRecentsCardDate(recording.createdAt)}</Text>
+      <View style={groupedCardStyle(groupPosition)}>
+        {showDivider ? <View style={styles.rowDivider} /> : null}
+        <TouchableOpacity
+          style={styles.row}
+          onPress={onPress}
+          onLongPress={handleLongPress}
+          activeOpacity={0.85}
+        >
+          <View style={styles.leading}>
+            <RecordingAvatar recording={recording} trailingSpacing={false} />
+            <View style={styles.textBlock}>
+              <Text style={styles.title} numberOfLines={1}>
+                {recording.title}
+              </Text>
+              <Text style={styles.subtitle}>{formatRecentsCardDate(recording.createdAt)}</Text>
+            </View>
           </View>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color={Colors.subtext} />
-      </TouchableOpacity>
+          <Ionicons name="chevron-forward" size={16} color={Colors.subtext} />
+        </TouchableOpacity>
+      </View>
       <TextInputDialog
         visible={renameDialogVisible}
         title="Rename Recording"
@@ -97,13 +138,16 @@ export function RecentsEntryCard({ recording, onPress, onRename, onDelete }: Pro
 }
 
 const styles = StyleSheet.create({
-  card: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.cardXL,
     padding: Spacing.md,
+  },
+  rowDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.border,
+    marginLeft: Spacing.md + AVATAR_SIZE + Spacing.md,
   },
   leading: {
     flex: 1,
