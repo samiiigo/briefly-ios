@@ -3,7 +3,7 @@
     "name": "Briefly",
     "slug": "briefly",
     "scheme": "briefly",
-    "version": "3.6.0",
+    "version": "4.7.0",
     "runtimeVersion": {
       "policy": "appVersion"
     },

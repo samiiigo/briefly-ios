@@ -4,6 +4,7 @@ node_modules/
 # Environment & secrets
 .env
 .env*.local
+
 briefly/.env
 !briefly/.env.example
 google-service-account.json

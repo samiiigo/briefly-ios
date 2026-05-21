@@ -156,7 +156,7 @@ export default function SettingsScreen() {
 
         <Text style={[sl.versionText, styles.versionText]}>
           {Constants.expoConfig?.name ?? 'Briefly'}{' '}
-          {Constants.expoConfig?.version ?? '3.6.0'}
+          {Constants.expoConfig?.version ?? '4.7.0'}
         </Text>
       </View>
 

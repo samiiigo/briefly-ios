@@ -108,6 +108,8 @@ cd briefly
 npm install
 ```
 
+On **Windows**, run `npm install` from the `briefly` folder (CMD, PowerShell, or Git Bash). `preinstall` refreshes `briefly/.npmrc` with a Windows path Node can load when npm runs scripts under `cmd.exe` (Git Bash `${PWD}` paths like `/d/...` do not work there). `npm install` skips `llama.rn`'s default postinstall (Git Bash GNU `tar` mishandles `C:\` paths) and runs the repo's Windows-safe downloader afterward via `postinstall`. If Git Bash still fails, run `npm run install:win`. Always `cd briefly` before installing. To re-download native artifacts manually: `npm run postinstall:llama`.
+
 ### API keys (cloud modes)
 
 If you want to use cloud transcription (AssemblyAI) or shared cloud summarization (OpenRouter), you need to provide API keys locally or via EAS secrets for builds.

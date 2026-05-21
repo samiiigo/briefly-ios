@@ -1,6 +1,6 @@
 {
   "name": "briefly",
-  "version": "3.6.0",
+  "version": "4.7.0",
   "main": "expo-router/entry",
   "scripts": {
     "start": "cross-env NODE_OPTIONS=--max-old-space-size=8192 expo start --dev-client",
@@ -24,6 +24,9 @@
     "test": "tsx --test src/**/*.test.ts",
     "audit:ci": "npm audit --audit-level=high",
     "verify": "npm run typecheck && npm test && npm run audit:ci",
+    "preinstall": "node ./scripts/prepare-llama-windows-install.js",
+    "install:win": "node ./scripts/prepare-llama-windows-install.js && npm install",
+    "postinstall": "node ./scripts/postinstall-llama-if-windows.js",
     "postinstall:llama": "node ./scripts/postinstall-llama.js",
     "android": "expo run:android"
   },
@@ -69,7 +72,9 @@
   "overrides": {
     "react-dom": "19.1.0",
     "@xmldom/xmldom": "0.8.13",
-    "postcss": "8.5.14"
+    "postcss": "8.5.14",
+    "glob": "^13.0.6",
+    "rimraf": "^6.0.1"
   },
   "devDependencies": {
     "@types/node": "^25.3.5",
