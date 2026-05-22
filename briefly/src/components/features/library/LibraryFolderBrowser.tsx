@@ -21,7 +21,6 @@ import { LibraryHeader } from './LibraryHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { AnchoredMenuModal, useAnchoredMenu } from '@/components/ui/AnchoredOverflowMenu';
-import { NewFolderDialog } from './NewFolderDialog';
 import { computeLibraryFolderCounts } from '@/utils/folders/folderCounts';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
 import { buildUserFolderMenuItems } from '@/utils/folders/userFolderActions';
@@ -318,8 +317,25 @@ export function LibraryFolderBrowser({
   );
 
   const handleAddFolder = useCallback(() => {
-    setAddModalVisible(true);
-  }, []);
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        'New Folder',
+        undefined,
+        (text) => {
+          const trimmed = text?.trim();
+          if (trimmed) {
+            addFolder(trimmed).catch((err: unknown) =>
+              Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
+            );
+          }
+        },
+        'plain-text',
+        ''
+      );
+    } else {
+      setAddModalVisible(true);
+    }
+  }, [addFolder]);
 
   const openFolder = useCallback(
     (folderId: string, folderName: string, folderType: 'built-in' | 'user') => {
@@ -787,16 +803,21 @@ export function LibraryFolderBrowser({
         </ScrollView>
       )}
 
-      <NewFolderDialog
-        visible={addModalVisible}
-        onSubmit={(text) => {
-          setAddModalVisible(false);
-          addFolder(text).catch((err: unknown) =>
-            Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
-          );
-        }}
-        onCancel={() => setAddModalVisible(false)}
-      />
+      {Platform.OS !== 'ios' ? (
+        <TextInputDialog
+          visible={addModalVisible}
+          title="New Folder"
+          placeholder="Folder name"
+          submitLabel="Create"
+          onSubmit={(text) => {
+            setAddModalVisible(false);
+            addFolder(text).catch((err: unknown) =>
+              Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
+            );
+          }}
+          onCancel={() => setAddModalVisible(false)}
+        />
+      ) : null}
 
       <LibraryHeader
         title={pageTitle}
@@ -814,22 +835,24 @@ export function LibraryFolderBrowser({
         align="center"
       />
 
-      <TextInputDialog
-        visible={!!renameFolderTarget}
-        title="Rename Folder"
-        defaultValue={renameFolderTarget?.name ?? ''}
-        placeholder="Folder name"
-        submitLabel="Rename"
-        onSubmit={(text) => {
-          if (renameFolderTarget) {
-            renameFolder(renameFolderTarget.id, text).catch((err: unknown) =>
-              Alert.alert('Error', err instanceof Error ? err.message : 'Could not rename folder')
-            );
-          }
-          setRenameFolderTarget(null);
-        }}
-        onCancel={() => setRenameFolderTarget(null)}
-      />
+      {Platform.OS !== 'ios' ? (
+        <TextInputDialog
+          visible={!!renameFolderTarget}
+          title="Rename Folder"
+          defaultValue={renameFolderTarget?.name ?? ''}
+          placeholder="Folder name"
+          submitLabel="Rename"
+          onSubmit={(text) => {
+            if (renameFolderTarget) {
+              renameFolder(renameFolderTarget.id, text).catch((err: unknown) =>
+                Alert.alert('Error', err instanceof Error ? err.message : 'Could not rename folder')
+              );
+            }
+            setRenameFolderTarget(null);
+          }}
+          onCancel={() => setRenameFolderTarget(null)}
+        />
+      ) : null}
     </View>
   );
 }
