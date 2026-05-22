@@ -49,6 +49,15 @@ export function isShortOrEmptyRecordingError(error: unknown): boolean {
   return SHORT_RECORDING_PATTERNS.some((p) => message.includes(p));
 }
 
+/** Missing on-disk audio (stale cache path, deleted file, etc.). */
+export function isAudioFileMissingError(error: unknown): boolean {
+  const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return (
+    message.includes('audio file not found') ||
+    message.includes('no audio file was saved')
+  );
+}
+
 export function isNetworkRelatedError(error: unknown): boolean {
   const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
   return NETWORK_PATTERNS.some((p) => message.includes(p));

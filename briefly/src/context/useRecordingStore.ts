@@ -5,6 +5,7 @@ import { RecordingStorageService } from '@/services/storage';
 import type { RecordingRepository } from '@/services/storage';
 import { folderFlagsFor } from '@/utils/folders/recordingFolder';
 import { logger } from '@/utils/logging/logger';
+import { repairRecordingFilePaths } from '@/utils/fileSystem/persistRecordingAudio';
 
 const RECENTLY_DELETED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -101,6 +102,12 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
         mutationEpoch += 1;
         await recordingRepository.saveAll(kept);
         recordings = kept;
+      }
+      const repaired = repairRecordingFilePaths(recordings);
+      if (repaired.changed) {
+        mutationEpoch += 1;
+        await recordingRepository.saveAll(repaired.recordings);
+        recordings = repaired.recordings;
       }
       if (__DEV__) {
         console.debug(

@@ -11,7 +11,11 @@ import {
   normalizeTranscriptionMode,
   resolvePostRecordingPipeline,
 } from '@/utils/processing/transcriptionMode';
-import { toProcessingFailure } from '@/utils/processing/processingErrors';
+import {
+  isAudioFileMissingError,
+  toProcessingFailure,
+} from '@/utils/processing/processingErrors';
+import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
 import {
   hasMeaningfulTranscript,
   isRecordingFileMissing,
@@ -54,6 +58,10 @@ async function failJob(recordingId: string, err: unknown, stage: 'transcribing' 
     });
   } catch {
     // List UI still reflects error via in-memory store when update succeeds partially
+  }
+
+  if (isAudioFileMissingError(failure.message)) {
+    useRecordingRetryFlashStore.getState().triggerRetryFlash(recordingId);
   }
 
   logger.warn('RECORDING', 'Background processing failed', {

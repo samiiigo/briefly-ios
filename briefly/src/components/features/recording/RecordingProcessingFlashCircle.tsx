@@ -60,7 +60,7 @@ export function RecordingProcessingFlashCircle({ size = 'md' }: Props) {
       ]}
     >
       <Animated.View style={iconStyle}>
-        <Ionicons name="alert-circle" size={ICON_SIZE[size]} color={colors.orange} />
+        <Ionicons name="alert" size={ICON_SIZE[size]} color={colors.orange} />
       </Animated.View>
     </View>
   );

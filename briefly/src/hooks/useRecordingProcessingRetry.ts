@@ -14,6 +14,7 @@ import {
   startRecordingSummarizationRetry,
 } from '@/services/recording/recordingBackgroundProcessing';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
+import { isAudioFileMissingError } from '@/utils/processing/processingErrors';
 import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
 
 export function useRecordingProcessingRetry(
@@ -64,7 +65,12 @@ export function useRecordingProcessingRetry(
     const leftProcessing =
       (prev === 'transcribing' || prev === 'summarizing') && next === 'error';
     if (leftProcessing) {
-      triggerRetryFlash(recording.id);
+      if (
+        wasPending ||
+        isAudioFileMissingError(recording.errorMessage ?? '')
+      ) {
+        triggerRetryFlash(recording.id);
+      }
       pendingRef.current = false;
       return;
     }

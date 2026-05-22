@@ -16,6 +16,7 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { useExport } from '@/hooks/useExport';
 import { KeyInsights } from '@/components/features/recording/KeyInsights';
 import { RecordingTitleHero } from '@/components/features/recording/RecordingTitleHero';
+import { RecordingProcessingFlashIcon } from '@/components/features/recording/RecordingProcessingFlashIcon';
 import { SummaryMarkdownSection } from '@/components/features/recording/SummaryMarkdownSection';
 import { RecordingDetailHeader } from '@/components/features/recording/RecordingDetailChrome';
 import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
@@ -40,6 +41,7 @@ import {
   startRecordingSummarizationRetry,
 } from '@/services/recording/recordingBackgroundProcessing';
 import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
+import { isAudioFileMissingError } from '@/utils/processing/processingErrors';
 import {
   Spacing,
   BorderRadius,
@@ -181,6 +183,13 @@ export default function TranscriptScreen() {
   const showProcessingBanner =
     (recording.status === 'saved' || (isSummarizing && !hasTranscript)) &&
     (hasAudio || (recording.status === 'saved' && hasTranscript));
+  const flashActive = useRecordingRetryFlashStore((s) => {
+    const until = s.flashUntilById[recording.id];
+    return until != null && Date.now() < until;
+  });
+  const hideAudioMissingBanner =
+    recording.status === 'error' &&
+    isAudioFileMissingError(recording.errorMessage ?? '');
   const overflowMenuItems = [
     { label: 'Rename', onPress: handleRename },
     {
@@ -219,8 +228,16 @@ export default function TranscriptScreen() {
                     : 'Processing incomplete'}
               </Text>
             </View>
-            <TouchableOpacity style={st.retryButton} onPress={handleStartProcessing}>
-              <Ionicons name="sparkles" size={15} color={colors.textPrimary} />
+            <TouchableOpacity
+              style={st.retryButton}
+              onPress={handleStartProcessing}
+              disabled={flashActive}
+            >
+              {flashActive ? (
+                <RecordingProcessingFlashIcon size={18} />
+              ) : (
+                <Ionicons name="sparkles" size={15} color={colors.textPrimary} />
+              )}
               <Text style={st.retryButtonText}>
                 {recording.status === 'saved' && hasTranscript
                   ? 'Run Summarization'
@@ -229,7 +246,9 @@ export default function TranscriptScreen() {
             </TouchableOpacity>
           </View>
         ) : null}
-        {recording.status === 'error' && !!recording.errorMessage && (
+        {recording.status === 'error' &&
+          !!recording.errorMessage &&
+          !hideAudioMissingBanner && (
           <View style={st.errorBanner}>
             <Text style={st.errorBannerMessage} numberOfLines={4}>
               {recording.errorMessage}
