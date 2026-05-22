@@ -4,6 +4,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProcessingMode, TranscriptionMode, CloudProvider } from '@/types';
 import type { ThemePreference } from '@/utils/theme/themePreference';
 import { registerLocalLlmDownloadStateSetter } from '@/services/summarization/local/localLlmDownloadState';
+import {
+  loadProviderApiKeysFromSecureStore,
+  saveProviderApiKey,
+} from '@/security/secureApiKeyStore';
+import { ValidationError } from '@/security/schema';
 
 /**
  * Provider API key field mapping (OCP).
@@ -67,6 +72,37 @@ interface SettingsState {
   deleteLocalLlmModel: () => Promise<void>;
 }
 
+/** API keys live in SecureStore — never written to AsyncStorage. */
+function partializeSettings(state: SettingsState): Omit<
+  SettingsState,
+  'openrouterApiKey' | 'openaiApiKey' | 'geminiApiKey' | 'cloudApiKey'
+> & {
+  openrouterApiKey?: never;
+  openaiApiKey?: never;
+  geminiApiKey?: never;
+  cloudApiKey?: never;
+} {
+  const {
+    openrouterApiKey: _o,
+    openaiApiKey: _a,
+    geminiApiKey: _g,
+    cloudApiKey: _c,
+    ...rest
+  } = state;
+  return rest;
+}
+
+async function persistProviderKey(provider: CloudProvider, key: string): Promise<void> {
+  try {
+    await saveProviderApiKey(provider, key);
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw new Error(error.message);
+    }
+    throw error;
+  }
+}
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
@@ -93,10 +129,12 @@ export const useSettingsStore = create<SettingsState>()(
 
       /**
        * Sets the API key for the currently selected cloud provider (OCP).
+       * Persisted in OS secure storage, not AsyncStorage.
        */
       setCloudApiKey: (key) => {
         const { cloudProvider } = get();
         const field = PROVIDER_KEY_FIELD[cloudProvider];
+        void persistProviderKey(cloudProvider, key);
         set({ cloudApiKey: key, [field]: key });
       },
 
@@ -110,7 +148,8 @@ export const useSettingsStore = create<SettingsState>()(
         if (get().cloudProvider === provider) {
           updates.cloudApiKey = key;
         }
-        set(updates as any);
+        void persistProviderKey(provider, key);
+        set(updates as Partial<SettingsState>);
       },
 
       /**
@@ -140,6 +179,17 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: '@briefly/settings',
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: partializeSettings,
+      onRehydrateStorage: () => async (state) => {
+        const keys = await loadProviderApiKeysFromSecureStore();
+        if (state) {
+          const activeField = PROVIDER_KEY_FIELD[state.cloudProvider];
+          useSettingsStore.setState({
+            ...keys,
+            cloudApiKey: keys[activeField],
+          });
+        }
+      },
     },
   ),
 );

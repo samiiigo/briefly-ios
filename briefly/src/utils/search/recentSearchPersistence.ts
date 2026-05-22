@@ -1,9 +1,17 @@
 import { MAX_RECENT_SEARCHES } from '@/constants/search';
+import { validateSearchQuery } from '@/security/inputSchemas';
+import { ValidationError } from '@/security/schema';
 
-/** Trim and reject empty / whitespace-only queries. */
+/** Trim, validate, and reject empty / whitespace-only queries. */
 export function normalizeRecentSearchQuery(raw: string): string | null {
-  const trimmed = raw.trim();
-  return trimmed.length > 0 ? trimmed : null;
+  try {
+    return validateSearchQuery(raw);
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 /** True when `prefix` is a strict leading substring of `full` (case-insensitive). */

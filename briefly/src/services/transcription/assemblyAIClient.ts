@@ -14,6 +14,10 @@ import {
   FileSystemSessionType,
 } from '@/utils/fileSystem/legacyUpload';
 import { AssemblyAIConfig } from '@/constants/api/assemblyAI';
+import { assertPublicEndpointRateLimit } from '@/security/rateLimiter';
+import { RateLimitError } from '@/security/RateLimitError';
+import { validateAssemblyAiTranscriptCreateBody } from '@/security/inputSchemas';
+import { secureFetch } from '@/security/secureFetch';
 import { logger } from '@/utils/logging/logger';
 
 const API_BASE_URL = 'https://api.assemblyai.com/v2';
@@ -33,7 +37,17 @@ export interface AssemblyAITranscriptPayload {
   text?: string;
 }
 
+function rethrowRateLimit(error: unknown): never {
+  if (error instanceof RateLimitError) {
+    throw new Error(
+      `Transcription rate limited. Try again in about ${error.retryAfterSec} seconds.`
+    );
+  }
+  throw error;
+}
+
 export async function uploadAudio(audioUri: string, apiKey: string): Promise<string> {
+  await assertPublicEndpointRateLimit(`${API_BASE_URL}/upload`);
   logger.info('TranscriptionService', 'Uploading audio to AssemblyAI', { audioUri });
   const contentType = uploadContentType(audioUri);
   const upload = await uploadAsync(`${API_BASE_URL}/upload`, audioUri, {
@@ -61,21 +75,29 @@ export async function uploadAudio(audioUri: string, apiKey: string): Promise<str
 }
 
 export async function createTranscriptJob(uploadUrl: string, apiKey: string): Promise<string> {
+  const transcriptUrl = `${API_BASE_URL}/transcript`;
+  await assertPublicEndpointRateLimit(transcriptUrl);
   logger.info('TranscriptionService', 'Creating transcript job');
-  const response = await fetch(`${API_BASE_URL}/transcript`, {
-    method: 'POST',
-    headers: {
-      Authorization: apiKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      audio_url: uploadUrl,
-      punctuate: true,
-      format_text: true,
-      language_detection: true,
-      speech_models: [AssemblyAIConfig.asyncModel, 'universal-2'],
-    }),
+  const body = validateAssemblyAiTranscriptCreateBody({
+    audio_url: uploadUrl,
+    punctuate: true,
+    format_text: true,
+    language_detection: true,
+    speech_models: [AssemblyAIConfig.asyncModel, 'universal-2'],
   });
+  let response: Response;
+  try {
+    response = await secureFetch(transcriptUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    rethrowRateLimit(error);
+  }
 
   if (!response.ok) {
     const body = await response.text();
@@ -97,9 +119,15 @@ export async function pollForCompletion(
   apiKey: string
 ): Promise<AssemblyAITranscriptPayload> {
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
-    const response = await fetch(`${API_BASE_URL}/transcript/${transcriptId}`, {
-      headers: { Authorization: apiKey },
-    });
+    const pollUrl = `${API_BASE_URL}/transcript/${transcriptId}`;
+    let response: Response;
+    try {
+      response = await secureFetch(pollUrl, {
+        headers: { Authorization: apiKey },
+      });
+    } catch (error) {
+      rethrowRateLimit(error);
+    }
     if (!response.ok) {
       const body = await response.text();
       throw new Error(`AssemblyAI transcript poll failed: ${response.status} ${body}`);

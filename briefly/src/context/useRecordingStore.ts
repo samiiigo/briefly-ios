@@ -6,6 +6,8 @@ import type { RecordingRepository } from '@/services/storage';
 import { folderFlagsFor } from '@/utils/folders/recordingFolder';
 import { logger } from '@/utils/logging/logger';
 import { repairRecordingFilePaths } from '@/utils/fileSystem/persistRecordingAudio';
+import { validateRecordingId, validateRecordingUpdates } from '@/security/inputSchemas';
+import { ValidationError } from '@/security/schema';
 
 const RECENTLY_DELETED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -154,25 +156,38 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
   },
 
   updateRecording: async (id, updates) => {
+    const safeId = validateRecordingId(id);
+    let safeUpdates: Partial<Recording>;
+    try {
+      safeUpdates = validateRecordingUpdates(
+        updates as Record<string, unknown>
+      ) as Partial<Recording>;
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        throw new Error(error.message);
+      }
+      throw error;
+    }
+
     mutationEpoch += 1;
     logger.info('useRecordingStore', 'Recording updated', {
-      id,
-      fields: Object.keys(updates),
+      id: safeId,
+      fields: Object.keys(safeUpdates),
     });
-    const previous = get().recordings.find((r) => r.id === id);
+    const previous = get().recordings.find((r) => r.id === safeId);
     set((state) => ({
       recordings: state.recordings.map((r) =>
-        r.id === id ? { ...r, ...updates } : r
+        r.id === safeId ? { ...r, ...safeUpdates } : r
       ),
     }));
-    const next = get().recordings.find((r) => r.id === id);
+    const next = get().recordings.find((r) => r.id === safeId);
     if (!next) return;
     try {
       await recordingRepository.save(next);
     } catch (error) {
       if (previous) {
         set((state) => ({
-          recordings: state.recordings.map((r) => (r.id === id ? previous : r)),
+          recordings: state.recordings.map((r) => (r.id === safeId ? previous : r)),
         }));
       }
       throw error;

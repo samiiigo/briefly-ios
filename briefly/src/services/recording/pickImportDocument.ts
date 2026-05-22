@@ -13,12 +13,12 @@ export async function pickImportDocument(): Promise<DocumentPickerResult> {
 
   const DocumentPicker = await import('expo-document-picker');
   // Android SAF often omits application/json, which greys out .json files in the picker.
-  const type = platformSelect({
+  const type = platformSelect<string | string[]>({
     ios: ['application/json', 'audio/*'],
     android: '*/*',
   });
   return DocumentPicker.getDocumentAsync({
     copyToCacheDirectory: true,
-    type,
+    type: type as string | string[],
   });
 }

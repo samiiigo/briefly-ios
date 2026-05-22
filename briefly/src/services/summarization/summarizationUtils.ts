@@ -8,6 +8,8 @@
 
 import { TranscriptSegment, KeyInsight } from '@/types';
 import { logger } from '@/utils/logging/logger';
+import { RateLimitError } from '@/security/RateLimitError';
+import { secureFetch } from '@/security/secureFetch';
 import { normalizeMainEmoji } from '@/utils/recording/recordingContentEmoji';
 import { SummarizationResult } from './summarizationProvider';
 
@@ -247,9 +249,16 @@ export function fetchWithTimeout(
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  const fetchPromise = fetch(url, { ...options, signal: controller.signal }).finally(() =>
-    clearTimeout(timeoutId)
-  );
+  const fetchPromise = secureFetch(url, { ...options, signal: controller.signal })
+    .catch((error) => {
+      if (error instanceof RateLimitError) {
+        throw new Error(
+          `Summarization rate limited. Try again in about ${error.retryAfterSec} seconds.`
+        );
+      }
+      throw error;
+    })
+    .finally(() => clearTimeout(timeoutId));
   let fallbackTimeoutId: ReturnType<typeof setTimeout>;
   const timeoutPromise = new Promise<never>((_, reject) => {
     fallbackTimeoutId = setTimeout(() => reject(new Error('timeout')), timeoutMs);
