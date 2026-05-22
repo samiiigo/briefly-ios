@@ -1,28 +1,4 @@
 {
-  "compilerOptions": {
-    "allowJs": true,
-    "esModuleInterop": true,
-    "jsx": "react-native",
-    "lib": ["DOM", "ESNext"],
-    "module": "preserve",
-    "moduleDetection": "force",
-    "moduleResolution": "bundler",
-    "customConditions": ["react-native"],
-    "noEmit": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "target": "ESNext",
-    "strict": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["briefly/src/*", "briefly/app/*"],
-      "@root/*": ["briefly/*"]
-    }
-  },
-  "include": [
-    "briefly/**/*.ts",
-    "briefly/**/*.tsx",
-    "briefly/.expo/types/**/*.d.ts"
-  ],
-  "exclude": ["briefly/node_modules", "briefly/**/*.test.ts"]
+  "files": [],
+  "references": [{ "path": "./briefly" }]
 }
