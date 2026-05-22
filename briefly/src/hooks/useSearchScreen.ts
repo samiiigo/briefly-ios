@@ -8,7 +8,7 @@ import { SEARCH_DEBOUNCE_MS } from '@/constants/search';
 import { buildSearchCatalog, runIndexedSearch } from '@/utils/search/searchIndex';
 import { normalizeSearchQuery } from '@/utils/search/searchEngine';
 import { filterRecentQueriesWithHits } from '@/utils/search/searchPristineContent';
-import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
+import { isRecordingEntryNavigationLocked } from '@/utils/recording/recordingEntryAccess';
 
 export function useSearchScreen() {
   const router = useRouter();
@@ -91,7 +91,7 @@ export function useSearchScreen() {
   const openRecording = useCallback(
     (id: string) => {
       const rec = useRecordingStore.getState().getRecordingById(id);
-      if (!rec || isRecordingProcessing(rec)) return;
+      if (!rec || isRecordingEntryNavigationLocked(rec)) return;
       persistQueryOnResultTap();
       router.push(`/recording/${id}`);
     },

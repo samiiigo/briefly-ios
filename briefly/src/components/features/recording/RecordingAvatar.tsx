@@ -19,12 +19,15 @@ interface Props {
   size?: 'md' | 'compact';
   /** When false, the parent row controls horizontal spacing (e.g. flex `gap`). */
   trailingSpacing?: boolean;
+  /** List rows: show alert + row-level retry; no inline retry button on the avatar. */
+  listRow?: boolean;
 }
 
 export function RecordingAvatar({
   recording,
   size = 'md',
   trailingSpacing = true,
+  listRow = false,
 }: Props) {
   const styles = useCreateStyles(createRecordingAvatarStyles);
   const colors = useThemedColors();
@@ -37,7 +40,7 @@ export function RecordingAvatar({
     const until = s.flashUntilById[recording.id];
     return until != null && Date.now() < until;
   });
-  const showRetry = failed && retryAction != null && !showFlash;
+  const showRetry = failed && retryAction != null && !showFlash && !listRow;
 
   return (
     <View
@@ -61,9 +64,9 @@ export function RecordingAvatar({
       ) : failed && !showOpenableContent ? (
         <View style={[styles.stateCircle, compact && styles.stateCircleCompact]}>
           <Ionicons
-            name="close-circle"
+            name="alert"
             size={compact ? 26 : 28}
-            color={colors.red}
+            color={colors.orange}
           />
         </View>
       ) : (

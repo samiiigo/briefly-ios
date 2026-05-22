@@ -6,6 +6,8 @@ import { formatRecentsCardDate } from '@/utils';
 import type { RecordingListGroupPosition } from '@/utils/list/flattenRecordingSections';
 import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
+import { isInitialProcessingFailure } from '@/utils/recording/recordingEntryAccess';
+import { useRecordingProcessingRetry } from '@/hooks/useRecordingProcessingRetry';
 import { useCreateStyles, useThemedColors, BorderRadius, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 
@@ -49,6 +51,11 @@ export function RecentsEntryCard({ recording, groupPosition = 'only' }: Props) {
   const colors = useThemedColors();
   const showDivider = groupPosition === 'middle' || groupPosition === 'last';
   const processing = isRecordingProcessing(recording);
+  const initialFailure = isInitialProcessingFailure(recording);
+  const { action: retryAction } = useRecordingProcessingRetry(recording, {
+    forListAvatar: true,
+  });
+  const showRerunTrailing = initialFailure && retryAction != null;
 
   return (
       <View style={groupedCardStyle(groupPosition, colors)}>
@@ -62,7 +69,7 @@ export function RecentsEntryCard({ recording, groupPosition = 'only' }: Props) {
         ) : null}
         <View style={styles.row}>
           <View style={styles.leading}>
-            <RecordingAvatar recording={recording} trailingSpacing={false} />
+            <RecordingAvatar recording={recording} trailingSpacing={false} listRow />
             <View style={styles.textBlock}>
               <Text style={styles.title} numberOfLines={1}>
                 {recording.title}
@@ -70,7 +77,9 @@ export function RecentsEntryCard({ recording, groupPosition = 'only' }: Props) {
               <Text style={styles.subtitle}>{formatRecentsCardDate(recording.createdAt)}</Text>
             </View>
           </View>
-          {!processing ? (
+          {showRerunTrailing ? (
+            <Ionicons name="refresh-outline" size={18} color={colors.orange} />
+          ) : !processing ? (
             <Ionicons name="chevron-forward" size={16} color={colors.subtext} />
           ) : null}
         </View>

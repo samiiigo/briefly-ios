@@ -20,6 +20,7 @@ interface CircularIconButtonProps {
   accessibilityLabel: string;
   style?: StyleProp<ViewStyle>;
   loading?: boolean;
+  disabled?: boolean;
 }
 
 export function CircularIconButton({
@@ -28,16 +29,18 @@ export function CircularIconButton({
   accessibilityLabel,
   style,
   loading = false,
+  disabled: disabledProp = false,
 }: CircularIconButtonProps) {
   const styles = useCreateStyles(createCircularIconButtonStyles);
   const colors = useThemedColors();
-  const disabled = loading || onPress == null;
+  const disabled = loading || disabledProp || onPress == null;
 
   return (
     <Pressable
       style={({ pressed }) => [
         styles.button,
         style,
+        disabled && styles.buttonDisabled,
         pressed && !disabled && Platform.OS === 'ios' && { opacity: 0.75 },
       ]}
       onPress={disabled ? undefined : onPress}
@@ -49,7 +52,7 @@ export function CircularIconButton({
       <Ionicons
         name={icon}
         size={22}
-        color={colors.textPrimary}
+        color={disabled ? colors.subtext : colors.textPrimary}
         style={loading ? styles.iconLoading : undefined}
       />
       {loading ? (
@@ -70,6 +73,9 @@ function createCircularIconButtonStyles(c: ColorPalette) {
     backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.45,
   },
   iconLoading: {
     opacity: 0.35,

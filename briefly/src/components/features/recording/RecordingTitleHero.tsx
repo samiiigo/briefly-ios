@@ -9,7 +9,9 @@ import { RecordingProcessingFlashCircle } from '@/components/features/recording/
 import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
 import { useRecordingProcessingRetry } from '@/hooks/useRecordingProcessingRetry';
 import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
+import { Ionicons } from '@expo/vector-icons';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
+import { isInitialProcessingFailure } from '@/utils/recording/recordingEntryAccess';
 import { useCreateStyles, useThemedColors, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 
@@ -31,14 +33,23 @@ export function RecordingTitleHero({ recording }: Props) {
     const until = s.flashUntilById[recording.id];
     return until != null && Date.now() < until;
   });
+  const initialFailure = isInitialProcessingFailure(recording);
   const showRetry =
-    recording.status === 'error' && retryAction != null && !showOpenableContent && !flashActive;
+    recording.status === 'error' &&
+    retryAction != null &&
+    !showOpenableContent &&
+    !flashActive &&
+    !initialFailure;
 
   const leading = flashActive ? (
     <RecordingProcessingFlashCircle size="lg" />
   ) : processing ? (
     <View style={styles.processingCircle}>
       <ActivityIndicator size="small" color={colors.textPrimary} />
+    </View>
+  ) : initialFailure ? (
+    <View style={styles.processingCircle}>
+      <Ionicons name="alert" size={28} color={colors.orange} />
     </View>
   ) : showRetry ? (
     <RecordingProcessingRetryCircle action={retryAction} onPress={runRetry} size="lg" />

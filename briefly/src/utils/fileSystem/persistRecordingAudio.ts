@@ -3,9 +3,35 @@ import { AudioFileService } from '@/services/audio';
 import type { Recording } from '@/types';
 import { recordingAudioDestName } from '@/utils/recording/recordingAudioFilename';
 import { deletePath, getPathInfo, normalizeFileUri } from './pathInfo';
+import {
+  resolveRecordingAudioOnDiskCore,
+  type ResolvedRecordingAudio,
+} from './recordingAudioResolveCore';
 
-function destFileForRecording(recordingId: string, sourcePath: string): File {
+export type { ResolvedRecordingAudio } from './recordingAudioResolveCore';
+
+export function destFileForRecording(recordingId: string, sourcePath: string): File {
   return new File(Paths.document, recordingAudioDestName(recordingId, sourcePath));
+}
+
+const recordingAudioProbe = {
+  getPathInfo,
+  destFile: (recordingId: string, sourcePath: string) => {
+    const file = recordingId
+      ? destFileForRecording(recordingId, sourcePath)
+      : new File(Paths.document, sourcePath);
+    return { exists: file.exists, uri: file.uri, size: file.size ?? 0 };
+  },
+};
+
+/**
+ * Locates the recording audio file on device, including repair fallbacks when
+ * stored metadata points at a moved or stale path.
+ */
+export function resolveRecordingAudioOnDisk(
+  recording: Pick<Recording, 'id' | 'filePath' | 'fileSize'>,
+): ResolvedRecordingAudio | null {
+  return resolveRecordingAudioOnDiskCore(recording, recordingAudioProbe);
 }
 
 function isCacheOrTempPath(uri: string): boolean {
@@ -69,43 +95,23 @@ export function repairRecordingFilePaths(recordings: Recording[]): {
   let changed = false;
 
   const repaired = recordings.map((recording) => {
-    const stored = recording.filePath?.trim();
-    if (!stored) return recording;
+    const resolved = resolveRecordingAudioOnDisk(recording);
+    if (!resolved) return recording;
 
-    const storedInfo = getPathInfo(stored);
-    if (storedInfo.exists) {
-      const size = storedInfo.size ?? recording.fileSize;
-      if (size > 0 && size !== recording.fileSize) {
-        changed = true;
-        return { ...recording, fileSize: size };
-      }
+    const stored = recording.filePath?.trim();
+    if (
+      stored === resolved.filePath &&
+      recording.fileSize === resolved.fileSize
+    ) {
       return recording;
     }
 
-    const basename = stored.split('/').pop()?.split('?')[0] ?? '';
-    if (basename) {
-      const byName = new File(Paths.document, basename);
-      if (byName.exists) {
-        changed = true;
-        return {
-          ...recording,
-          filePath: byName.uri,
-          fileSize: byName.size ?? recording.fileSize,
-        };
-      }
-    }
-
-    const byId = destFileForRecording(recording.id, stored);
-    if (byId.exists) {
-      changed = true;
-      return {
-        ...recording,
-        filePath: byId.uri,
-        fileSize: byId.size ?? recording.fileSize,
-      };
-    }
-
-    return recording;
+    changed = true;
+    return {
+      ...recording,
+      filePath: resolved.filePath,
+      fileSize: resolved.fileSize,
+    };
   });
 
   return { recordings: repaired, changed };

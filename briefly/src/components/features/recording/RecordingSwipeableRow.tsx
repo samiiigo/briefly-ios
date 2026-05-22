@@ -25,6 +25,11 @@ import { useUserFolderStore } from '@/context/useUserFolderStore';
 import { useExport } from '@/hooks/useExport';
 import { folderFlagsFor } from '@/utils/folders/recordingFolder';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
+import {
+  isInitialProcessingFailure,
+  isRecordingEntryNavigationLocked,
+} from '@/utils/recording/recordingEntryAccess';
+import { useRecordingProcessingRetry } from '@/hooks/useRecordingProcessingRetry';
 import { RecordingFolder } from '@/types';
 import { BUILTIN_MOVE_ORDER, BUILT_IN_FOLDERS } from '@/constants/builtInFolders';
 import { SWIPE_ACTION_GAP, SwipeableAnimatedAction } from './SwipeableAnimatedAction';
@@ -83,6 +88,9 @@ export function RecordingSwipeableRow({
   const motionTranslation = swipeTranslationRef.current ?? fallbackTranslation;
   const { folders, loadFolders } = useUserFolderStore();
   const { shareBusy, shareMenuItems } = useExport(recording);
+  const { action: retryAction, runRetry } = useRecordingProcessingRetry(recording, {
+    forListAvatar: true,
+  });
   const pressAnchorRef = useRef<{ x: number; y: number } | null>(null);
   const moreAnchorRef = useRef<View>(null);
   const shareMenu = useAnchoredMenu();
@@ -322,12 +330,17 @@ export function RecordingSwipeableRow({
   const handleRowPress = useCallback(() => {
     useActiveSwipeableStore.getState().closeActive();
     if (isRecordingProcessing(recording)) return;
+    if (isInitialProcessingFailure(recording) && retryAction) {
+      runRetry();
+      return;
+    }
+    if (isRecordingEntryNavigationLocked(recording)) return;
     if (isValidElement<{ onPress?: () => void }>(children) && children.props.onPress) {
       children.props.onPress();
     } else {
       onPress();
     }
-  }, [children, onPress, recording]);
+  }, [children, onPress, recording, retryAction, runRetry]);
 
   const handleRowLongPress = useCallback(
     (event: GestureResponderEvent) => {

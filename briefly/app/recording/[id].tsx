@@ -29,17 +29,20 @@ import { useSettingsStore } from '@/context/useSettingsStore';
 import { builtInFolderName } from '@/constants/builtInFolders';
 import { ensureUniqueTitle } from '@/utils';
 import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
-import {
-  hasMeaningfulTranscript,
-  hasRecordingAudio,
-} from '@/utils/recording/recordingValidation';
+import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
+import { useRecordingAudioAvailability } from '@/hooks/useRecordingAudioAvailability';
+import { getRecordingAudioAvailability } from '@/utils/recording/recordingPlayableAudio';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
 import {
-  cancelRecordingBackgroundProcessing,
-  startRecordingBackgroundProcessing,
-  startRecordingSummarizationRetry,
-} from '@/services/recording/recordingBackgroundProcessing';
+  executeManualRecordingRerun,
+  executeSummarizationOnlyRerun,
+  resolveManualRerunSource,
+} from '@/utils/recording/manualRecordingRerun';
+import {
+  canRerunSummaryFromTranscript,
+  canRerunTranscriptFromAudio,
+} from '@/utils/recording/recordingRerunCapabilities';
 import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
 import { isAudioFileMissingError } from '@/utils/processing/processingErrors';
 import {
@@ -75,8 +78,9 @@ export default function TranscriptScreen() {
     [recording, folders],
   );
 
+  const audioAvailability = useRecordingAudioAvailability(recording);
   const playback = usePlayback({
-    filePath: recording?.filePath ?? '',
+    filePath: audioAvailability.filePath,
     transcript: recording?.transcript,
   });
   const { shareBusy, shareMenuItems } = useExport(recording);
@@ -89,30 +93,56 @@ export default function TranscriptScreen() {
     else { setRenameDialogVisible(true); }
   }, [recording, recordings, updateRecording]);
 
-  const handleStartProcessing = useCallback(() => {
+  const markRerunPending = useCallback((recordingId: string) => {
+    useRecordingRetryFlashStore.getState().markRetryPending(recordingId);
+  }, []);
+
+  const handleRerunFromAudio = useCallback(() => {
     if (!recording) return;
+    if (isRecordingProcessing(recording)) return;
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
-    useRecordingRetryFlashStore.getState().markRetryPending(recording.id);
-    startRecordingBackgroundProcessing(recording.id);
-  }, [recording]);
+    if (!canRerunTranscriptFromAudio(recording)) return;
+    markRerunPending(recording.id);
+    executeManualRecordingRerun(recording.id);
+  }, [markRerunPending, recording]);
 
-  const handleRerunSummarization = useCallback(() => {
-    if (!recording || !recordingId) return;
-    if (recording.status === 'transcribing' || recording.status === 'summarizing') return;
-    if (!hasMeaningfulTranscript(recording.transcript)) {
+  const handleRerunSummary = useCallback(() => {
+    if (!recording) return;
+    if (isRecordingProcessing(recording)) return;
+    const mode = useSettingsStore.getState().summarizationMode;
+    if (!alertIfLocalLlmNotReady(mode)) return;
+    if (!canRerunSummaryFromTranscript(recording)) {
       Alert.alert(
-        'No transcript',
-        'There is no transcript to summarize. Transcribe this recording first.',
+        'Nothing to summarize',
+        'No saved transcript is available for this recording.',
       );
       return;
     }
+    markRerunPending(recording.id);
+    executeSummarizationOnlyRerun(recording.id);
+  }, [markRerunPending, recording]);
+
+  const handleManualRerun = useCallback(() => {
+    if (!recording) return;
+    if (isRecordingProcessing(recording)) return;
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
-    useRecordingRetryFlashStore.getState().markRetryPending(recording.id);
-    cancelRecordingBackgroundProcessing(recording.id);
-    startRecordingSummarizationRetry(recording.id, mode);
-  }, [recording, recordingId]);
+    const source = resolveManualRerunSource(recording);
+    if (source === 'none') {
+      Alert.alert(
+        'Nothing to process',
+        'No audio file or saved transcript is available for this recording.',
+      );
+      return;
+    }
+    markRerunPending(recording.id);
+    if (source === 'audio') {
+      executeManualRecordingRerun(recording.id);
+    } else {
+      executeSummarizationOnlyRerun(recording.id);
+    }
+  }, [markRerunPending, recording]);
 
   const handleToggleFavorite = useCallback(() => {
     if (!recording) return;
@@ -123,7 +153,7 @@ export default function TranscriptScreen() {
     if (!recording) return;
     const hasTranscript = (recording.transcript?.length ?? 0) > 0;
     const isTranscribing = recording.status === 'transcribing';
-    const hasAudio = hasRecordingAudio(recording.filePath, recording.fileSize);
+    const hasAudio = getRecordingAudioAvailability(recording).hasAudio;
 
     if (hasTranscript || isTranscribing || hasAudio) {
       router.push({
@@ -176,10 +206,14 @@ export default function TranscriptScreen() {
     );
   }
 
-  const hasAudio = hasRecordingAudio(recording.filePath, recording.fileSize);
+  const hasAudio = audioAvailability.hasAudio;
   const hasTranscript = hasMeaningfulTranscript(recording.transcript);
+  const canRerunTranscript = canRerunTranscriptFromAudio(recording);
+  const canRerunSummary = canRerunSummaryFromTranscript(recording);
+  const canManualRerun = resolveManualRerunSource(recording) !== 'none';
   const isTranscribing = recording.status === 'transcribing';
   const isSummarizing = recording.status === 'summarizing';
+  const isProcessing = isTranscribing || isSummarizing;
   const showProcessingBanner =
     (recording.status === 'saved' || (isSummarizing && !hasTranscript)) &&
     (hasAudio || (recording.status === 'saved' && hasTranscript));
@@ -198,10 +232,16 @@ export default function TranscriptScreen() {
     },
     { label: 'View transcript', onPress: handleViewTranscript },
     {
-      label: isSummarizing ? 'Summarizing…' : 'Rerun summarization',
-      onPress: handleRerunSummarization,
+      label: isTranscribing ? 'Transcribing…' : 'Re-run transcript',
+      onPress: handleRerunFromAudio,
+      loading: isTranscribing,
+      disabled: isProcessing || !canRerunTranscript,
+    },
+    {
+      label: isSummarizing ? 'Summarizing…' : 'Re-run summary',
+      onPress: handleRerunSummary,
       loading: isSummarizing,
-      disabled: isSummarizing,
+      disabled: isProcessing || !canRerunSummary,
     },
   ];
 
@@ -229,9 +269,9 @@ export default function TranscriptScreen() {
               </Text>
             </View>
             <TouchableOpacity
-              style={st.retryButton}
-              onPress={handleStartProcessing}
-              disabled={flashActive}
+              style={[st.retryButton, (!canManualRerun || flashActive) && st.retryButtonDisabled]}
+              onPress={handleManualRerun}
+              disabled={!canManualRerun || flashActive}
             >
               {flashActive ? (
                 <RecordingProcessingFlashIcon size={18} />
@@ -279,7 +319,7 @@ export default function TranscriptScreen() {
         shareItems={shareMenuItems}
         shareLoading={shareBusy}
         menuItems={overflowMenuItems}
-        menuLoading={isTranscribing || isSummarizing}
+        menuLoading={isProcessing}
       />
       <TextInputDialog
         visible={renameDialogVisible}
@@ -393,5 +433,8 @@ function createRecordingDetailStyles(c: ColorPalette) {
     fontWeight: '600',
     color: c.textPrimary,
   }),
+  retryButtonDisabled: {
+    opacity: 0.45,
+  },
   });
 }

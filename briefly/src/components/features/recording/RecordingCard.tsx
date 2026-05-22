@@ -41,7 +41,7 @@ export function RecordingCard({ recording, compact }: Props) {
   if (compact) {
     return (
       <View style={[styles.card, styles.cardCompact]}>
-          <RecordingAvatar recording={recording} size="compact" />
+          <RecordingAvatar recording={recording} size="compact" listRow />
 
           <View style={styles.contentCompactInner}>
             <View style={styles.titleRowCompact}>
@@ -63,7 +63,7 @@ export function RecordingCard({ recording, compact }: Props) {
 
   return (
       <View style={styles.card}>
-        <RecordingAvatar recording={recording} />
+        <RecordingAvatar recording={recording} listRow />
 
         <View style={styles.content}>
           <View style={styles.titleRow}>

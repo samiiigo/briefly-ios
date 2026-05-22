@@ -16,8 +16,8 @@ import {
   buildRecordingExportPlainText,
 } from '@/utils/recording/recordingExport';
 import { ensureUploadableAudioUri } from '@/utils/fileSystem/repairWavForUpload';
-import { getPathInfo } from '@/utils/fileSystem/pathInfo';
 import { normalizeFileUri } from '@/utils/fileSystem/normalizeFileUri';
+import { getRecordingAudioAvailability } from '@/utils/recording/recordingPlayableAudio';
 
 function audioShareMimeType(uri: string): string {
   const lower = uri.toLowerCase();
@@ -74,14 +74,8 @@ export function useExport(recording: Recording | undefined) {
 
   const shareAudio = useCallback(async () => {
     if (!recording) return;
-    const filePath = recording.filePath?.trim();
-    if (!filePath) {
-      Alert.alert('No audio', 'This note does not have a recording file to share.');
-      return;
-    }
-
-    const onDisk = getPathInfo(filePath);
-    if (!onDisk.exists) {
+    const { hasAudio, filePath } = getRecordingAudioAvailability(recording);
+    if (!hasAudio || !filePath) {
       Alert.alert('No audio', 'The recording file is missing from this device.');
       return;
     }
@@ -109,6 +103,8 @@ export function useExport(recording: Recording | undefined) {
   }, [recording]);
 
   const shareBusy = isExportingPdf || isSharingAudio;
+  const audioShareDisabled =
+    recording != null && !getRecordingAudioAvailability(recording).hasAudio;
 
   const shareMenuItems: AnchoredMenuItem[] = useMemo(
     () => [
@@ -117,7 +113,7 @@ export function useExport(recording: Recording | undefined) {
         label: 'Share Audio',
         onPress: shareAudio,
         loading: isSharingAudio,
-        disabled: isSharingAudio,
+        disabled: isSharingAudio || audioShareDisabled,
       },
       {
         label: 'Export to PDF',
@@ -126,7 +122,7 @@ export function useExport(recording: Recording | undefined) {
         disabled: isExportingPdf,
       },
     ],
-    [exportPdf, isExportingPdf, isSharingAudio, shareAudio, shareText],
+    [audioShareDisabled, exportPdf, isExportingPdf, isSharingAudio, shareAudio, shareText],
   );
 
   return {

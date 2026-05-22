@@ -8,13 +8,8 @@ import {
   type RecordingRetryAction,
   type ResolveRecordingRetryOptions,
 } from '@/utils/processing/recordingRetryAction';
-import {
-  cancelRecordingBackgroundProcessing,
-  startRecordingBackgroundProcessing,
-  startRecordingSummarizationRetry,
-} from '@/services/recording/recordingBackgroundProcessing';
+import { executeManualRecordingRerun, executeSummarizationOnlyRerun } from '@/utils/recording/manualRecordingRerun';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
-import { isAudioFileMissingError } from '@/utils/processing/processingErrors';
 import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
 
 export function useRecordingProcessingRetry(
@@ -64,13 +59,8 @@ export function useRecordingProcessingRetry(
 
     const leftProcessing =
       (prev === 'transcribing' || prev === 'summarizing') && next === 'error';
-    if (leftProcessing) {
-      if (
-        wasPending ||
-        isAudioFileMissingError(recording.errorMessage ?? '')
-      ) {
-        triggerRetryFlash(recording.id);
-      }
+    if (leftProcessing && wasPending) {
+      triggerRetryFlash(recording.id);
       pendingRef.current = false;
       return;
     }
@@ -92,18 +82,20 @@ export function useRecordingProcessingRetry(
     markRetryPending(recording.id);
     pendingRef.current = true;
 
-    if (action.kind === 'transcription') {
-      startRecordingBackgroundProcessing(recording.id, { audioFallbackOnly: true });
-      return;
-    }
-
-    if (action.kind === 'full') {
+    if (
+      action.kind === 'transcription' ||
+      action.kind === 'full'
+    ) {
       if (!alertIfLocalLlmNotReady(summarizationMode)) {
         clearRetryPending(recording.id);
         pendingRef.current = false;
         return;
       }
-      startRecordingBackgroundProcessing(recording.id);
+      const source = executeManualRecordingRerun(recording.id);
+      if (source === 'none') {
+        clearRetryPending(recording.id);
+        pendingRef.current = false;
+      }
       return;
     }
 
@@ -113,8 +105,12 @@ export function useRecordingProcessingRetry(
       pendingRef.current = false;
       return;
     }
-    cancelRecordingBackgroundProcessing(recording.id);
-    startRecordingSummarizationRetry(recording.id, mode);
+    if (!hasMeaningfulTranscript(recording.transcript)) {
+      clearRetryPending(recording.id);
+      pendingRef.current = false;
+      return;
+    }
+    executeSummarizationOnlyRerun(recording.id, { summarizationMode: mode });
   }, [
     action,
     clearRetryPending,
