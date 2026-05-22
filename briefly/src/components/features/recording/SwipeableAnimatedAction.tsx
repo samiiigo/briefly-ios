@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import React, { forwardRef } from 'react';
+import { Pressable, StyleSheet, Text, type View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   Extrapolation,
@@ -30,19 +30,23 @@ interface SwipeableAnimatedActionProps {
   disabled?: boolean;
 }
 
-export function SwipeableAnimatedAction({
-  progress,
-  index,
-  count,
-  side,
-  backgroundColor,
-  icon,
-  label,
-  onPress,
-  marginRight,
-  numberOfLines = 1,
-  disabled = false,
-}: SwipeableAnimatedActionProps) {
+export const SwipeableAnimatedAction = forwardRef<View, SwipeableAnimatedActionProps>(
+  function SwipeableAnimatedAction(
+    {
+      progress,
+      index,
+      count,
+      side,
+      backgroundColor,
+      icon,
+      label,
+      onPress,
+      marginRight,
+      numberOfLines = 1,
+      disabled = false,
+    },
+    ref,
+  ) {
   const styles = useCreateStyles(createSwipeableAnimatedActionStyles);
   const colors = useThemedColors();
   const animatedStyle = useAnimatedStyle(() => {
@@ -73,6 +77,8 @@ export function SwipeableAnimatedAction({
 
   return (
     <Animated.View
+      ref={ref}
+      collapsable={false}
       style={[
         styles.actionButton,
         { backgroundColor, marginRight },
@@ -94,7 +100,8 @@ export function SwipeableAnimatedAction({
       </Pressable>
     </Animated.View>
   );
-}
+  },
+);
 
 function createSwipeableAnimatedActionStyles(c: ColorPalette) {
   return StyleSheet.create({

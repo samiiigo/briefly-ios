@@ -38,6 +38,11 @@ import {
   RECORDING_SWIPE_SPRING,
 } from './recordingSwipeSpring';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
+import {
+  AnchoredMenuModal,
+  useAnchoredMenu,
+  type AnchoredMenuItem,
+} from '@/components/ui/AnchoredOverflowMenu';
 import { useCreateStyles, Spacing, BorderRadius, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 
@@ -80,7 +85,9 @@ export function RecordingSwipeableRow({
 
   const motionTranslation = swipeTranslationRef.current ?? fallbackTranslation;
   const { folders, loadFolders } = useUserFolderStore();
-  const { shareBusy, openShareMenu } = useExport(recording);
+  const { shareBusy, shareMenuItems, openShareMenu } = useExport(recording);
+  const shareMenu = useAnchoredMenu();
+  const moreMenu = useAnchoredMenu();
 
   const closeThisRow = useCallback(() => {
     swipeableRef.current?.close();
@@ -221,7 +228,14 @@ export function RecordingSwipeableRow({
     onRestore?.();
   }, [onRestore]);
 
-  const handleShare = useCallback(() => {
+  /** Opens share options anchored to the swipe Share button (row should stay open). */
+  const openShareAnchored = useCallback(() => {
+    if (shareBusy) return;
+    shareMenu.open();
+  }, [shareBusy, shareMenu.open]);
+
+  /** Share from long-press sheet when the swipe actions are not exposed. */
+  const handleShareFromSheet = useCallback(() => {
     swipeableRef.current?.close();
     openShareMenu();
   }, [openShareMenu]);
@@ -245,6 +259,54 @@ export function RecordingSwipeableRow({
     }
   }, [closeThisRow, onRename, recording.title]);
 
+  const moreMenuItems = React.useMemo((): AnchoredMenuItem[] => {
+    const deleteLabel = isRecentlyDeleted ? 'Delete Forever' : 'Delete';
+    const items: AnchoredMenuItem[] = [];
+
+    if (isRecentlyDeleted) {
+      if (onRename) {
+        items.push({ label: 'Rename', onPress: promptRename });
+      }
+      if (onRestore) {
+        items.push({ label: 'Recover', onPress: handleRecover });
+      }
+      items.push({ label: 'Share', onPress: openShareAnchored, disabled: shareBusy });
+      items.push({ label: deleteLabel, onPress: handleDelete });
+      return items;
+    }
+
+    items.push({
+      label: recording.isFavorite ? 'Unfavorite' : 'Favorite',
+      onPress: toggleFavorite,
+    });
+    items.push({ label: 'Share', onPress: openShareAnchored, disabled: shareBusy });
+    if (onRename) {
+      items.push({ label: 'Rename', onPress: promptRename });
+    }
+    items.push({
+      label: recording.isArchived ? 'Unarchive' : 'Archive',
+      onPress: recording.isArchived ? removeFromArchive : moveToArchive,
+    });
+    items.push({ label: 'Move to…', onPress: showMoveSheet });
+    items.push({ label: deleteLabel, onPress: handleDelete });
+    return items;
+  }, [
+    handleDelete,
+    handleRecover,
+    openShareAnchored,
+    isRecentlyDeleted,
+    moveToArchive,
+    onRename,
+    onRestore,
+    promptRename,
+    recording.isArchived,
+    recording.isFavorite,
+    removeFromArchive,
+    shareBusy,
+    showMoveSheet,
+    toggleFavorite,
+  ]);
+
   const showOptionsMenu = useCallback(() => {
     closeThisRow();
     const favoriteLabel = recording.isFavorite ? 'Unfavorite' : 'Favorite';
@@ -264,7 +326,7 @@ export function RecordingSwipeableRow({
           handlers.push(handleRecover);
         }
         options.push('Share', deleteLabel);
-        handlers.push(handleShare, handleDelete);
+        handlers.push(handleShareFromSheet, handleDelete);
         ActionSheetIOS.showActionSheetWithOptions(
           {
             options,
@@ -283,7 +345,7 @@ export function RecordingSwipeableRow({
         [];
       if (onRename) buttons.push({ text: 'Rename', onPress: promptRename });
       if (onRestore) buttons.push({ text: 'Recover', onPress: handleRecover });
-      buttons.push({ text: 'Share', onPress: handleShare });
+      buttons.push({ text: 'Share', onPress: handleShareFromSheet });
       buttons.push({ text: deleteLabel, style: 'destructive', onPress: handleDelete });
       buttons.push({ text: 'Cancel', style: 'cancel' });
       Alert.alert(recording.title, undefined, buttons);
@@ -296,7 +358,7 @@ export function RecordingSwipeableRow({
       options.push(favoriteLabel);
       handlers.push(toggleFavorite);
       options.push('Share');
-      handlers.push(handleShare);
+      handlers.push(handleShareFromSheet);
       if (onRename) {
         options.push('Rename');
         handlers.push(promptRename);
@@ -324,7 +386,7 @@ export function RecordingSwipeableRow({
     const androidButtons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] =
       [];
     androidButtons.push({ text: favoriteLabel, onPress: toggleFavorite });
-    androidButtons.push({ text: 'Share', onPress: handleShare });
+    androidButtons.push({ text: 'Share', onPress: handleShareFromSheet });
     if (onRename) {
       androidButtons.push({ text: 'Rename', onPress: promptRename });
     }
@@ -342,7 +404,7 @@ export function RecordingSwipeableRow({
     closeThisRow,
     handleDelete,
     handleRecover,
-    handleShare,
+    handleShareFromSheet,
     isRecentlyDeleted,
     moveToArchive,
     onRename,
@@ -380,6 +442,7 @@ export function RecordingSwipeableRow({
       return (
         <View style={styles.trailingActions}>
           <SwipeableAnimatedAction
+            ref={moreMenu.anchorRef}
             progress={progress}
             index={0}
             count={actionCount}
@@ -387,9 +450,10 @@ export function RecordingSwipeableRow({
             backgroundColor="#636366"
             icon="ellipsis-horizontal"
             label="More"
-            onPress={showOptionsMenu}
+            onPress={moreMenu.open}
           />
           <SwipeableAnimatedAction
+            ref={shareMenu.anchorRef}
             progress={progress}
             index={1}
             count={actionCount}
@@ -397,7 +461,7 @@ export function RecordingSwipeableRow({
             backgroundColor="#0A84FF"
             icon="share-outline"
             label="Share"
-            onPress={handleShare}
+            onPress={openShareAnchored}
             disabled={shareBusy}
           />
           <SwipeableAnimatedAction
@@ -417,10 +481,10 @@ export function RecordingSwipeableRow({
     [
       bindSwipeTranslation,
       handleDelete,
-      handleShare,
       isRecentlyDeleted,
+      moreMenu.open,
+      openShareAnchored,
       shareBusy,
-      showOptionsMenu,
     ]
   );
 
@@ -480,6 +544,21 @@ export function RecordingSwipeableRow({
           </Pressable>
         </SwipeableMotionCard>
       </Swipeable>
+
+      <AnchoredMenuModal
+        visible={shareMenu.visible}
+        anchor={shareMenu.anchor}
+        items={shareMenuItems}
+        onClose={shareMenu.close}
+        align="trailing"
+      />
+      <AnchoredMenuModal
+        visible={moreMenu.visible}
+        anchor={moreMenu.anchor}
+        items={moreMenuItems}
+        onClose={moreMenu.close}
+        align="trailing"
+      />
 
       <Modal
         visible={moveModalVisible}

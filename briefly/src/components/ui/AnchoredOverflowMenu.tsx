@@ -9,6 +9,8 @@ import {
   LayoutRectangle,
   Platform,
   ActivityIndicator,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import {
   Spacing,
@@ -31,39 +33,56 @@ export type AnchoredMenuItem = {
 const MENU_MIN_WIDTH = 220;
 const ANCHOR_GAP = 6;
 
-interface AnchoredOverflowMenuProps {
-  items: AnchoredMenuItem[];
-  renderTrigger: (open: () => void) => React.ReactNode;
-  /** Menu horizontal alignment relative to the trigger. */
-  align?: 'leading' | 'trailing';
-  /** Shows a spinner on the trigger (e.g. while a menu action runs). */
-  triggerLoading?: boolean;
-}
+const defaultTriggerWrapperStyle: ViewStyle = {
+  flexShrink: 0,
+  alignSelf: 'stretch',
+};
 
-/** Context menu anchored below the trigger. */
-export function AnchoredOverflowMenu({
-  items,
-  renderTrigger,
-  align = 'trailing',
-}: AnchoredOverflowMenuProps) {
-  const styles = useCreateStyles(createAnchoredOverflowMenuStyles);
-  const colors = useThemedColors();
-  const resolvedScheme = useResolvedColorScheme();
+export function useAnchoredMenu() {
   const anchorRef = useRef<View>(null);
   const [visible, setVisible] = useState(false);
   const [anchor, setAnchor] = useState<LayoutRectangle | null>(null);
 
   const open = useCallback(() => {
-    anchorRef.current?.measureInWindow((x, y, width, height) => {
-      setAnchor({ x, y, width, height });
-      setVisible(true);
-    });
+    const measure = () => {
+      anchorRef.current?.measureInWindow((x, y, width, height) => {
+        if (width <= 0 || height <= 0) {
+          return;
+        }
+        setAnchor({ x, y, width, height });
+        setVisible(true);
+      });
+    };
+    requestAnimationFrame(measure);
   }, []);
 
   const close = useCallback(() => {
     setVisible(false);
     setAnchor(null);
   }, []);
+
+  return { anchorRef, visible, anchor, open, close };
+}
+
+interface AnchoredMenuModalProps {
+  visible: boolean;
+  anchor: LayoutRectangle | null;
+  items: AnchoredMenuItem[];
+  onClose: () => void;
+  align?: 'leading' | 'trailing';
+}
+
+/** Anchored menu panel; pair with {@link useAnchoredMenu} when the trigger lives outside this tree. */
+export function AnchoredMenuModal({
+  visible,
+  anchor,
+  items,
+  onClose,
+  align = 'trailing',
+}: AnchoredMenuModalProps) {
+  const styles = useCreateStyles(createAnchoredOverflowMenuStyles);
+  const colors = useThemedColors();
+  const resolvedScheme = useResolvedColorScheme();
 
   const rowRippleColor =
     resolvedScheme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)';
@@ -80,57 +99,92 @@ export function AnchoredOverflowMenu({
         };
 
   return (
-    <>
-      <View ref={anchorRef} collapsable={false}>
-        {renderTrigger(open)}
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={onClose}
+          accessibilityLabel="Dismiss menu"
+        />
+        {anchor ? (
+          <View style={[styles.menu, menuPosition]} accessibilityViewIsModal>
+            {items.map((item, index) => {
+              const inactive = item.disabled || item.loading;
+              return (
+                <Pressable
+                  key={item.label}
+                  style={({ pressed }) => [
+                    styles.row,
+                    index > 0 && styles.rowBorder,
+                    pressed && !inactive && Platform.OS === 'ios' && styles.rowPressed,
+                  ]}
+                  onPress={() => {
+                    onClose();
+                    if (!inactive) {
+                      item.onPress();
+                    }
+                  }}
+                  disabled={inactive}
+                  accessibilityRole="menuitem"
+                  accessibilityState={{ disabled: inactive, busy: item.loading }}
+                  android_ripple={{ color: rowRippleColor }}
+                >
+                  {item.loading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.primary}
+                      style={styles.rowSpinner}
+                    />
+                  ) : null}
+                  <Text style={[styles.label, inactive && styles.labelDisabled]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
       </View>
-      <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
-        <View style={styles.overlay}>
-          <Pressable
-            style={styles.backdrop}
-            onPress={close}
-            accessibilityLabel="Dismiss menu"
-          />
-          {anchor ? (
-            <View style={[styles.menu, menuPosition]} accessibilityViewIsModal>
-              {items.map((item, index) => {
-                const inactive = item.disabled || item.loading;
-                return (
-                  <Pressable
-                    key={item.label}
-                    style={({ pressed }) => [
-                      styles.row,
-                      index > 0 && styles.rowBorder,
-                      pressed && !inactive && Platform.OS === 'ios' && styles.rowPressed,
-                    ]}
-                    onPress={() => {
-                      close();
-                      if (!inactive) {
-                        item.onPress();
-                      }
-                    }}
-                    disabled={inactive}
-                    accessibilityRole="menuitem"
-                    accessibilityState={{ disabled: inactive, busy: item.loading }}
-                    android_ripple={{ color: rowRippleColor }}
-                  >
-                    {item.loading ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={colors.primary}
-                        style={styles.rowSpinner}
-                      />
-                    ) : null}
-                    <Text style={[styles.label, inactive && styles.labelDisabled]}>
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
-        </View>
-      </Modal>
+    </Modal>
+  );
+}
+
+interface AnchoredOverflowMenuProps {
+  items: AnchoredMenuItem[];
+  renderTrigger: (open: () => void) => React.ReactNode;
+  /** Menu horizontal alignment relative to the trigger. */
+  align?: 'leading' | 'trailing';
+  /** Shows a spinner on the trigger (e.g. while a menu action runs). */
+  triggerLoading?: boolean;
+  /** Layout for the trigger wrapper (e.g. swipe actions need `alignSelf: 'stretch'`). */
+  triggerWrapperStyle?: StyleProp<ViewStyle>;
+}
+
+/** Context menu anchored below the trigger. */
+export function AnchoredOverflowMenu({
+  items,
+  renderTrigger,
+  align = 'trailing',
+  triggerWrapperStyle,
+}: AnchoredOverflowMenuProps) {
+  const menu = useAnchoredMenu();
+
+  return (
+    <>
+      <View
+        ref={menu.anchorRef}
+        collapsable={false}
+        style={[defaultTriggerWrapperStyle, triggerWrapperStyle]}
+      >
+        {renderTrigger(menu.open)}
+      </View>
+      <AnchoredMenuModal
+        visible={menu.visible}
+        anchor={menu.anchor}
+        items={items}
+        onClose={menu.close}
+        align={align}
+      />
     </>
   );
 }
