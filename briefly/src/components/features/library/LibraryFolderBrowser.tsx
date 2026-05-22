@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   useWindowDimensions,
+  type GestureResponderEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -19,10 +20,11 @@ import { useFolderListLayoutStore } from '@/context/useFolderListLayoutStore';
 import { LibraryHeader } from './LibraryHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
+import { AnchoredMenuModal, useAnchoredMenu } from '@/components/ui/AnchoredOverflowMenu';
 import { NewFolderDialog } from './NewFolderDialog';
 import { computeLibraryFolderCounts } from '@/utils/folders/folderCounts';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
-import { showUserFolderActions } from '@/utils/folders/userFolderActions';
+import { buildUserFolderMenuItems } from '@/utils/folders/userFolderActions';
 import {
   folderIconBadgeBackground,
   folderIconColor,
@@ -129,6 +131,8 @@ export function LibraryFolderBrowser({
 
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [renameFolderTarget, setRenameFolderTarget] = useState<FolderTile | null>(null);
+  const folderMenu = useAnchoredMenu();
+  const [folderMenuTarget, setFolderMenuTarget] = useState<FolderTile | null>(null);
   useEffect(() => {
     loadFolders();
   }, [loadFolders]);
@@ -335,59 +339,75 @@ export function LibraryFolderBrowser({
     [toggleFolderPinned]
   );
 
-  const handleUserFolderLongPress = useCallback(
-    (folder: FolderTile) => {
-      const recordingCount = recordings.filter((r) => r.userFolderId === folder.id).length;
-
-      showUserFolderActions(
-        folder.name,
-        !!folder.pinned,
-        {
-          onRename: (newName) =>
-            renameFolder(folder.id, newName).catch((err: unknown) =>
-              Alert.alert('Error', err instanceof Error ? err.message : 'Could not rename folder')
-            ),
-          onTogglePin: () => handleToggleUserFolderPin(folder.id),
-          onDelete: () => {
-            Alert.alert(
-              'Delete Folder',
-              recordingCount > 0
-                ? `Delete "${folder.name}"? ${recordingCount} recording${recordingCount === 1 ? '' : 's'} will move to Unlisted.`
-                : `Delete "${folder.name}"?`,
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete',
-                  style: 'destructive',
-                  onPress: () => {
-                    void (async () => {
-                      try {
-                        const inFolder = recordings.filter((r) => r.userFolderId === folder.id);
-                        await Promise.all(
-                          inFolder.map((r) => updateRecording(r.id, { userFolderId: undefined }))
-                        );
-                        await deleteFolder(folder.id);
-                      } catch (err: unknown) {
-                        Alert.alert(
-                          'Error',
-                          err instanceof Error ? err.message : 'Could not delete folder'
-                        );
-                      }
-                    })();
-                  },
+  const folderMenuItems = useMemo(() => {
+    if (!folderMenuTarget) return [];
+    const folder = folderMenuTarget;
+    const recordingCount = recordings.filter((r) => r.userFolderId === folder.id).length;
+    return buildUserFolderMenuItems(
+      folder.name,
+      !!folder.pinned,
+      {
+        onRename: (newName) =>
+          renameFolder(folder.id, newName).catch((err: unknown) =>
+            Alert.alert('Error', err instanceof Error ? err.message : 'Could not rename folder')
+          ),
+        onTogglePin: () => handleToggleUserFolderPin(folder.id),
+        onDelete: () => {
+          Alert.alert(
+            'Delete Folder',
+            recordingCount > 0
+              ? `Delete "${folder.name}"? ${recordingCount} recording${recordingCount === 1 ? '' : 's'} will move to Unlisted.`
+              : `Delete "${folder.name}"?`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => {
+                  void (async () => {
+                    try {
+                      const inFolder = recordings.filter((r) => r.userFolderId === folder.id);
+                      await Promise.all(
+                        inFolder.map((r) => updateRecording(r.id, { userFolderId: undefined }))
+                      );
+                      await deleteFolder(folder.id);
+                    } catch (err: unknown) {
+                      Alert.alert(
+                        'Error',
+                        err instanceof Error ? err.message : 'Could not delete folder'
+                      );
+                    }
+                  })();
                 },
-              ]
-            );
-          },
+              },
+            ]
+          );
         },
-        () => {
-          // Store the active folder for rename in state to render the dialog
-          setRenameFolderTarget(folder);
-        }
-      );
+      },
+      () => setRenameFolderTarget(folder),
+    );
+  }, [
+    folderMenuTarget,
+    recordings,
+    renameFolder,
+    deleteFolder,
+    handleToggleUserFolderPin,
+    updateRecording,
+  ]);
+
+  const handleUserFolderLongPress = useCallback(
+    (folder: FolderTile, event: GestureResponderEvent) => {
+      setFolderMenuTarget(folder);
+      const { pageX, pageY } = event.nativeEvent;
+      requestAnimationFrame(() => folderMenu.openAtPoint(pageX, pageY));
     },
-    [recordings, renameFolder, deleteFolder, handleToggleUserFolderPin, updateRecording]
+    [folderMenu.openAtPoint],
   );
+
+  const closeFolderMenu = useCallback(() => {
+    folderMenu.close();
+    setFolderMenuTarget(null);
+  }, [folderMenu.close]);
 
   const renderGridFolderCard = useCallback(
     (f: FolderTile, showPinnedChrome = true) => {
@@ -442,7 +462,7 @@ export function LibraryFolderBrowser({
               pinned={!!f.pinned}
               onPress={() => openFolder(f.id, f.name, f.folderType)}
               onTogglePin={() => handleToggleUserFolderPin(f.id)}
-              onLongPress={() => handleUserFolderLongPress(f)}
+              onLongPress={(e) => handleUserFolderLongPress(f, e)}
               pinInteractionEnabled
               layout="grid"
             >
@@ -476,7 +496,7 @@ export function LibraryFolderBrowser({
             f.pinned && styles.folderCardPinned,
           ]}
           onPress={() => openFolder(f.id, f.name, f.folderType)}
-          onLongPress={() => handleUserFolderLongPress(f)}
+          onLongPress={(e) => handleUserFolderLongPress(f, e)}
           delayLongPress={450}
           accessibilityRole="button"
           accessibilityLabel={f.name}
@@ -599,7 +619,7 @@ export function LibraryFolderBrowser({
             pinned={!!f.pinned}
             onPress={() => openFolder(f.id, f.name, f.folderType)}
             onTogglePin={() => handleToggleUserFolderPin(f.id)}
-            onLongPress={() => handleUserFolderLongPress(f)}
+            onLongPress={(e) => handleUserFolderLongPress(f, e)}
             pinInteractionEnabled
             layout="list"
           >
@@ -786,6 +806,14 @@ export function LibraryFolderBrowser({
         onBack={() => router.back()}
         onAddFolder={handleAddFolder}
         onSearch={() => router.push('/search')}
+      />
+
+      <AnchoredMenuModal
+        visible={folderMenu.visible}
+        anchor={folderMenu.anchor}
+        items={folderMenuItems}
+        onClose={closeFolderMenu}
+        align="center"
       />
 
       <TextInputDialog

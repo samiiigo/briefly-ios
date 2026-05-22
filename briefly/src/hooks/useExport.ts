@@ -129,16 +129,6 @@ export function useExport(recording: Recording | undefined) {
     [exportPdf, isExportingPdf, isSharingAudio, shareAudio, shareText],
   );
 
-  const openShareMenu = useCallback(() => {
-    if (shareBusy) return;
-    Alert.alert('Share Note', 'Choose what to share.', [
-      { text: 'Share as Text', onPress: shareText },
-      { text: 'Share Audio', onPress: shareAudio },
-      { text: 'Export to PDF', onPress: exportPdf },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }, [exportPdf, shareAudio, shareText, shareBusy]);
-
   return {
     isExportingPdf,
     isSharingAudio,
@@ -147,6 +137,5 @@ export function useExport(recording: Recording | undefined) {
     exportPdf,
     shareText,
     shareAudio,
-    openShareMenu,
   };
 }

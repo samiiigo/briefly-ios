@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from 'react';
-import { Text, StyleSheet, Pressable } from 'react-native';
+import { Text, StyleSheet, Pressable, type GestureResponderEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Colors, BorderRadius, withAppFont } from '@/theme';
@@ -10,7 +10,7 @@ interface FolderUserSwipeableRowProps {
   pinned: boolean;
   onPress: () => void;
   onTogglePin: () => void;
-  onLongPress: () => void;
+  onLongPress: (event: GestureResponderEvent) => void;
   /** Swipe + long-press apply when true (user-created folders). */
   pinInteractionEnabled: boolean;
   layout: 'list' | 'grid';
