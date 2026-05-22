@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, type RefObject } from 'react';
 import {
   Modal,
   View,
@@ -9,6 +9,7 @@ import {
   LayoutRectangle,
   Platform,
   ActivityIndicator,
+  ScrollView,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -31,6 +32,7 @@ export type AnchoredMenuItem = {
 };
 
 const MENU_MIN_WIDTH = 220;
+const MENU_MAX_HEIGHT = 320;
 const ANCHOR_GAP = 6;
 
 const defaultTriggerWrapperStyle: ViewStyle = {
@@ -38,8 +40,10 @@ const defaultTriggerWrapperStyle: ViewStyle = {
   alignSelf: 'stretch',
 };
 
-export function useAnchoredMenu() {
-  const anchorRef = useRef<View>(null);
+/** @param externalAnchorRef Share one ref when multiple menus anchor to the same control. */
+export function useAnchoredMenu(externalAnchorRef?: RefObject<View | null>) {
+  const internalAnchorRef = useRef<View>(null);
+  const anchorRef = externalAnchorRef ?? internalAnchorRef;
   const [visible, setVisible] = useState(false);
   const [anchor, setAnchor] = useState<LayoutRectangle | null>(null);
 
@@ -54,7 +58,7 @@ export function useAnchoredMenu() {
       });
     };
     requestAnimationFrame(measure);
-  }, []);
+  }, [anchorRef]);
 
   const close = useCallback(() => {
     setVisible(false);
@@ -108,11 +112,17 @@ export function AnchoredMenuModal({
         />
         {anchor ? (
           <View style={[styles.menu, menuPosition]} accessibilityViewIsModal>
+            <ScrollView
+              style={styles.menuScroll}
+              bounces={false}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={items.length > 6}
+            >
             {items.map((item, index) => {
               const inactive = item.disabled || item.loading;
               return (
                 <Pressable
-                  key={item.label}
+                  key={`${item.label}-${index}`}
                   style={({ pressed }) => [
                     styles.row,
                     index > 0 && styles.rowBorder,
@@ -142,6 +152,7 @@ export function AnchoredMenuModal({
                 </Pressable>
               );
             })}
+            </ScrollView>
           </View>
         ) : null}
       </View>
@@ -201,12 +212,16 @@ function createAnchoredOverflowMenuStyles(c: ColorPalette) {
     menu: {
       position: 'absolute',
       minWidth: MENU_MIN_WIDTH,
+      maxHeight: MENU_MAX_HEIGHT,
       backgroundColor: c.card,
       borderRadius: BorderRadius.lg,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.border,
       overflow: 'hidden',
       ...shadowElevated,
+    },
+    menuScroll: {
+      flexGrow: 0,
     },
     row: {
       flexDirection: 'row',

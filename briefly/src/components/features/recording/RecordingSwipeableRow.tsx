@@ -14,9 +14,6 @@ import {
   Alert,
   Platform,
   ActionSheetIOS,
-  Modal,
-  FlatList,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { triggerHaptic } from '@/utils/haptics';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -43,7 +40,7 @@ import {
   useAnchoredMenu,
   type AnchoredMenuItem,
 } from '@/components/ui/AnchoredOverflowMenu';
-import { useCreateStyles, Spacing, BorderRadius, withAppFont } from '@/theme';
+import { useCreateStyles, Spacing } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 
 interface RecordingSwipeableRowProps {
@@ -86,8 +83,10 @@ export function RecordingSwipeableRow({
   const motionTranslation = swipeTranslationRef.current ?? fallbackTranslation;
   const { folders, loadFolders } = useUserFolderStore();
   const { shareBusy, shareMenuItems, openShareMenu } = useExport(recording);
+  const moreAnchorRef = useRef<View>(null);
   const shareMenu = useAnchoredMenu();
-  const moreMenu = useAnchoredMenu();
+  const moreMenu = useAnchoredMenu(moreAnchorRef);
+  const moveMenu = useAnchoredMenu(moreAnchorRef);
 
   const closeThisRow = useCallback(() => {
     swipeableRef.current?.close();
@@ -167,47 +166,24 @@ export function RecordingSwipeableRow({
     return [...builtIn, ...user];
   }, [folders]);
 
-  const showMoveSheet = useCallback(async () => {
-    closeThisRow();
-    await loadFolders();
-    const latestFolders = useUserFolderStore.getState().folders;
-    const dests = moveDestinations(latestFolders);
-    const names = [
-      ...BUILTIN_MOVE_ORDER.map(
-        (id) => BUILT_IN_FOLDERS.find((f) => f.id === id)!.name
-      ),
-      ...latestFolders.map((folder) => folder.name),
-    ];
-    if (Platform.OS === 'ios' && names.length <= 10) {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', ...names],
-          cancelButtonIndex: 0,
-        },
-        (index) => {
-          if (index === 0) return;
-          const dest = dests[index - 1];
-          if (dest) handleMoveTo(dest);
-        }
-      );
-    } else {
-      setMoveModalVisible(true);
-    }
-  }, [closeThisRow, loadFolders, moveDestinations, handleMoveTo]);
-
-  const [moveModalVisible, setMoveModalVisible] = React.useState(false);
   const [renameDialogVisible, setRenameDialogVisible] = React.useState(false);
-  const destsForModal = moveDestinations();
-  const moveModalOptions = [
-    ...BUILTIN_MOVE_ORDER.map((id) => ({
-      label: BUILT_IN_FOLDERS.find((f) => f.id === id)!.name,
-      dest: destsForModal.find((d) => d.type === 'built-in' && d.id === id)!,
-    })),
-    ...folders.map((folder) => ({
-      label: folder.name,
-      dest: { type: 'user' as const, id: folder.id, name: folder.name } as MoveDestination,
-    })),
-  ].filter((o) => o.dest);
+
+  const moveMenuItems = React.useMemo((): AnchoredMenuItem[] => {
+    return moveDestinations().map((dest) => ({
+      label:
+        dest.type === 'built-in'
+          ? BUILT_IN_FOLDERS.find((f) => f.id === dest.id)!.name
+          : dest.name,
+      onPress: () => handleMoveTo(dest),
+    }));
+  }, [folders, handleMoveTo, moveDestinations]);
+
+  const openMoveMenu = useCallback(async () => {
+    await loadFolders();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => moveMenu.open());
+    });
+  }, [loadFolders, moveMenu.open]);
 
   const handleDelete = useCallback(() => {
     swipeableRef.current?.close();
@@ -287,7 +263,7 @@ export function RecordingSwipeableRow({
       label: recording.isArchived ? 'Unarchive' : 'Archive',
       onPress: recording.isArchived ? removeFromArchive : moveToArchive,
     });
-    items.push({ label: 'Move to…', onPress: showMoveSheet });
+    items.push({ label: 'Move to…', onPress: openMoveMenu });
     items.push({ label: deleteLabel, onPress: handleDelete });
     return items;
   }, [
@@ -303,7 +279,7 @@ export function RecordingSwipeableRow({
     recording.isFavorite,
     removeFromArchive,
     shareBusy,
-    showMoveSheet,
+    openMoveMenu,
     toggleFavorite,
   ]);
 
@@ -366,7 +342,7 @@ export function RecordingSwipeableRow({
       options.push(archiveLabel, 'Move to…', deleteLabel);
       handlers.push(
         () => (recording.isArchived ? removeFromArchive() : moveToArchive()),
-        showMoveSheet,
+        openMoveMenu,
         handleDelete
       );
       ActionSheetIOS.showActionSheetWithOptions(
@@ -395,7 +371,7 @@ export function RecordingSwipeableRow({
         text: archiveLabel,
         onPress: recording.isArchived ? removeFromArchive : moveToArchive,
       },
-      { text: 'Move to…', onPress: showMoveSheet },
+      { text: 'Move to…', onPress: openMoveMenu },
       { text: deleteLabel, style: 'destructive', onPress: handleDelete },
       { text: 'Cancel', style: 'cancel' }
     );
@@ -414,7 +390,7 @@ export function RecordingSwipeableRow({
     recording.isFavorite,
     recording.title,
     removeFromArchive,
-    showMoveSheet,
+    openMoveMenu,
     toggleFavorite,
   ]);
 
@@ -442,7 +418,7 @@ export function RecordingSwipeableRow({
       return (
         <View style={styles.trailingActions}>
           <SwipeableAnimatedAction
-            ref={moreMenu.anchorRef}
+            ref={moreAnchorRef}
             progress={progress}
             index={0}
             count={actionCount}
@@ -559,44 +535,13 @@ export function RecordingSwipeableRow({
         onClose={moreMenu.close}
         align="trailing"
       />
-
-      <Modal
-        visible={moveModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMoveModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setMoveModalVisible(false)}>
-          <View style={styles.moveModalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.moveModalContent}>
-                <Text style={styles.moveModalTitle}>Move to…</Text>
-                <FlatList
-                  data={moveModalOptions}
-                  keyExtractor={(item) => `${item.dest.type}-${item.dest.id}`}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={styles.moveModalRow}
-                      onPress={() => {
-                        handleMoveTo(item.dest);
-                        setMoveModalVisible(false);
-                      }}
-                    >
-                      <Text style={styles.moveModalRowText}>{item.label}</Text>
-                    </TouchableOpacity>
-                  )}
-                />
-                <TouchableOpacity
-                  style={styles.moveModalCancel}
-                  onPress={() => setMoveModalVisible(false)}
-                >
-                  <Text style={styles.moveModalCancelText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+      <AnchoredMenuModal
+        visible={moveMenu.visible}
+        anchor={moveMenu.anchor}
+        items={moveMenuItems}
+        onClose={moveMenu.close}
+        align="trailing"
+      />
 
       {onRename ? (
         <TextInputDialog
@@ -629,46 +574,5 @@ function createRecordingSwipeableRowStyles(c: ColorPalette) {
     paddingLeft: SWIPE_ACTION_GAP,
     paddingRight: SWIPE_ACTION_GAP / 2,
   },
-  moveModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  moveModalContent: {
-    backgroundColor: c.card,
-    borderRadius: BorderRadius.cardXL,
-    maxHeight: 400,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
-    overflow: 'hidden',
-  },
-  moveModalTitle: withAppFont({
-    fontSize: 14,
-    fontWeight: '500',
-    color: c.subtext,
-    paddingHorizontal: Spacing.md,
-    paddingTop: 14,
-    paddingBottom: 8,
-  }),
-  moveModalRow: {
-    paddingVertical: 14,
-    paddingHorizontal: Spacing.md,
-  },
-  moveModalRowText: withAppFont({
-    fontSize: 17,
-    color: c.textPrimary,
-  }),
-  moveModalCancel: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: c.border,
-  },
-  moveModalCancelText: withAppFont({
-    fontSize: 17,
-    fontWeight: '600',
-    color: c.primary,
-  }),
   });
 }
