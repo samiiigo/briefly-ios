@@ -9,9 +9,6 @@ import {
   SectionList,
   Alert,
   Platform,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +19,7 @@ import { useFolderListLayoutStore } from '@/context/useFolderListLayoutStore';
 import { LibraryHeader } from './LibraryHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
+import { NewFolderDialog } from './NewFolderDialog';
 import { computeLibraryFolderCounts } from '@/utils/folders/folderCounts';
 import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
 import { showUserFolderActions } from '@/utils/folders/userFolderActions';
@@ -771,12 +769,8 @@ export function LibraryFolderBrowser({
         </ScrollView>
       )}
 
-      <TextInputDialog
+      <NewFolderDialog
         visible={addModalVisible}
-        title="New Folder"
-        message="Enter a name for the folder"
-        placeholder="Folder name"
-        submitLabel="Create"
         onSubmit={(text) => {
           setAddModalVisible(false);
           addFolder(text).catch((err: unknown) =>
@@ -1011,63 +1005,5 @@ function createLibraryFolderBrowserStyles(c: ColorPalette) {
   utilityItemGap: {
     height: 4,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContentWrap: {
-    width: '100%',
-    maxWidth: 340,
-  },
-  addFolderModal: {
-    backgroundColor: c.card,
-    borderRadius: BorderRadius.lg,
-    padding: 20,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
-  },
-  addFolderModalTitle: withAppFont({
-    fontSize: 17,
-    fontWeight: '700',
-    color: c.textPrimary,
-    marginBottom: 16,
-  }),
-  addFolderInput: withAppFont({
-    backgroundColor: c.surface,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: c.textPrimary,
-    marginBottom: 20,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
-  }),
-  addFolderModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  addFolderModalBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: Spacing.lg,
-  },
-  addFolderModalBtnCancel: withAppFont({
-    fontSize: 16,
-    color: c.subtext,
-    fontWeight: '600',
-  }),
-  addFolderModalBtnPrimary: {
-    backgroundColor: c.primary,
-    borderRadius: BorderRadius.md,
-  },
-  addFolderModalBtnPrimaryText: withAppFont({
-    fontSize: 16,
-    color: c.textPrimary,
-    fontWeight: '600',
-  }),
   });
 }
