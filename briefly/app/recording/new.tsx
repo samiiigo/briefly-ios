@@ -16,7 +16,12 @@ import { useFloatingTabBarLayout } from '@/components/navigation/useFloatingTabB
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { RecordingService, LiveTranscriptionService } from '@/services/audio';
+import {
+  RecordingService,
+  DecorativeLivePreview,
+  DecorativeOnDeviceLivePreview,
+  LiveTranscriptionService,
+} from '@/services/audio';
 import { saveCapturedRecording } from '@/services/recording/saveCapturedRecording';
 import { interceptOnDeviceSummarizationIfBlocked } from '@/utils/processing/localLlmSummarizationGate';
 import { RecordingFolder } from '@/types';
@@ -34,9 +39,8 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import {
   normalizeTranscriptionMode,
-  resolveRecordingTranscriptionPlan,
-  requiresLiveOnDeviceCapture,
-  showsLivePreviewDuringRecording,
+  resolveDecorativePreviewEngine,
+  canRunDecorativeLivePreview,
 } from '@/utils/processing/transcriptionMode';
 import { formatTimestamp } from '@/utils';
 import {
@@ -76,7 +80,7 @@ export default function NewRecordingScreen() {
     markImported?: string;
   }>();
   const setLiveTranscript = useRecordingStore((s) => s.setLiveTranscript);
-  const { transcriptionMode: settingsTranscriptionMode } = useSettingsStore();
+  const { transcriptionMode: settingsTranscriptionMode, showLivePreview } = useSettingsStore();
   const { elapsed, elapsedRef, start: startTimer, stop: stopTimer } = useTimer();
   const live = useLiveTranscript(setLiveTranscript, elapsedRef);
   const { finalText, partialText, liveSegments, isStopped, onPartial, onFinal, flush, reset, cleanup } =
@@ -85,39 +89,76 @@ export default function NewRecordingScreen() {
   const [isStarted, setIsStarted] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
   const [startFailed, setStartFailed] = useState(false);
-  const [liveStreamVisible, setLiveStreamVisible] = useState(true);
   const [interruptHint, setInterruptHint] = useState<string | null>(null);
   const livePreviewScrollRef = useRef<ScrollView | null>(null);
   const isPausedRef = useRef(false);
-  const startedWithLiveRef = useRef(false);
+  const previewEngineRef = useRef<'cloud' | 'on-device' | 'none'>('none');
   const isMountedRef = useRef(true);
 
   const settingsMode = normalizeTranscriptionMode(settingsTranscriptionMode);
-  const plan = resolveRecordingTranscriptionPlan(settingsMode, {
+  const previewEngine = resolveDecorativePreviewEngine(settingsMode, {
     canCloudLive: LiveTranscriptionService.isSupported,
     canOnDeviceLive: LiveTranscriptionService.isOnDeviceSupported,
   });
-  const useLive = plan.useLiveCapture;
-  const isLocalLive = plan.settingsMode === 'local-on-device' && useLive;
-  const showLivePreviewPanel = showsLivePreviewDuringRecording(plan);
-  const showLiveStream = showLivePreviewPanel && (!isLocalLive || liveStreamVisible);
+  const showLivePreviewPanel = canRunDecorativeLivePreview(showLivePreview, previewEngine);
 
-  const getMetering = useCallback(() => {
-    if (startedWithLiveRef.current) return LiveTranscriptionService.getMetering();
-    return RecordingService.getMetering();
+  const getMetering = useCallback(() => RecordingService.getMetering(), []);
+
+  const stopDecorativePreview = useCallback(() => {
+    if (previewEngineRef.current === 'cloud') {
+      DecorativeLivePreview.stop();
+    } else if (previewEngineRef.current === 'on-device') {
+      DecorativeOnDeviceLivePreview.stop();
+    }
+    previewEngineRef.current = 'none';
   }, []);
+
+  const startDecorativePreview = useCallback(async () => {
+    if (!showLivePreviewPanel) return;
+    previewEngineRef.current = previewEngine;
+    if (previewEngine === 'cloud') {
+      await DecorativeLivePreview.start(
+        () => RecordingService.getActiveRecordingUri(),
+        {
+          onPartial,
+          onFinal,
+          onConnectionState: () => {},
+          onError: (msg) => {
+            if (liveSegments.current.length === 0) {
+              setLiveTranscript('Reconnecting…');
+            }
+            if (/permission|denied|not authorized/i.test(msg)) {
+              setInterruptHint('Speech recognition may be unavailable. Check Settings.');
+            }
+          },
+        },
+      );
+      return;
+    }
+    if (previewEngine === 'on-device') {
+      await DecorativeOnDeviceLivePreview.start({
+        onPartial,
+        onFinal,
+        onConnectionState: () => {},
+        onError: (msg) => {
+          if (/permission|denied|not authorized/i.test(msg)) {
+            setInterruptHint('Speech recognition may be unavailable. Check Settings.');
+          }
+        },
+      });
+    }
+  }, [onFinal, onPartial, previewEngine, setLiveTranscript, showLivePreviewPanel]);
 
   const teardownCapture = useCallback(async () => {
     try {
-      if (startedWithLiveRef.current) {
-        await LiveTranscriptionService.stop();
-      } else if (isStarted) {
+      stopDecorativePreview();
+      if (isStarted) {
         await RecordingService.stop();
       }
     } catch {
       // Best-effort cleanup
     }
-  }, [isStarted]);
+  }, [isStarted, stopDecorativePreview]);
 
   const showPermissionAlert = useCallback(
     (message: string) => {
@@ -172,28 +213,14 @@ export default function NewRecordingScreen() {
 
     (async () => {
       try {
-        if (requiresLiveOnDeviceCapture(plan) && !plan.useLiveCapture) {
-          throw new Error(
-            'On-device transcription is not available on this device. Choose another mode in Settings.',
-          );
-        }
-        startedWithLiveRef.current = useLive;
-        if (useLive && plan.liveEngine !== 'none') {
-          await LiveTranscriptionService.start(plan.liveEngine, {
-            onPartial,
-            onFinal,
-            onConnectionState: () => {},
-            onError: (msg) => {
-              if (liveSegments.current.length === 0) {
-                setLiveTranscript('Reconnecting…');
-              }
-              if (/permission|denied|not authorized/i.test(msg)) {
-                setInterruptHint('Speech recognition may be unavailable. Check Settings.');
-              }
-            },
-          });
-        } else {
-          await RecordingService.start();
+        await RecordingService.start();
+        if (showLivePreviewPanel) {
+          await new Promise((r) => setTimeout(r, 300));
+          try {
+            await startDecorativePreview();
+          } catch {
+            // Decorative preview is optional; recording still works without it.
+          }
         }
         if (!isMountedRef.current) {
           await teardownCapture();
@@ -227,8 +254,9 @@ export default function NewRecordingScreen() {
   const resumeRecording = useCallback(async () => {
     if (!isStarted || startFailed || isStopped.current || !isPausedRef.current) return;
     try {
-      if (startedWithLiveRef.current) await LiveTranscriptionService.resume();
-      else await RecordingService.resume();
+      if (previewEngineRef.current === 'cloud') DecorativeLivePreview.resume();
+      else if (previewEngineRef.current === 'on-device') await DecorativeOnDeviceLivePreview.resume();
+      await RecordingService.resume();
       startTimer();
       setIsPaused(false);
       isPausedRef.current = false;
@@ -242,8 +270,9 @@ export default function NewRecordingScreen() {
   const pauseRecording = useCallback(async () => {
     if (!isStarted || startFailed || isStopped.current || isPausedRef.current) return;
     try {
-      if (startedWithLiveRef.current) await LiveTranscriptionService.pause();
-      else await RecordingService.pause();
+      if (previewEngineRef.current === 'cloud') DecorativeLivePreview.pause();
+      else if (previewEngineRef.current === 'on-device') await DecorativeOnDeviceLivePreview.pause();
+      await RecordingService.pause();
       stopTimer();
       setIsPaused(true);
       isPausedRef.current = true;
@@ -334,18 +363,18 @@ export default function NewRecordingScreen() {
 
     let result;
     try {
-      result = startedWithLiveRef.current
-        ? await LiveTranscriptionService.stop()
-        : await RecordingService.stop();
-    } catch {
+      stopDecorativePreview();
+      result = await RecordingService.stop();
+    } catch (e: unknown) {
       try {
         await new Promise((r) => setTimeout(r, 300));
         result = await RecordingService.stop();
-      } catch (e: unknown) {
+      } catch (retryErr: unknown) {
         isStopped.current = false;
         setIsStopping(false);
         if (!isPausedRef.current) startTimer();
-        const message = e instanceof Error ? e.message : 'Could not stop recording.';
+        const message =
+          retryErr instanceof Error ? retryErr.message : 'Could not stop recording.';
         Alert.alert('Error', message);
         return;
       }
@@ -384,9 +413,6 @@ export default function NewRecordingScreen() {
       return;
     }
 
-    const preTranscript =
-      liveSegments.current.length > 0 ? liveSegments.current : undefined;
-
     try {
       const { summarizationBlocked } = await saveCapturedRecording({
         duration: stoppedDurationSec,
@@ -395,7 +421,6 @@ export default function NewRecordingScreen() {
         targetFolder: (params.targetFolder as RecordingFolder) ?? 'unlisted',
         targetUserFolderId: params.targetUserFolderId,
         markImported: params.markImported === 'true',
-        preTranscript,
       });
       if (summarizationBlocked) {
         interceptOnDeviceSummarizationIfBlocked(useSettingsStore.getState().summarizationMode);
@@ -417,6 +442,7 @@ export default function NewRecordingScreen() {
     router,
     startFailed,
     startTimer,
+    stopDecorativePreview,
     stopTimer,
   ]);
 
@@ -481,7 +507,7 @@ export default function NewRecordingScreen() {
   const min = Math.floor((elapsed % 3600) / 60);
   const sec = elapsed % 60;
   const hasAnyText = finalText.length > 0 || partialText.length > 0;
-  const placeholder = useLive ? 'Listening...' : 'Transcription after you stop.';
+  const placeholder = showLivePreviewPanel ? 'Listening…' : 'Transcription after you stop.';
 
   return (
     <View style={sl.container}>
@@ -533,65 +559,38 @@ export default function NewRecordingScreen() {
         </View>
 
         {showLivePreviewPanel ? (
-          <View style={[s.lpC, !showLiveStream && s.lpCCollapsed]}>
+          <View style={s.lpC}>
             <View style={s.lpH}>
               <Ionicons name="document-text" size={14} color={colors.primary} />
-              <Text style={s.lpLbl}>Live transcript</Text>
-              {isLocalLive ? (
-                <Pressable
-                  style={({ pressed }) => [s.streamToggle, pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
-                  onPress={() => setLiveStreamVisible((v) => !v)}
-                  accessibilityLabel={
-                    liveStreamVisible ? 'Hide live transcript' : 'Show live transcript'
-                  }
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  android_ripple={{
-                    color: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)',
-                    borderless: true,
-                    radius: 16,
-                  }}
-                >
-                  <Ionicons
-                    name={liveStreamVisible ? 'eye-off-outline' : 'eye-outline'}
-                    size={20}
-                    color={colors.textSecondary}
-                  />
-                </Pressable>
-              ) : null}
+              <Text style={s.lpLbl}>Live preview</Text>
             </View>
-            {showLiveStream ? (
-              <ScrollView
-                ref={livePreviewScrollRef}
-                style={s.lpScroll}
-                showsVerticalScrollIndicator={false}
-                onContentSizeChange={() =>
-                  livePreviewScrollRef.current?.scrollToEnd({ animated: true })
-                }
-              >
-                {hasAnyText ? (
-                  <>
-                    {liveSegments.current.map((seg) => (
-                      <View key={seg.id} style={s.segBlk}>
-                        <Text style={s.segTs}>{formatTimestamp(seg.startTime)}</Text>
-                        <Text style={s.segTxt}>{seg.text}</Text>
-                      </View>
-                    ))}
-                    {partialText ? (
-                      <View style={s.segBlk}>
-                        <View style={{ width: 38 }} />
-                        <Text style={[s.segTxt, s.partTxt]}>{partialText}</Text>
-                      </View>
-                    ) : null}
-                  </>
-                ) : (
-                  <Text style={s.lpPh}>{placeholder}</Text>
-                )}
-              </ScrollView>
-            ) : (
-              <Text style={s.lpHiddenHint}>
-                Transcript hidden — still recording in the background.
-              </Text>
-            )}
+            <ScrollView
+              ref={livePreviewScrollRef}
+              style={s.lpScroll}
+              showsVerticalScrollIndicator={false}
+              onContentSizeChange={() =>
+                livePreviewScrollRef.current?.scrollToEnd({ animated: true })
+              }
+            >
+              {hasAnyText ? (
+                <>
+                  {liveSegments.current.map((seg) => (
+                    <View key={seg.id} style={s.segBlk}>
+                      <Text style={s.segTs}>{formatTimestamp(seg.startTime)}</Text>
+                      <Text style={s.segTxt}>{seg.text}</Text>
+                    </View>
+                  ))}
+                  {partialText ? (
+                    <View style={s.segBlk}>
+                      <View style={{ width: 38 }} />
+                      <Text style={[s.segTxt, s.partTxt]}>{partialText}</Text>
+                    </View>
+                  ) : null}
+                </>
+              ) : (
+                <Text style={s.lpPh}>{placeholder}</Text>
+              )}
+            </ScrollView>
           </View>
         ) : null}
       </View>
@@ -716,17 +715,9 @@ function createNewRecordingStyles(c: ColorPalette) {
       padding: Spacing.md,
       marginBottom: Spacing.md,
     },
-    lpCCollapsed: { flex: 0 },
     lpH: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm },
     lpLbl: withAppFont({ fontSize: 13, fontWeight: '600', color: c.primary, flex: 1 }),
-    streamToggle: { padding: 4, marginLeft: 4 },
     lpScroll: { flex: 1 },
-    lpHiddenHint: withAppFont({
-      fontSize: 14,
-      color: c.textTertiary,
-      lineHeight: 20,
-      fontStyle: 'italic',
-    }),
     segBlk: {
       flexDirection: 'row',
       alignItems: 'flex-start',

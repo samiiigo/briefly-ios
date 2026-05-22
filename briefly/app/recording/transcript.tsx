@@ -4,11 +4,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import {
-  executeManualRecordingRerun,
-  executeSummarizationOnlyRerun,
-} from '@/utils/recording/manualRecordingRerun';
-import {
   canRerunSummaryFromTranscript,
+  canRerunTranscriptFromAudio,
+  runTranscriptScreenRerun,
 } from '@/utils/recording/recordingRerunCapabilities';
 import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
 import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
@@ -22,7 +20,6 @@ import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
 import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
 import { useRecordingAudioAvailability } from '@/hooks/useRecordingAudioAvailability';
-import { getRecordingAudioAvailability } from '@/utils/recording/recordingPlayableAudio';
 import { RecordingProcessingFlashIcon } from '@/components/features/recording/RecordingProcessingFlashIcon';
 import { Colors, Spacing } from '@/theme';
 
@@ -61,21 +58,14 @@ export default function RecordingTranscriptScreen() {
 
     useRecordingRetryFlashStore.getState().markRetryPending(recording.id);
 
-    if (getRecordingAudioAvailability(recording).hasAudio) {
-      executeManualRecordingRerun(recording.id, { preservePreviousResults: true });
-      return;
+    const result = runTranscriptScreenRerun(recording, audioAvailability);
+    if (result === 'none') {
+      Alert.alert(
+        'Nothing to process',
+        'No audio file or saved transcript is available for this recording.',
+      );
     }
-
-    if (canRerunSummaryFromTranscript(recording)) {
-      executeSummarizationOnlyRerun(recording.id);
-      return;
-    }
-
-    Alert.alert(
-      'Nothing to process',
-      'No audio file or saved transcript is available for this recording.',
-    );
-  }, [recording]);
+  }, [audioAvailability, recording]);
 
   if (!recording) {
     return (
@@ -90,7 +80,7 @@ export default function RecordingTranscriptScreen() {
   const segments = recording.transcript ?? [];
   const isProcessing =
     recording.status === 'transcribing' || recording.status === 'summarizing';
-  const canRerunTranscript = hasAudio;
+  const canRerunTranscript = canRerunTranscriptFromAudio(recording);
   const canRerunSummary = canRerunSummaryFromTranscript(recording);
   const rerunDisabled =
     isProcessing || flashActive || (!canRerunTranscript && !canRerunSummary);

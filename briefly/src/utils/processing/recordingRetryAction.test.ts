@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import type { Recording } from '@/types';
 import {
-  __setRecordingAudioProbeForTests,
-  resolveRecordingRetryAction,
-} from './recordingRetryAction';
+  __setRecordingAudioAvailabilityForTests,
+  type RecordingAudioAvailability,
+} from '@/utils/recording/recordingPlayableAudio';
+import { resolveRecordingRetryAction } from './recordingRetryAction';
 
 function baseRecording(overrides: Partial<Recording> = {}): Recording {
   return {
@@ -20,26 +21,25 @@ function baseRecording(overrides: Partial<Recording> = {}): Recording {
   };
 }
 
-const audioPresentProbe = {
-  getPathInfo: (uri: string) =>
-    uri === '/audio.m4a'
-      ? { exists: true, size: 1000, resolvedUri: '/audio.m4a' }
-      : { exists: false, size: 0, resolvedUri: uri },
-  destFile: () => ({ exists: false, uri: '', size: 0 }),
+const audioPresent: RecordingAudioAvailability = {
+  hasAudio: true,
+  filePath: '/audio.m4a',
+  fileSize: 1000,
 };
 
-const audioMissingProbe = {
-  getPathInfo: (uri: string) => ({ exists: false, size: 0, resolvedUri: uri }),
-  destFile: () => ({ exists: false, uri: '', size: 0 }),
+const audioMissing: RecordingAudioAvailability = {
+  hasAudio: false,
+  filePath: '',
+  fileSize: 0,
 };
 
 afterEach(() => {
-  __setRecordingAudioProbeForTests(null);
+  __setRecordingAudioAvailabilityForTests(null);
 });
 
 describe('resolveRecordingRetryAction', () => {
   it('prefers transcription retry when audio exists on disk but no transcript', () => {
-    __setRecordingAudioProbeForTests(audioPresentProbe);
+    __setRecordingAudioAvailabilityForTests(() => audioPresent);
 
     const action = resolveRecordingRetryAction(
       baseRecording({ transcript: [] }),
@@ -50,7 +50,7 @@ describe('resolveRecordingRetryAction', () => {
   });
 
   it('offers summarization fallback when transcript exists', () => {
-    __setRecordingAudioProbeForTests(audioMissingProbe);
+    __setRecordingAudioAvailabilityForTests(() => audioMissing);
 
     const action = resolveRecordingRetryAction(
       baseRecording({
@@ -64,7 +64,7 @@ describe('resolveRecordingRetryAction', () => {
   });
 
   it('skips list avatar retry when a transcript exists so the row stays openable', () => {
-    __setRecordingAudioProbeForTests(audioMissingProbe);
+    __setRecordingAudioAvailabilityForTests(() => audioMissing);
 
     const action = resolveRecordingRetryAction(
       baseRecording({

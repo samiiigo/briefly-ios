@@ -11,6 +11,8 @@
 export { PlaybackService } from './playbackService';
 export { RecordingService } from './recordingService';
 export { LiveTranscriptionService } from './liveTranscriptionService';
+export { DecorativeLivePreview } from './decorativeLivePreview';
+export { DecorativeOnDeviceLivePreview } from './decorativeOnDeviceLivePreview';
 export { AudioFileService } from './audioFileService';
 export type { AudioRecordingResult } from './types';
 export type { PlaybackControls, MeteringSource } from './contracts';

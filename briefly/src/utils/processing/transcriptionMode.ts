@@ -1,53 +1,7 @@
 import { TranscriptSegment, TranscriptionMode } from '@/types';
 import { hasMeaningfulTranscript } from '../recording/recordingValidation';
 
-export type LiveTranscriptionEngine = 'cloud' | 'on-device' | 'none';
-
-export interface RecordingTranscriptionPlan {
-  settingsMode: TranscriptionMode;
-  useLiveCapture: boolean;
-  liveEngine: LiveTranscriptionEngine;
-}
-
-export function normalizeTranscriptionMode(mode: string | undefined | null): TranscriptionMode {
-  if (mode === 'live-assemblyai' || mode === 'post-assemblyai' || mode === 'local-on-device') {
-    return mode;
-  }
-  // Legacy values from older builds.
-  if (mode === 'on-device') return 'live-assemblyai';
-  if (mode === 'cloud') return 'post-assemblyai';
-  if (mode === 'on-device-first') return 'local-on-device';
-  return 'live-assemblyai';
-}
-
-export function transcriptionModeTitle(mode: TranscriptionMode | string): string {
-  const normalized = normalizeTranscriptionMode(mode);
-  if (normalized === 'live-assemblyai') return 'Live';
-  if (normalized === 'post-assemblyai') return 'After recording';
-  return 'On Device';
-}
-
-export function transcriptionModeDescription(mode: TranscriptionMode | string): string {
-  const normalized = normalizeTranscriptionMode(mode);
-  if (normalized === 'live-assemblyai') {
-    return 'Updates the transcript in real time while you record.';
-  }
-  if (normalized === 'post-assemblyai') {
-    return 'Transcribes the full recording after you stop.';
-  }
-  return 'Transcribes on your device. Audio does not leave your phone.';
-}
-
-/**
- * Maps the global Settings transcription mode to one that can run against a
- * saved audio file. Live capture uses post-recording AssemblyAI only when the
- * live stream did not produce a transcript.
- */
-export function resolveAsyncTranscriptionMode(mode: TranscriptionMode | string): TranscriptionMode {
-  const normalized = normalizeTranscriptionMode(mode);
-  if (normalized === 'live-assemblyai') return 'post-assemblyai';
-  return normalized;
-}
+export type DecorativePreviewEngine = 'cloud' | 'on-device' | 'none';
 
 export interface PostRecordingPipeline {
   /** When true, use the live transcript and skip file upload / async transcription. */
@@ -56,77 +10,78 @@ export interface PostRecordingPipeline {
   asyncTranscriptionMode: TranscriptionMode;
 }
 
+export function normalizeTranscriptionMode(mode: string | undefined | null): TranscriptionMode {
+  if (mode === 'cloud' || mode === 'local') {
+    return mode;
+  }
+  // Legacy values from older builds.
+  if (
+    mode === 'live-assemblyai' ||
+    mode === 'post-assemblyai' ||
+    mode === 'cloud-user-key' ||
+    mode === 'cloud-shared-openrouter'
+  ) {
+    return 'cloud';
+  }
+  if (mode === 'local-on-device' || mode === 'on-device-first' || mode === 'on-device') {
+    return 'local';
+  }
+  return 'cloud';
+}
+
+export function transcriptionModeTitle(mode: TranscriptionMode | string): string {
+  const normalized = normalizeTranscriptionMode(mode);
+  return normalized === 'local' ? 'Local' : 'Cloud';
+}
+
+export function transcriptionModeDescription(mode: TranscriptionMode | string): string {
+  const normalized = normalizeTranscriptionMode(mode);
+  if (normalized === 'local') {
+    return 'Processes your recording on-device after you stop when supported on this build.';
+  }
+  return 'Transcribes your recording in the cloud after you stop, then summarizes.';
+}
+
+/**
+ * Post-recording transcription always runs from the saved audio file.
+ * Live preview text is never used for processing.
+ */
+export function resolvePostRecordingPipeline(
+  settingsMode: TranscriptionMode | string,
+  _existingTranscript?: TranscriptSegment[] | null,
+): PostRecordingPipeline {
+  const mode = normalizeTranscriptionMode(settingsMode);
+  return {
+    skipAsyncTranscription: false,
+    asyncTranscriptionMode: mode,
+  };
+}
+
 export function hasUsableTranscript(transcript?: TranscriptSegment[] | null): boolean {
   return hasMeaningfulTranscript(transcript);
 }
 
 /**
- * Handoff from recording stop → summarization based on Settings transcription mode.
+ * Engine used only for optional decorative live preview while recording.
+ * Does not affect save, transcription, or summarization pipelines.
  */
-export function resolvePostRecordingPipeline(
-  settingsMode: TranscriptionMode | string,
-  existingTranscript?: TranscriptSegment[] | null,
-): PostRecordingPipeline {
-  const mode = normalizeTranscriptionMode(settingsMode);
-  const hasTranscript = hasUsableTranscript(existingTranscript);
-
-  if (mode === 'post-assemblyai') {
-    return {
-      skipAsyncTranscription: false,
-      asyncTranscriptionMode: 'post-assemblyai',
-    };
-  }
-
-  if (mode === 'local-on-device') {
-    return {
-      skipAsyncTranscription: hasTranscript,
-      asyncTranscriptionMode: 'local-on-device',
-    };
-  }
-
-  return {
-    skipAsyncTranscription: hasTranscript,
-    asyncTranscriptionMode: 'post-assemblyai',
-  };
-}
-
-/**
- * Derives capture behavior from global Settings only. Local (on-device) is always
- * treated as a live stream when native speech is available.
- */
-export function resolveRecordingTranscriptionPlan(
+export function resolveDecorativePreviewEngine(
   settingsMode: TranscriptionMode | string,
   capabilities: { canCloudLive: boolean; canOnDeviceLive: boolean },
-): RecordingTranscriptionPlan {
+): DecorativePreviewEngine {
   const mode = normalizeTranscriptionMode(settingsMode);
-
-  if (mode === 'local-on-device') {
-    return {
-      settingsMode: mode,
-      useLiveCapture: capabilities.canOnDeviceLive,
-      liveEngine: capabilities.canOnDeviceLive ? 'on-device' : 'none',
-    };
+  if (mode === 'local' && capabilities.canOnDeviceLive) {
+    return 'on-device';
   }
-
-  if (mode === 'live-assemblyai') {
-    return {
-      settingsMode: mode,
-      useLiveCapture: capabilities.canCloudLive,
-      liveEngine: capabilities.canCloudLive ? 'cloud' : 'none',
-    };
+  if (capabilities.canCloudLive) {
+    return 'cloud';
   }
-
-  return {
-    settingsMode: mode,
-    useLiveCapture: false,
-    liveEngine: 'none',
-  };
+  return 'none';
 }
 
-export function showsLivePreviewDuringRecording(plan: RecordingTranscriptionPlan): boolean {
-  return plan.settingsMode !== 'post-assemblyai';
-}
-
-export function requiresLiveOnDeviceCapture(plan: RecordingTranscriptionPlan): boolean {
-  return plan.settingsMode === 'local-on-device';
+export function canRunDecorativeLivePreview(
+  showLivePreview: boolean,
+  engine: DecorativePreviewEngine,
+): boolean {
+  return showLivePreview && engine !== 'none';
 }

@@ -3,27 +3,23 @@ import { describe, it } from 'node:test';
 import { resolveTranscriptionRoute } from './transcriptionRouting';
 
 describe('transcription route resolution', () => {
-  it('maps live AssemblyAI mode directly', () => {
-    assert.equal(resolveTranscriptionRoute('live-assemblyai'), 'live-assemblyai');
+  it('maps cloud mode directly', () => {
+    assert.equal(resolveTranscriptionRoute('cloud'), 'cloud');
   });
 
-  it('maps post-recording AssemblyAI mode directly', () => {
-    assert.equal(resolveTranscriptionRoute('post-assemblyai'), 'post-assemblyai');
+  it('maps local mode directly', () => {
+    assert.equal(resolveTranscriptionRoute('local'), 'local');
   });
 
-  it('maps local on-device mode directly', () => {
-    assert.equal(resolveTranscriptionRoute('local-on-device'), 'local-on-device');
+  it('maps legacy live AssemblyAI to cloud', () => {
+    assert.equal(resolveTranscriptionRoute('live-assemblyai' as any), 'cloud');
   });
 
-  it('maps legacy on-device to live AssemblyAI', () => {
-    assert.equal(resolveTranscriptionRoute('on-device' as any), 'live-assemblyai');
+  it('maps legacy post-recording to cloud', () => {
+    assert.equal(resolveTranscriptionRoute('post-assemblyai' as any), 'cloud');
   });
 
-  it('maps legacy cloud to post-recording AssemblyAI', () => {
-    assert.equal(resolveTranscriptionRoute('cloud' as any), 'post-assemblyai');
-  });
-
-  it('maps legacy on-device-first to local on-device', () => {
-    assert.equal(resolveTranscriptionRoute('on-device-first' as any), 'local-on-device');
+  it('maps legacy local on-device to local', () => {
+    assert.equal(resolveTranscriptionRoute('local-on-device' as any), 'local');
   });
 });

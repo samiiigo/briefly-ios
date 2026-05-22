@@ -20,11 +20,7 @@ import {
   supportsOnDeviceLiveTranscription,
 } from '@/utils/platformCapabilities';
 
-const TRANSCRIPTION_MODES: TranscriptionMode[] = [
-  'live-assemblyai',
-  'post-assemblyai',
-  'local-on-device',
-];
+const TRANSCRIPTION_MODES: TranscriptionMode[] = ['cloud', 'local'];
 
 export default function TranscriptionModePickerScreen() {
   const goBack = useStackBack('/settings');
@@ -42,12 +38,13 @@ export default function TranscriptionModePickerScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={sl.sectionDescription}>
-          Choose how Briefly transcribes recordings. This applies to every recording.
+          Choose where Briefly transcribes and summarizes after you stop recording. Live preview
+          while recording is optional and does not change this.
         </Text>
         <View style={sl.card}>
           {TRANSCRIPTION_MODES.map((mode, index) => {
             const selected = selectedMode === mode;
-            const disabled = mode === 'local-on-device' && !canUseOnDeviceTranscription;
+            const disabled = mode === 'local' && !canUseOnDeviceTranscription;
             return (
               <React.Fragment key={mode}>
                 <ModePickerOption

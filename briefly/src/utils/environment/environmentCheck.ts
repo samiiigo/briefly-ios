@@ -33,11 +33,9 @@ export function checkEnvironment(): EnvironmentCapabilities {
   const canLiveTranscribe = hasAudioCapture && hasAssemblyAIKey;
   const canRecord = supportsLocalRecording();
 
-  let recommendedTranscriptionMode: TranscriptionMode = 'post-assemblyai';
-  if (canLiveTranscribe) {
-    recommendedTranscriptionMode = 'live-assemblyai';
-  } else if (hasOnDeviceSpeech) {
-    recommendedTranscriptionMode = 'local-on-device';
+  let recommendedTranscriptionMode: TranscriptionMode = 'cloud';
+  if (hasOnDeviceSpeech && !canLiveTranscribe) {
+    recommendedTranscriptionMode = 'local';
   }
 
   return {

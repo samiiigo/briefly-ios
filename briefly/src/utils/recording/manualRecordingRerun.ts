@@ -7,8 +7,10 @@ import {
   startRecordingSummarizationRetry,
 } from '@/services/recording/recordingBackgroundProcessing';
 import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
-import { resolveRecordingAudioOnDisk } from '@/utils/fileSystem/persistRecordingAudio';
-import { getRecordingAudioAvailability } from '@/utils/recording/recordingPlayableAudio';
+import {
+  getRecordingAudioAvailability,
+  type RecordingAudioAvailability,
+} from '@/utils/recording/recordingPlayableAudio';
 import {
   resolveManualRerunSourceFromFlags,
   type ManualRerunSource,
@@ -30,6 +32,8 @@ export type ExecuteManualRerunOptions = {
   preservePreviousResults?: boolean;
   /** Override summarization mode; defaults to current settings. */
   summarizationMode?: import('@/types').ProcessingMode;
+  /** Pre-resolved on-disk audio (e.g. from useRecordingAudioAvailability). */
+  audio?: RecordingAudioAvailability;
 };
 
 /**
@@ -43,12 +47,11 @@ export function executeManualRecordingRerun(
   const rec = useRecordingStore.getState().getRecordingById(recordingId);
   if (!rec) return 'none';
 
-  const onDisk = resolveRecordingAudioOnDisk(rec);
-  const recWithAudio = onDisk
-    ? { ...rec, filePath: onDisk.filePath, fileSize: onDisk.fileSize }
-    : rec;
-
-  const source = resolveManualRerunSource(recWithAudio);
+  const audio = options?.audio ?? getRecordingAudioAvailability(rec);
+  const source = resolveManualRerunSourceFromFlags(
+    audio.hasAudio,
+    hasMeaningfulTranscript(rec.transcript),
+  );
   if (source === 'none') return 'none';
 
   const mode =

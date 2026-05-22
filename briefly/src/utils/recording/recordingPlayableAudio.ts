@@ -1,5 +1,24 @@
 import type { Recording } from '@/types';
-import { resolveRecordingAudioOnDisk } from '@/utils/fileSystem/persistRecordingAudio';
+import type { ResolvedRecordingAudio } from '@/utils/fileSystem/persistRecordingAudio';
+
+function resolveRecordingAudioOnDisk(
+  recording: Pick<Recording, 'id' | 'filePath' | 'fileSize'>,
+): ResolvedRecordingAudio | null {
+  const { resolveRecordingAudioOnDisk: resolve } =
+    require('@/utils/fileSystem/persistRecordingAudio') as typeof import('@/utils/fileSystem/persistRecordingAudio');
+  return resolve(recording);
+}
+
+let availabilityOverrideForTests:
+  | ((recording: Pick<Recording, 'id' | 'filePath' | 'fileSize'>) => RecordingAudioAvailability)
+  | null = null;
+
+/** @internal Overrides on-disk resolution in node unit tests (no Expo). */
+export function __setRecordingAudioAvailabilityForTests(
+  overrideFn: typeof availabilityOverrideForTests,
+): void {
+  availabilityOverrideForTests = overrideFn;
+}
 
 export type RecordingAudioAvailability = {
   /** Single source of truth: audio file is present and playable on this device. */
@@ -20,6 +39,9 @@ export function getRecordingAudioAvailability(
   recording: Pick<Recording, 'id' | 'filePath' | 'fileSize'> | undefined,
 ): RecordingAudioAvailability {
   if (!recording) return NO_AUDIO;
+  if (availabilityOverrideForTests) {
+    return availabilityOverrideForTests(recording);
+  }
 
   const resolved = resolveRecordingAudioOnDisk(recording);
   if (!resolved) return NO_AUDIO;
@@ -29,6 +51,13 @@ export function getRecordingAudioAvailability(
     filePath: resolved.filePath,
     fileSize: resolved.fileSize,
   };
+}
+
+/** Recording metadata with resolved on-disk audio paths when available. */
+export function applyResolvedAudioToRecording(recording: Recording): Recording {
+  const audio = getRecordingAudioAvailability(recording);
+  if (!audio.hasAudio) return recording;
+  return { ...recording, filePath: audio.filePath, fileSize: audio.fileSize };
 }
 
 /** @deprecated Prefer `getRecordingAudioAvailability(recording).hasAudio`. */

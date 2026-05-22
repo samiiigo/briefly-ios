@@ -146,7 +146,7 @@ export const TranscriptionService = {
   async transcribe(
     audioUri: string,
     onSegment?: (segment: TranscriptSegment) => void,
-    mode: TranscriptionMode = 'post-assemblyai'
+    mode: TranscriptionMode = 'cloud'
   ): Promise<TranscriptSegment[]> {
     const normalizedMode = normalizeTranscriptionMode(mode as unknown as string);
     logger.info('TranscriptionService', 'Transcription submitted', {
@@ -154,10 +154,13 @@ export const TranscriptionService = {
       audioUri,
     });
 
-    if (normalizedMode === 'local-on-device') {
-      logger.warn('TranscriptionService', 'Local mode cannot be used for async transcription');
+    if (normalizedMode === 'local') {
+      logger.warn(
+        'TranscriptionService',
+        'On-device file transcription unavailable; caller may fall back to cloud',
+      );
       throw new Error(
-        'On-device transcription does not upload audio. Transcripts must be captured live while recording. If none was captured, switch to On Device mode and record again.'
+        'On-device transcription from saved audio is not available on this device. Try Cloud mode in Settings.',
       );
     }
 

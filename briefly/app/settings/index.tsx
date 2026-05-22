@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Switch,
 } from 'react-native';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,7 +32,13 @@ export default function SettingsScreen() {
   const { scrollPaddingTop } = useTopChromeLayout();
   const colors = useThemedColors();
   const sl = useScreenLayoutStyles();
-  const { summarizationMode, transcriptionMode, themePreference } = useSettingsStore();
+  const {
+    summarizationMode,
+    transcriptionMode,
+    showLivePreview,
+    setShowLivePreview,
+    themePreference,
+  } = useSettingsStore();
   const folderLayout = useFolderListLayoutStore((s) => s.layout);
   const { busy: transcriptBackupBusy, exportTranscripts, importTranscripts } =
     useTranscriptBackup();
@@ -62,6 +69,23 @@ export default function SettingsScreen() {
             </Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
+
+          <View style={sl.cardDivider} />
+
+          <View style={sl.settingsRow}>
+            <Ionicons
+              name="eye-outline"
+              size={20}
+              color={colors.textPrimary}
+              style={sl.settingsRowIcon}
+            />
+            <Text style={sl.settingsRowTitle}>Show live preview</Text>
+            <Switch
+              value={showLivePreview}
+              onValueChange={setShowLivePreview}
+              trackColor={{ false: colors.border, true: colors.primary }}
+            />
+          </View>
         </View>
 
         <Text style={sl.sectionLabel}>Summarization</Text>

@@ -1,4 +1,4 @@
-import { RecordingFolder, TranscriptSegment } from '@/types';
+import { RecordingFolder } from '@/types';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { generateId, generateTitle, ensureUniqueTitle } from '@/utils';
@@ -18,7 +18,6 @@ export type SaveCapturedRecordingParams = {
   targetFolder?: RecordingFolder;
   targetUserFolderId?: string;
   markImported?: boolean;
-  preTranscript?: TranscriptSegment[];
   title?: string;
 };
 
@@ -55,10 +54,8 @@ export async function saveCapturedRecording(
     ...folderFlagsFor(targetFolder),
     ...(params.markImported ? { isImported: true } : {}),
     userFolderId: params.targetUserFolderId,
-    status: summarizationBlocked
-      ? 'saved'
-      : initialStatusAfterSave(transcriptionMode, params.preTranscript),
-    transcript: params.preTranscript,
+    status: summarizationBlocked ? 'saved' : initialStatusAfterSave(transcriptionMode),
+    transcript: undefined,
   });
 
   if (!summarizationBlocked) {

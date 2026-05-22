@@ -19,7 +19,7 @@ import {
 } from '@/utils/recording/recordingValidation';
 import { logger } from '@/utils/logging/logger';
 import { buildRecordingReadyFromSummarization } from '@/utils/recording/recordingSummarization';
-import { resolveRecordingAudioOnDisk } from '@/utils/fileSystem/persistRecordingAudio';
+import { applyResolvedAudioToRecording } from '@/utils/recording/recordingPlayableAudio';
 import { getLocalLlmSummarizationBlocker } from '@/services/summarization';
 
 const PROCESSING_TIMEOUT_MS = 12 * 60 * 1000;
@@ -103,9 +103,9 @@ async function runJob(
     throw new Error('Recording not found.');
   }
 
-  const onDisk = resolveRecordingAudioOnDisk(rec);
-  const filePath = onDisk?.filePath ?? rec.filePath;
-  const fileSize = onDisk?.fileSize ?? rec.fileSize;
+  const recWithAudio = applyResolvedAudioToRecording(rec);
+  const filePath = recWithAudio.filePath;
+  const fileSize = recWithAudio.fileSize;
 
   const asset = {
     durationSec: rec.duration,
@@ -358,13 +358,9 @@ export function startRecordingSummarizationRetry(
   })();
 }
 
-export function initialStatusAfterSave(
-  settingsTranscriptionMode: string,
-  existingTranscript?: import('@/types').TranscriptSegment[],
-): 'transcribing' | 'summarizing' {
+export function initialStatusAfterSave(settingsTranscriptionMode: string): 'transcribing' | 'summarizing' {
   const pipeline = resolvePostRecordingPipeline(
     normalizeTranscriptionMode(settingsTranscriptionMode),
-    existingTranscript,
   );
   return pipeline.skipAsyncTranscription ? 'summarizing' : 'transcribing';
 }

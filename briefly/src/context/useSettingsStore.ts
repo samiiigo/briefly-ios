@@ -25,6 +25,8 @@ interface SettingsState {
   summarizationMode: ProcessingMode;
   /** App-wide transcription mode (Settings is the only place to change this). */
   transcriptionMode: TranscriptionMode;
+  /** Decorative live transcript panel during recording (does not affect processing). */
+  showLivePreview: boolean;
   cloudProvider: CloudProvider;
   cloudApiKey: string;
   openrouterApiKey: string;
@@ -48,6 +50,7 @@ interface SettingsState {
   setSummarizationMode: (mode: ProcessingMode) => void;
   setThemePreference: (preference: ThemePreference) => void;
   setTranscriptionMode: (mode: TranscriptionMode) => void;
+  setShowLivePreview: (enabled: boolean) => void;
   setCloudProvider: (provider: CloudProvider) => void;
   setCloudApiKey: (key: string) => void;
   setProviderApiKey: (provider: CloudProvider, key: string) => void;
@@ -68,7 +71,8 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       summarizationMode: 'cloud-shared-openrouter',
-      transcriptionMode: 'live-assemblyai',
+      transcriptionMode: 'cloud',
+      showLivePreview: true,
       cloudProvider: 'openrouter',
       cloudApiKey: '',
       openrouterApiKey: '',
@@ -84,6 +88,7 @@ export const useSettingsStore = create<SettingsState>()(
       setSummarizationMode: (mode) => set({ summarizationMode: mode }),
       setThemePreference: (preference) => set({ themePreference: preference }),
       setTranscriptionMode: (mode) => set({ transcriptionMode: mode }),
+      setShowLivePreview: (enabled) => set({ showLivePreview: enabled }),
       setCloudProvider: (provider) => set({ cloudProvider: provider }),
 
       /**

@@ -23,7 +23,7 @@ import { logger } from '@/utils/logging/logger';
 export type RecordingProcessingStage = 'transcribing' | 'summarizing';
 
 /** Standard file-based transcription used when the primary path fails or the user retries. */
-export const FALLBACK_TRANSCRIPTION_MODE: TranscriptionMode = 'post-assemblyai';
+export const FALLBACK_TRANSCRIPTION_MODE: TranscriptionMode = 'cloud';
 
 export interface RecordingProcessingResult {
   segments: TranscriptSegment[];
@@ -109,7 +109,7 @@ export async function retranscribeRecordingFromAudio(
   const segments = await TranscriptionService.transcribe(
     uploadUri,
     undefined,
-    'post-assemblyai',
+    'cloud',
   );
   assertTranscriptHasContent(segments);
   return segments;
@@ -131,10 +131,6 @@ export async function obtainTranscriptForSummarization(
     const segments = existingTranscript ?? [];
     assertTranscriptHasContent(segments);
     return segments;
-  }
-
-  if (settingsMode === 'local-on-device') {
-    throw new Error('No on-device transcript was captured during recording.');
   }
 
   if (meta?.fileSizeBytes != null) {

@@ -1,30 +1,7 @@
 import type { ProcessingMode, Recording } from '@/types';
 import { getNextSummarizationFallback } from '@/utils/processing/summarizationFallback';
-import {
-  resolveRecordingAudioOnDiskCore,
-  type RecordingAudioPathProbe,
-} from '@/utils/fileSystem/recordingAudioResolveCore';
 import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
-
-let recordingAudioProbeOverride: RecordingAudioPathProbe | null = null;
-
-/** @internal Test-only hook for filesystem probes without loading Expo. */
-export function __setRecordingAudioProbeForTests(
-  probe: RecordingAudioPathProbe | null,
-): void {
-  recordingAudioProbeOverride = probe;
-}
-
-function hasAudioOnDevice(recording: Recording): boolean {
-  if (recordingAudioProbeOverride) {
-    return resolveRecordingAudioOnDiskCore(recording, recordingAudioProbeOverride) != null;
-  }
-
-  // Lazy import keeps node unit tests free of expo-file-system / react-native.
-  const { resolveRecordingAudioOnDisk } =
-    require('@/utils/fileSystem/persistRecordingAudio') as typeof import('@/utils/fileSystem/persistRecordingAudio');
-  return resolveRecordingAudioOnDisk(recording) != null;
-}
+import { getRecordingAudioAvailability } from '@/utils/recording/recordingPlayableAudio';
 
 export type RecordingRetryKind =
   | 'transcription'
@@ -52,7 +29,7 @@ export function resolveRecordingRetryAction(
 ): RecordingRetryAction | null {
   if (recording.status !== 'error') return null;
 
-  const hasAudio = hasAudioOnDevice(recording);
+  const hasAudio = getRecordingAudioAvailability(recording).hasAudio;
   const hasTranscript = hasMeaningfulTranscript(recording.transcript);
 
   if (options?.forListAvatar && hasTranscript) return null;

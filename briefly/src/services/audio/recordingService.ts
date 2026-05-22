@@ -166,6 +166,18 @@ class RecordingServiceClass {
     return result;
   }
 
+  /** URI of the in-progress WAV while recording (for decorative live preview polling). */
+  getActiveRecordingUri(): string | undefined {
+    if (!this.recorder) return undefined;
+    try {
+      const status = this.recorder.getStatus();
+      if (status.url) return status.url;
+    } catch {
+      // fall through
+    }
+    return this.recorder.uri ?? undefined;
+  }
+
   getMetering(): number {
     if (!this.recorder || this._recordingPaused) return 0;
     try {
