@@ -78,7 +78,7 @@ export default function TranscriptScreen() {
     filePath: recording?.filePath ?? '',
     transcript: recording?.transcript,
   });
-  const { shareBusy, openShareMenu } = useExport(recording);
+  const { shareBusy, shareMenuItems } = useExport(recording);
 
   const handleRename = useCallback(() => {
     if (!recording) return;
@@ -302,8 +302,8 @@ export default function TranscriptScreen() {
       <RecordingDetailHeader
         onBack={() => router.back()}
         folderLabel={folderLabel}
-        onShare={openShareMenu}
-        shareDisabled={shareBusy}
+        shareItems={shareMenuItems}
+        shareLoading={shareBusy}
         menuItems={overflowMenuItems}
         menuLoading={isTranscribing || isSummarizing}
       />

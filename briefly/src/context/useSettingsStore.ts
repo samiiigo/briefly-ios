@@ -79,7 +79,7 @@ export const useSettingsStore = create<SettingsState>()(
       localLlmDownloadProgress: null,
       localLlmDownloadStatus: 'idle',
       localLlmDownloadError: undefined,
-      themePreference: 'dark',
+      themePreference: 'system',
 
       setSummarizationMode: (mode) => set({ summarizationMode: mode }),
       setThemePreference: (preference) => set({ themePreference: preference }),

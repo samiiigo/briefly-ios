@@ -15,8 +15,8 @@ import type { ColorPalette } from '@/theme/colorPalettes';
 interface HeaderProps {
   onBack: () => void;
   folderLabel: string;
-  onShare: () => void;
-  shareDisabled?: boolean;
+  shareItems: AnchoredMenuItem[];
+  shareLoading?: boolean;
   menuItems: AnchoredMenuItem[];
   menuLoading?: boolean;
 }
@@ -25,8 +25,8 @@ interface HeaderProps {
 export function RecordingDetailHeader({
   onBack,
   folderLabel,
-  onShare,
-  shareDisabled,
+  shareItems,
+  shareLoading = false,
   menuItems,
   menuLoading = false,
 }: HeaderProps) {
@@ -46,14 +46,18 @@ export function RecordingDetailHeader({
           </Text>
         </View>
         <View style={headerStyles.actions}>
-          <CircularIconButton
-            icon={shareDisabled ? 'hourglass-outline' : 'share-outline'}
-            accessibilityLabel="Share"
-            onPress={shareDisabled ? undefined : onShare}
-            style={[
-              headerStyles.secondaryButton,
-              shareDisabled ? headerStyles.shareDisabled : undefined,
-            ]}
+          <AnchoredOverflowMenu
+            items={shareItems}
+            triggerLoading={shareLoading}
+            renderTrigger={(open) => (
+              <CircularIconButton
+                icon="share-outline"
+                accessibilityLabel="Share"
+                onPress={open}
+                loading={shareLoading}
+                style={headerStyles.secondaryButton}
+              />
+            )}
           />
           <AnchoredOverflowMenu
             items={menuItems}
@@ -170,9 +174,6 @@ function createRecordingDetailHeaderStyles(c: ColorPalette) {
   },
   secondaryButton: {
     backgroundColor: c.headerButtonMuted,
-  },
-  shareDisabled: {
-    opacity: 0.6,
   },
   });
 }

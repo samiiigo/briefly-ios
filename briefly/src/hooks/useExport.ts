@@ -5,8 +5,9 @@
  * Shared by recording detail screens for export and share actions.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Alert, Share } from 'react-native';
+import type { AnchoredMenuItem } from '@/components/ui/AnchoredOverflowMenu';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Recording } from '@/types';
@@ -109,6 +110,25 @@ export function useExport(recording: Recording | undefined) {
 
   const shareBusy = isExportingPdf || isSharingAudio;
 
+  const shareMenuItems: AnchoredMenuItem[] = useMemo(
+    () => [
+      { label: 'Share as Text', onPress: shareText },
+      {
+        label: 'Share Audio',
+        onPress: shareAudio,
+        loading: isSharingAudio,
+        disabled: isSharingAudio,
+      },
+      {
+        label: 'Export to PDF',
+        onPress: exportPdf,
+        loading: isExportingPdf,
+        disabled: isExportingPdf,
+      },
+    ],
+    [exportPdf, isExportingPdf, isSharingAudio, shareAudio, shareText],
+  );
+
   const openShareMenu = useCallback(() => {
     if (shareBusy) return;
     Alert.alert('Share Note', 'Choose what to share.', [
@@ -123,6 +143,7 @@ export function useExport(recording: Recording | undefined) {
     isExportingPdf,
     isSharingAudio,
     shareBusy,
+    shareMenuItems,
     exportPdf,
     shareText,
     shareAudio,

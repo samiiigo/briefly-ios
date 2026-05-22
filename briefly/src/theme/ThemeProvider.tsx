@@ -28,7 +28,7 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue>({
   colors: darkColors,
   resolvedScheme: 'dark',
-  preference: 'dark',
+  preference: 'system',
 });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
