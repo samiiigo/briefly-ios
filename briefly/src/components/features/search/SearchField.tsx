@@ -10,12 +10,10 @@ import {
   withAppFont,
 } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 export interface SearchFieldHandle {
   focus: () => void;
   blur: () => void;
 }
-
 interface Props {
   value: string;
   onChangeText: (text: string) => void;
@@ -25,7 +23,6 @@ interface Props {
   onBlur?: () => void;
   autoFocus?: boolean;
 }
-
 export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchField(
   { value, onChangeText, onClear, onSubmit, onBlur, autoFocus = true },
   ref
@@ -33,26 +30,21 @@ export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchF
   const styles = useCreateStyles(createSearchFieldStyles);
   const colors = useThemedColors();
   const inputRef = useRef<TextInput>(null);
-
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current?.focus(),
     blur: () => inputRef.current?.blur(),
   }));
-
   useEffect(() => {
     if (!autoFocus) return;
     const id = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(id);
   }, [autoFocus]);
-
   const showClear = value.length > 0;
-
   const handleClearPress = useCallback(() => {
     onClear();
     // Tap targets the ×, not the field — refocus so the keyboard stays open.
     setTimeout(() => inputRef.current?.focus(), 0);
   }, [onClear]);
-
   return (
     <View style={styles.field}>
       <Ionicons name="search" size={18} color={colors.subtext} style={styles.leadingIcon} />
@@ -86,7 +78,6 @@ export const SearchField = forwardRef<SearchFieldHandle, Props>(function SearchF
     </View>
   );
 });
-
 function createSearchFieldStyles(c: ColorPalette) {
   return StyleSheet.create({
     field: {

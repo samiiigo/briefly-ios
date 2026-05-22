@@ -5,11 +5,10 @@ import {
   TOP_HEADER_BUTTON_ROW_HEIGHT,
   TOP_HEADER_PADDING_BOTTOM,
   TOP_HEADER_PADDING_TOP,
-} from '@/components/navigation/topHeaderMetrics';
-import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
+} from '@/components/navigation/layout/topHeaderMetrics';
+import { TopChromeOverlay } from '@/components/navigation/chrome/TopChromeOverlay';
 import { SearchField, type SearchFieldHandle } from './SearchField';
 import { Spacing } from '@/theme';
-
 interface Props {
   query: string;
   onChangeText: (text: string) => void;
@@ -19,7 +18,6 @@ interface Props {
   onClose: () => void;
   fieldRef?: React.RefObject<SearchFieldHandle | null>;
 }
-
 export function SearchTopChrome({
   query,
   onChangeText,
@@ -53,7 +51,6 @@ export function SearchTopChrome({
     </TopChromeOverlay>
   );
 }
-
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',

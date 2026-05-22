@@ -3,7 +3,6 @@
  * Polls the in-progress WAV and streams PCM to AssemblyAI (cloud preview only).
  * Output is UI-only and is not passed into save or background processing.
  */
-
 import { getInfoAsync, readAsStringAsync, EncodingType } from '@/utils/fileSystem/legacyPositionalRead';
 import { WAV_HEADER_BYTES } from './recordingOptions';
 import { base64ToArrayBuffer } from '@/utils/binary/base64ToArrayBuffer';
@@ -12,12 +11,9 @@ import { AssemblyAIWebSocketService } from './assemblyAIWebSocketService';
 import type { AssemblyAIConnectionState } from './assemblyAILiveTranscription';
 import type { LiveTranscriptionCallbacks } from './liveTranscriptionService';
 import { logger } from '@/utils/logging/logger';
-
 const POLL_INTERVAL_MS = 250;
 const MAX_READ_BYTES_PER_POLL = 16_384;
-
 export type DecorativeLivePreviewCallbacks = LiveTranscriptionCallbacks;
-
 class DecorativeLivePreviewClass {
   private ws: AssemblyAIWebSocketService | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -26,7 +22,6 @@ class DecorativeLivePreviewClass {
   private pollInFlight = false;
   private getUri: (() => string | undefined) | null = null;
   private callbacks: DecorativeLivePreviewCallbacks | null = null;
-
   async start(
     getRecordingUri: () => string | undefined,
     callbacks: DecorativeLivePreviewCallbacks,
@@ -37,7 +32,6 @@ class DecorativeLivePreviewClass {
     this.callbacks = callbacks;
     this.sentBytes = 0;
     this.isPaused = false;
-
     const ws = new AssemblyAIWebSocketService();
     ws.connect(
       apiKey,
@@ -56,17 +50,14 @@ class DecorativeLivePreviewClass {
     this.startPolling();
     logger.info('AUDIO', 'Decorative live preview started (cloud stream)');
   }
-
   pause(): void {
     this.isPaused = true;
     this.stopPolling();
   }
-
   resume(): void {
     this.isPaused = false;
     this.startPolling();
   }
-
   stop(): void {
     this.stopPolling();
     if (this.ws) {
@@ -84,44 +75,36 @@ class DecorativeLivePreviewClass {
     this.isPaused = false;
     logger.info('AUDIO', 'Decorative live preview stopped');
   }
-
   private startPolling(): void {
     this.stopPolling();
     this.pollTimer = setInterval(() => void this.pollFile(), POLL_INTERVAL_MS);
   }
-
   private stopPolling(): void {
     if (this.pollTimer !== null) {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
   }
-
   private async pollFile(): Promise<void> {
     if (this.pollInFlight || this.isPaused || !this.ws) return;
     const uri = this.getUri?.();
     if (!uri) return;
-
     this.pollInFlight = true;
     try {
       const info = await getInfoAsync(uri);
       if (!info.exists) return;
-
       const totalBytes: number = (info as { size?: number }).size ?? 0;
       const readFrom = this.sentBytes === 0 ? WAV_HEADER_BYTES : this.sentBytes;
       const pendingBytes = totalBytes - readFrom;
       if (pendingBytes <= 0) return;
-
       const readLength = Math.min(pendingBytes, MAX_READ_BYTES_PER_POLL);
       const b64 = await readAsStringAsync(uri, {
         encoding: EncodingType.Base64,
         position: readFrom,
         length: readLength,
       });
-
       const buffer = base64ToArrayBuffer(b64);
       if (buffer.byteLength === 0) return;
-
       this.ws.sendPCM(buffer);
       this.sentBytes = readFrom + readLength;
     } catch (err: unknown) {
@@ -132,5 +115,4 @@ class DecorativeLivePreviewClass {
     }
   }
 }
-
 export const DecorativeLivePreview = new DecorativeLivePreviewClass();

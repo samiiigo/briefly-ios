@@ -6,15 +6,11 @@
  * Android: AAC in MPEG_4 container at 16 kHz mono — well-supported across
  *          Android versions with good speech quality.
  */
-
 import { IOSOutputFormat, AudioQuality } from 'expo-audio';
 import type { RecordingOptions } from 'expo-audio';
-
 export const ASSEMBLY_AI_SAMPLE_RATE = 16000;
-
 /** WAV header size — first PCM poll must skip this many bytes. */
 export const WAV_HEADER_BYTES = 44;
-
 export const assemblyAIRecordingOptions: RecordingOptions = {
   extension: '.wav',
   sampleRate: ASSEMBLY_AI_SAMPLE_RATE,

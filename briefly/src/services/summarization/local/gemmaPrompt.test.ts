@@ -6,7 +6,6 @@ import {
   GEMMA4_TURN_SUFFIX,
   ON_DEVICE_SUMMARIZATION_SYSTEM,
 } from './gemmaPrompt';
-
 describe('buildGemmaSummarizationPrompt', () => {
   it('uses Gemma 4 <|turn>role markers and turn suffix', () => {
     const prompt = buildGemmaSummarizationPrompt('Hello team, we decided to ship Friday.');
@@ -17,12 +16,10 @@ describe('buildGemmaSummarizationPrompt', () => {
     assert.doesNotMatch(prompt, /<start_of_turn>/);
     assert.match(prompt, /Hello team, we decided to ship Friday\./);
   });
-
   it('requires titles without emojis in system instructions', () => {
     assert.match(ON_DEVICE_SUMMARIZATION_SYSTEM, /title.*MUST NOT contain any emoji/i);
   });
 });
-
 describe('buildGemmaSummarizationMessages', () => {
   it('provides system and user roles for Jinja chat template', () => {
     const messages = buildGemmaSummarizationMessages('Budget review at 3pm.');

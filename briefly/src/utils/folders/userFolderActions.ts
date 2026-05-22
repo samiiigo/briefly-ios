@@ -1,12 +1,10 @@
 import { Alert, Platform } from 'react-native';
 import type { AnchoredMenuItem } from '@/components/ui/AnchoredOverflowMenu';
-
 export interface UserFolderActionHandlers {
   onRename: (newName: string) => void | Promise<void>;
   onDelete: () => void;
   onTogglePin: () => void | Promise<void>;
 }
-
 /**
  * Folder long-press / options menu items. On iOS, rename uses Alert.prompt inline.
  * On Android, calls `onPromptRename` so the caller can render a TextInputDialog.

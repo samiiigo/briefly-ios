@@ -4,7 +4,6 @@ import {
 } from '@/constants/builtInFolders';
 import { Recording, UserFolder } from '@/types';
 import { computeLibraryFolderCounts } from '@/utils/folders/folderCounts';
-
 export interface SearchFolderResult {
   id: string;
   name: string;
@@ -13,16 +12,13 @@ export interface SearchFolderResult {
   accent: string;
   count: number;
 }
-
 export interface SearchResults {
   folders: SearchFolderResult[];
   recordings: Recording[];
 }
-
 export function normalizeSearchQuery(raw: string): string {
   return raw.trim().toLowerCase();
 }
-
 function builtInFolderCount(id: string, counts: ReturnType<typeof computeLibraryFolderCounts>): number {
   switch (id) {
     case 'all':
@@ -37,7 +33,6 @@ function builtInFolderCount(id: string, counts: ReturnType<typeof computeLibrary
       return 0;
   }
 }
-
 function mapBuiltInFolder(
   folder: BuiltInFolderDef,
   counts: ReturnType<typeof computeLibraryFolderCounts>
@@ -51,7 +46,6 @@ function mapBuiltInFolder(
     count: builtInFolderCount(folder.id, counts),
   };
 }
-
 export function buildSearchableFolders(
   userFolders: UserFolder[],
   recordings: Recording[]

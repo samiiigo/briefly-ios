@@ -7,7 +7,6 @@ import {
   supportsNativePcmCapture,
   supportsOnDeviceLiveTranscription,
 } from '@/utils/platformCapabilities';
-
 export interface EnvironmentCapabilities {
   hasNativeModule: boolean;
   hasOnDeviceSpeech: boolean;
@@ -16,7 +15,6 @@ export interface EnvironmentCapabilities {
   canRecord: boolean;
   recommendedTranscriptionMode: TranscriptionMode;
 }
-
 /**
  * Synchronously checks what transcription capabilities are available on this
  * device/build and returns the recommended default mode.
@@ -32,12 +30,10 @@ export function checkEnvironment(): EnvironmentCapabilities {
   const hasAssemblyAIKey = !!getAssemblyAISharedApiKey();
   const canLiveTranscribe = hasAudioCapture && hasAssemblyAIKey;
   const canRecord = supportsLocalRecording();
-
   let recommendedTranscriptionMode: TranscriptionMode = 'cloud';
   if (hasOnDeviceSpeech && !canLiveTranscribe) {
     recommendedTranscriptionMode = 'local';
   }
-
   return {
     hasNativeModule: hasNativeModule || hasBrieflyTranscriberModule(),
     hasOnDeviceSpeech,

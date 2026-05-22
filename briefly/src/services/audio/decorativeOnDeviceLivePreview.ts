@@ -2,15 +2,12 @@
  * On-device decorative live transcript (iOS Speech). UI-only; does not write audio or
  * feed the post-recording pipeline. Runs alongside RecordingService when enabled.
  */
-
 import { AssemblyAIConfig } from '@/constants/api/assemblyAI';
 import { AssemblyAILiveTranscriptionClient } from './assemblyAILiveTranscription';
 import type { LiveTranscriptionCallbacks } from './liveTranscriptionService';
 import { logger } from '@/utils/logging/logger';
-
 class DecorativeOnDeviceLivePreviewClass {
   private client: AssemblyAILiveTranscriptionClient | null = null;
-
   async start(callbacks: LiveTranscriptionCallbacks): Promise<void> {
     this.stop();
     const client = new AssemblyAILiveTranscriptionClient({
@@ -27,15 +24,12 @@ class DecorativeOnDeviceLivePreviewClass {
     this.client = client;
     logger.info('AUDIO', 'Decorative on-device live preview started');
   }
-
   async pause(): Promise<void> {
     await this.client?.pause();
   }
-
   async resume(): Promise<void> {
     await this.client?.resume();
   }
-
   stop(): void {
     if (this.client) {
       void this.client.stop().catch(() => {});
@@ -45,5 +39,4 @@ class DecorativeOnDeviceLivePreviewClass {
     logger.info('AUDIO', 'Decorative on-device live preview stopped');
   }
 }
-
 export const DecorativeOnDeviceLivePreview = new DecorativeOnDeviceLivePreviewClass();

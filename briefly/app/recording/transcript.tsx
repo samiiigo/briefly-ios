@@ -1,71 +1,33 @@
-import React, { useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useRecordingStore } from '@/context/useRecordingStore';
-import { useSettingsStore } from '@/context/useSettingsStore';
-import {
-  runTranscriptScreenRerunFromAudio,
-  TRANSCRIPT_SCREEN_RERUN_FROM_AUDIO_LABEL,
-} from '@/utils/recording/recordingRerunCapabilities';
-import { useRecordingRetryFlashActive } from '@/hooks/useRecordingRetryFlashActive';
-import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
-import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
-import { usePlayback } from '@/hooks/usePlayback';
 import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
 import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
-import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
+import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
-import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
-import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
-import { useRecordingAudioAvailability } from '@/hooks/useRecordingAudioAvailability';
+import { usePlaybackBarLayout } from '@/components/navigation/layout/usePlaybackBarLayout';
+import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
 import { RecordingProcessingFlashIcon } from '@/components/features/recording/RecordingProcessingFlashIcon';
+import { useTranscriptScreen } from '@/hooks/recording/useTranscriptScreen';
 import { Colors, Spacing } from '@/theme';
 
 export default function RecordingTranscriptScreen() {
   const sl = useScreenLayoutStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
   const { paddingBottom: playbackBottom } = usePlaybackBarLayout();
-  const router = useRouter();
   const { recordingId: recordingIdParam } = useLocalSearchParams<{ recordingId: string }>();
-  const recordingId = useMemo(
-    () => (Array.isArray(recordingIdParam) ? recordingIdParam[0] : recordingIdParam),
-    [recordingIdParam],
-  );
-  const recording = useRecordingStore((s) =>
-    recordingId ? s.recordings.find((r) => r.id === recordingId) : undefined,
-  );
-  const flashActive = useRecordingRetryFlashActive(recordingId);
-
-  const audioAvailability = useRecordingAudioAvailability(recording);
-  const playback = usePlayback({
-    filePath: audioAvailability.filePath,
-    transcript: recording?.transcript,
-  });
-
-  const isProcessing = recording != null && isRecordingProcessing(recording);
-  const hasTranscript = hasMeaningfulTranscript(recording?.transcript);
-  const canRerunFromAudio = audioAvailability.hasAudio;
-  const rerunDisabled =
-    !recording || isProcessing || flashActive || !canRerunFromAudio;
-
-  const handleRerun = useCallback(() => {
-    if (rerunDisabled || !recording) return;
-
-    const mode = useSettingsStore.getState().summarizationMode;
-    if (!alertIfLocalLlmNotReady(mode)) return;
-
-    useRecordingRetryFlashStore.getState().markRetryPending(recording.id);
-
-    if (runTranscriptScreenRerunFromAudio(recording, audioAvailability) === 'none') {
-      Alert.alert(
-        'No audio',
-        'No recording file is available on this device to transcribe.',
-      );
-    }
-  }, [audioAvailability, recording, rerunDisabled]);
+  const {
+    router,
+    recording,
+    playback,
+    rerun,
+    rerunDisabled,
+    handleRerun,
+    rerunAccessibilityLabel,
+  } = useTranscriptScreen(recordingIdParam);
 
   if (!recording) {
     return (
@@ -75,7 +37,9 @@ export default function RecordingTranscriptScreen() {
     );
   }
 
-  const hasAudio = canRerunFromAudio;
+  const isProcessing = isRecordingProcessing(recording);
+  const hasTranscript = hasMeaningfulTranscript(recording.transcript);
+  const hasAudio = rerun.hasAudio;
   const segments = recording.transcript ?? [];
 
   return (
@@ -107,7 +71,6 @@ export default function RecordingTranscriptScreen() {
           </View>
         ) : null}
       </ScrollView>
-
       {hasAudio ? (
         <RecordingPlaybackBar
           recording={recording}
@@ -115,21 +78,20 @@ export default function RecordingTranscriptScreen() {
           paddingBottom={playbackBottom}
         />
       ) : null}
-
       <StackScreenHeader
         title="Transcript"
         showBack
         onBack={() => router.back()}
         trailing={
           <View>
-            {flashActive ? (
+            {rerun.flashActive ? (
               <View style={styles.rerunFlashWrap}>
                 <RecordingProcessingFlashIcon size={22} />
               </View>
             ) : (
               <CircularIconButton
                 icon="refresh-outline"
-                accessibilityLabel={TRANSCRIPT_SCREEN_RERUN_FROM_AUDIO_LABEL}
+                accessibilityLabel={rerunAccessibilityLabel}
                 loading={isProcessing}
                 disabled={rerunDisabled}
                 onPress={rerunDisabled ? undefined : handleRerun}

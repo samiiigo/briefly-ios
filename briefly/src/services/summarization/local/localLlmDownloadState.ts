@@ -1,25 +1,19 @@
 export type LocalLlmDownloadStatus = 'idle' | 'downloading' | 'ready' | 'error';
-
 export type LocalLlmDownloadStatePatch = Partial<{
   localLlmModelReady: boolean;
   localLlmDownloadProgress: number | null;
   localLlmDownloadStatus: LocalLlmDownloadStatus;
   localLlmDownloadError: string | undefined;
 }>;
-
 type LocalLlmDownloadStateSnapshot = {
   localLlmDownloadStatus: LocalLlmDownloadStatus;
   localLlmDownloadProgress: number | null;
 };
-
 type StateSetter = (patch: LocalLlmDownloadStatePatch) => void;
-
 let setLocalLlmDownloadState: StateSetter | null = null;
 let mirroredDownloadStatus: LocalLlmDownloadStatus = 'idle';
 let mirroredDownloadProgress: number | null = null;
-
 /**
- * Wires download-state helpers to the settings store without importing it here
  * (avoids require cycles with gemmaModelDownload).
  */
 export function registerLocalLlmDownloadStateSetter(
@@ -33,15 +27,12 @@ export function registerLocalLlmDownloadStateSetter(
     mirroredDownloadProgress = snapshot.localLlmDownloadProgress;
   }
 }
-
 export function getMirroredLocalLlmDownloadStatus(): LocalLlmDownloadStatus {
   return mirroredDownloadStatus;
 }
-
 export function getMirroredLocalLlmDownloadProgress(): number | null {
   return mirroredDownloadProgress;
 }
-
 /** Applies a partial update to the persisted local LLM download slice. */
 export function applyLocalLlmDownloadState(patch: LocalLlmDownloadStatePatch): void {
   if (patch.localLlmDownloadStatus !== undefined) {
@@ -52,7 +43,6 @@ export function applyLocalLlmDownloadState(patch: LocalLlmDownloadStatePatch): v
   }
   setLocalLlmDownloadState?.(patch);
 }
-
 export function resetLocalLlmDownloadStateToIdle(): void {
   applyLocalLlmDownloadState({
     localLlmModelReady: false,
@@ -61,7 +51,6 @@ export function resetLocalLlmDownloadStateToIdle(): void {
     localLlmDownloadError: undefined,
   });
 }
-
 export function markLocalLlmDownloadReady(): void {
   applyLocalLlmDownloadState({
     localLlmModelReady: true,
@@ -70,7 +59,6 @@ export function markLocalLlmDownloadReady(): void {
     localLlmDownloadError: undefined,
   });
 }
-
 export function markLocalLlmDownloadStarting(): void {
   applyLocalLlmDownloadState({
     localLlmModelReady: false,
@@ -79,7 +67,6 @@ export function markLocalLlmDownloadStarting(): void {
     localLlmDownloadError: undefined,
   });
 }
-
 export function markLocalLlmDownloadFailed(message: string): void {
   applyLocalLlmDownloadState({
     localLlmModelReady: false,

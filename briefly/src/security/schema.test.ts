@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { ValidationError, validateObject } from './schema';
-
 describe('schema validation', () => {
   it('rejects unexpected object keys in strict mode', () => {
     assert.throws(
@@ -19,7 +18,6 @@ describe('schema validation', () => {
       ValidationError
     );
   });
-
   it('trims and validates string length', () => {
     const result = validateObject<{ name: string }>(
       { name: '  hello  ' },

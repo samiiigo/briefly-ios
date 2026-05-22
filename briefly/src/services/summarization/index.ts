@@ -1,13 +1,3 @@
-/**
- * SummarizationService — refactored public API
- *
- * The service is now a thin facade that delegates to the correct
- * SummarizationProvider via the factory. All provider-specific logic
- * lives in its own class (SRP), new providers can be added without
- * modifying this file (OCP), and the service depends only on the
- * SummarizationProvider interface (DIP).
- */
-
 import { TranscriptSegment, KeyInsight, ProcessingMode } from '@/types';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import {
@@ -20,10 +10,8 @@ import {
   assertLocalLlmReadyForSummarization,
   isOnDeviceSummarizationMode,
 } from './local/localLlmAvailability';
-
 // Re-export for external consumers
 export type { SummarizationResult, SummarizationProvider } from './summarizationProvider';
-
 export const SummarizationService = {
   /**
    * Resolves the active summarization mode from Settings when `modeOverride` is omitted,
@@ -46,13 +34,11 @@ export const SummarizationService = {
     return provider.summarize(segments);
   },
 };
-
 export {
   createSummarizationProvider,
   configureSummarizationProviderFactory,
   resetSummarizationProviderFactory,
 };
-
 export {
   ensureLocalGemmaModelDownloaded,
   isLocalGemmaModelDownloaded,
@@ -60,7 +46,6 @@ export {
   cancelLocalGemmaModelDownload,
   deleteLocalGemmaModel,
 } from './local/gemmaModelDownload';
-export { LocalModelStorageService } from '@/services/storage/localModelStorageService';
 export type { ModelDownloadProgress } from './local/gemmaModelDownload';
 export { LocalLlamaError, isLocalLlamaError } from './local/localLlamaErrors';
 export {

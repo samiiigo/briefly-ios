@@ -1,14 +1,11 @@
 import { darkColors, lightColors, type ColorPalette } from './colorPalettes';
 import type { ResolvedColorScheme } from '@/utils/theme/themePreference';
-
 /** Live palette synced by {@link ThemeProvider}. Prefer {@link useThemedColors} in components. */
 export const Colors: ColorPalette = { ...darkColors };
-
 export function applyColorPalette(scheme: ResolvedColorScheme): void {
   const next = scheme === 'light' ? lightColors : darkColors;
   Object.assign(Colors, next);
 }
-
 export const Spacing = {
   xs: 4,
   sm: 8,
@@ -20,7 +17,6 @@ export const Spacing = {
   screenHorizontal: 20,
   contentTop: 0,
 };
-
 export const BorderRadius = {
   sm: 8,
   md: 12,

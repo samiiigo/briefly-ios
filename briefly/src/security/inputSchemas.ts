@@ -1,16 +1,13 @@
 import { CloudProvider } from '@/types';
 import { isValidApiKeyFormat } from '@/utils/providers/cloudProvider';
 import { ValidationError, validateObject } from './schema';
-
 /** OWASP-recommended bounds for user-visible text fields. */
 export const MAX_FOLDER_NAME_LENGTH = 80;
 export const MAX_RECORDING_TITLE_LENGTH = 200;
 export const MAX_SEARCH_QUERY_LENGTH = 200;
 export const MAX_API_KEY_LENGTH = 512;
-
 const ID_PATTERN = /^[a-zA-Z0-9_-]{4,128}$/;
 const USER_FOLDER_ID_PATTERN = /^uf_[a-zA-Z0-9_-]{2,120}$/;
-
 const folderNameSchema = {
   type: 'object' as const,
   strict: true,
@@ -23,7 +20,6 @@ const folderNameSchema = {
     },
   },
 };
-
 const recordingTitleSchema = {
   type: 'object' as const,
   strict: true,
@@ -36,7 +32,6 @@ const recordingTitleSchema = {
     },
   },
 };
-
 const searchQuerySchema = {
   type: 'object' as const,
   strict: true,
@@ -49,7 +44,6 @@ const searchQuerySchema = {
     },
   },
 };
-
 /** Allow-list for recording patch keys (internal + UI). */
 const RECORDING_PATCH_KEYS = new Set([
   'title',
@@ -71,9 +65,7 @@ const RECORDING_PATCH_KEYS = new Set([
   'mainEmoji',
   'errorMessage',
 ]);
-
 const MAX_TRANSCRIPT_SEGMENTS = 10_000;
-
 /** AssemblyAI async transcript create payload — strict allow-list. */
 export const assemblyAiTranscriptCreateSchema = {
   type: 'object' as const,
@@ -90,12 +82,10 @@ export const assemblyAiTranscriptCreateSchema = {
     },
   },
 };
-
 export function validateFolderName(name: string): string {
   const { name: validated } = validateObject<{ name: string }>({ name }, folderNameSchema);
   return validated;
 }
-
 export function validateRecordingTitle(title: string): string {
   const { title: validated } = validateObject<{ title: string }>(
     { title },
@@ -103,12 +93,10 @@ export function validateRecordingTitle(title: string): string {
   );
   return validated;
 }
-
 export function validateSearchQuery(query: string): string {
   const { query: validated } = validateObject<{ query: string }>({ query }, searchQuerySchema);
   return validated;
 }
-
 export function validateRecordingId(id: string): string {
   const trimmed = id.trim();
   if (!ID_PATTERN.test(trimmed)) {
@@ -116,7 +104,6 @@ export function validateRecordingId(id: string): string {
   }
   return trimmed;
 }
-
 export function validateUserFolderId(id: string): string {
   const trimmed = id.trim();
   if (!USER_FOLDER_ID_PATTERN.test(trimmed)) {
@@ -124,7 +111,6 @@ export function validateUserFolderId(id: string): string {
   }
   return trimmed;
 }
-
 export function validateProviderApiKey(key: string, provider: CloudProvider): string {
   const trimmed = key.trim();
   if (!trimmed) return '';
@@ -136,7 +122,6 @@ export function validateProviderApiKey(key: string, provider: CloudProvider): st
   }
   return trimmed;
 }
-
 /**
  * Validates recording store patches: rejects unknown keys; sanitizes text fields.
  * `undefined` values are allowed (used to clear transcript/summary during re-runs).
@@ -149,9 +134,7 @@ export function validateRecordingUpdates(
       throw new ValidationError(`${key} is not allowed on recording updates`, key);
     }
   }
-
   const out: Record<string, unknown> = { ...updates };
-
   if (typeof out.title === 'string') {
     out.title = validateRecordingTitle(out.title);
   }
@@ -179,10 +162,8 @@ export function validateRecordingUpdates(
   if (out.keyInsights != null && !Array.isArray(out.keyInsights)) {
     throw new ValidationError('keyInsights must be an array', 'keyInsights');
   }
-
   return out;
 }
-
 export function validateAssemblyAiTranscriptCreateBody(
   body: Record<string, unknown>
 ): Record<string, unknown> {

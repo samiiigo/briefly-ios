@@ -8,16 +8,13 @@ import { logger } from '@/utils/logging/logger';
 import { repairRecordingFilePaths } from '@/utils/fileSystem/persistRecordingAudio';
 import { validateRecordingId, validateRecordingUpdates } from '@/security/inputSchemas';
 import { ValidationError } from '@/security/schema';
-
 const RECENTLY_DELETED_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
 interface RecordingStore {
   recordings: Recording[];
   activeRecordingId: string | null;
   liveTranscript: string;
   hasLoaded: boolean;
   isLoading: boolean;
-
   loadRecordings: (force?: boolean) => Promise<void>;
   addRecording: (recording: Recording) => Promise<void>;
   updateRecording: (id: string, updates: Partial<Recording>) => Promise<void>;
@@ -35,17 +32,13 @@ interface RecordingStore {
   /** Adds multiple imported recordings in one persistence write. */
   importRecordings: (recordings: Recording[]) => Promise<void>;
 }
-
 let recordingRepository: RecordingRepository = RecordingStorageService;
-
 export function configureRecordingRepository(repository: RecordingRepository): void {
   recordingRepository = repository;
 }
-
 export function resetRecordingRepository(): void {
   recordingRepository = RecordingStorageService;
 }
-
 function purgeExpiredRecentlyDeleted(
   recordings: Recording[],
   retentionMs: number
@@ -54,7 +47,6 @@ function purgeExpiredRecentlyDeleted(
   const kept = recordings.filter((recording) => !recording.deletedAt || recording.deletedAt > cutoff);
   return { kept, removedCount: recordings.length - kept.length };
 }
-
 /** Prefer in-memory state when a background load finishes after local edits. */
 function mergeRecordingsFromPersistence(
   memory: Recording[],
@@ -63,7 +55,6 @@ function mergeRecordingsFromPersistence(
   const memoryById = new Map(memory.map((r) => [r.id, r]));
   const persistedById = new Map(persisted.map((r) => [r.id, r]));
   const ids = new Set([...memoryById.keys(), ...persistedById.keys()]);
-
   const merged = Array.from(ids, (id) => {
     const inMemory = memoryById.get(id);
     const fromDisk = persistedById.get(id);
@@ -73,19 +64,15 @@ function mergeRecordingsFromPersistence(
     // segments with fewer AssemblyAI segments; disk may still be stale.
     return inMemory;
   });
-
   return merged.sort((a, b) => b.createdAt - a.createdAt);
 }
-
 let mutationEpoch = 0;
-
 export const useRecordingStore = create<RecordingStore>((set, get) => ({
   recordings: [],
   activeRecordingId: null,
   liveTranscript: '',
   hasLoaded: false,
   isLoading: false,
-
   loadRecordings: async (force = false) => {
     const { hasLoaded, isLoading } = get();
     if (!force && (hasLoaded || isLoading)) {
@@ -135,7 +122,6 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       set({ isLoading: false });
     }
   },
-
   addRecording: async (recording) => {
     mutationEpoch += 1;
     logger.info('useRecordingStore', 'Recording added', {
@@ -154,7 +140,6 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       throw error;
     }
   },
-
   updateRecording: async (id, updates) => {
     const safeId = validateRecordingId(id);
     let safeUpdates: Partial<Recording>;
@@ -168,7 +153,6 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       }
       throw error;
     }
-
     mutationEpoch += 1;
     logger.info('useRecordingStore', 'Recording updated', {
       id: safeId,
@@ -193,7 +177,6 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       throw error;
     }
   },
-
   deleteRecording: async (id) => {
     logger.info('useRecordingStore', 'Recording soft-deleted', { id });
     const recording = get().recordings.find((r) => r.id === id);
@@ -205,12 +188,10 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       ),
     }));
   },
-
   restoreRecording: async (id) => {
     logger.info('useRecordingStore', 'Recording restored', { id });
     await get().updateRecording(id, { deletedAt: undefined });
   },
-
   permanentDelete: async (id) => {
     const recording = get().recordings.find((r) => r.id === id);
     if (recording?.filePath) {
@@ -222,7 +203,6 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
       recordings: state.recordings.filter((r) => r.id !== id),
     }));
   },
-
   permanentDeleteAll: async (ids) => {
     if (ids.length === 0) return;
     mutationEpoch += 1;
@@ -240,13 +220,9 @@ export const useRecordingStore = create<RecordingStore>((set, get) => ({
     await recordingRepository.saveAll(remaining);
     set({ recordings: remaining });
   },
-
   setActiveRecordingId: (id) => set({ activeRecordingId: id }),
-
   setLiveTranscript: (text) => set({ liveTranscript: text }),
-
   getRecordingById: (id) => get().recordings.find((r) => r.id === id),
-
   importRecordings: async (incoming) => {
     if (incoming.length === 0) return;
     mutationEpoch += 1;

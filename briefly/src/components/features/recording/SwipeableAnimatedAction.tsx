@@ -9,12 +9,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useCreateStyles, useThemedColors, BorderRadius, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 export const SWIPE_ACTION_SIZE = 76;
 export const SWIPE_ACTION_GAP = Spacing.sm;
 export const SWIPE_ACTION_INSET = 2;
 export const SWIPE_ACTION_RADIUS = BorderRadius.cardXL - SWIPE_ACTION_INSET;
-
 interface SwipeableAnimatedActionProps {
   progress: SharedValue<number>;
   index: number;
@@ -29,7 +27,6 @@ interface SwipeableAnimatedActionProps {
   numberOfLines?: number;
   disabled?: boolean;
 }
-
 export const SwipeableAnimatedAction = forwardRef<View, SwipeableAnimatedActionProps>(
   function SwipeableAnimatedAction(
     {
@@ -56,7 +53,6 @@ export const SwipeableAnimatedAction = forwardRef<View, SwipeableAnimatedActionP
     const start = revealIndex * stride * 0.35;
     const end = Math.min(start + stride * 1.25, 1);
     const translateStart = side === 'trailing' && revealIndex === 0 ? 14 : -12;
-
     return {
       opacity: interpolate(progress.value, [start, end], [0, 1], Extrapolation.CLAMP),
       transform: [
@@ -74,7 +70,6 @@ export const SwipeableAnimatedAction = forwardRef<View, SwipeableAnimatedActionP
       ],
     };
   });
-
   return (
     <Animated.View
       ref={ref}
@@ -102,7 +97,6 @@ export const SwipeableAnimatedAction = forwardRef<View, SwipeableAnimatedActionP
   );
   },
 );
-
 function createSwipeableAnimatedActionStyles(c: ColorPalette) {
   return StyleSheet.create({
   actionButton: {

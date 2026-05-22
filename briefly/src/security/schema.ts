@@ -5,17 +5,14 @@
  * - Type checks, length limits, enums, regex patterns
  * - No dependency on runtime JSON Schema servers
  */
-
 export class ValidationError extends Error {
   readonly field?: string;
-
   constructor(message: string, field?: string) {
     super(message);
     this.name = 'ValidationError';
     this.field = field;
   }
 }
-
 export type SchemaField =
   | { type: 'string'; minLength?: number; maxLength?: number; pattern?: RegExp; trim?: boolean }
   | { type: 'number'; min?: number; max?: number; integer?: boolean }
@@ -23,26 +20,21 @@ export type SchemaField =
   | { type: 'enum'; values: readonly string[] }
   | { type: 'array'; items: SchemaField; maxItems?: number }
   | { type: 'object'; fields: Record<string, SchemaField>; strict?: boolean };
-
 export interface ObjectSchema {
   type: 'object';
   fields: Record<string, SchemaField>;
   /** When true (default), unknown keys cause rejection. */
   strict?: boolean;
 }
-
 const CONTROL_CHAR = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/;
-
 export function containsControlCharacters(value: string): boolean {
   return CONTROL_CHAR.test(value);
 }
-
 export function assertNoControlCharacters(value: string, field: string): void {
   if (containsControlCharacters(value)) {
     throw new ValidationError(`${field} contains invalid control characters`, field);
   }
 }
-
 function validateField(value: unknown, schema: SchemaField, path: string): unknown {
   switch (schema.type) {
     case 'string': {
@@ -107,7 +99,6 @@ function validateField(value: unknown, schema: SchemaField, path: string): unkno
     }
   }
 }
-
 export function validateObject<T extends Record<string, unknown>>(
   input: unknown,
   schema: ObjectSchema,
@@ -116,11 +107,9 @@ export function validateObject<T extends Record<string, unknown>>(
   if (input == null || typeof input !== 'object' || Array.isArray(input)) {
     throw new ValidationError(`${path} must be an object`, path);
   }
-
   const raw = input as Record<string, unknown>;
   const strict = schema.strict !== false;
   const allowed = new Set(Object.keys(schema.fields));
-
   if (strict) {
     for (const key of Object.keys(raw)) {
       if (!allowed.has(key)) {
@@ -128,17 +117,14 @@ export function validateObject<T extends Record<string, unknown>>(
       }
     }
   }
-
   const out: Record<string, unknown> = {};
   for (const [key, fieldSchema] of Object.entries(schema.fields)) {
     if (!(key in raw)) continue;
     const fieldPath = `${path}.${key}`;
     out[key] = validateField(raw[key], fieldSchema, fieldPath);
   }
-
   return out as T;
 }
-
 /** Parses JSON then validates; rejects malformed JSON. */
 export function parseAndValidateJson<T extends Record<string, unknown>>(
   raw: string,

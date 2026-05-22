@@ -16,9 +16,8 @@ import {
   type FlatRecordingListItem,
   type RecordingListGroupPosition,
 } from '@/utils/list/flattenRecordingSections';
-
 interface RecordingSectionFlashListProps {
-  sections: ReadonlyArray<{ title: string; data: Recording[] }>;
+  sections: readonly { title: string; data: Recording[] }[];
   renderRecording: (
     recording: Recording,
     groupPosition: RecordingListGroupPosition
@@ -29,7 +28,6 @@ interface RecordingSectionFlashListProps {
   onMomentumScrollBegin?: () => void;
   drawDistance?: number;
 }
-
 function ListSeparator({
   leadingItem,
   trailingItem,
@@ -45,7 +43,6 @@ function ListSeparator({
   }
   return null;
 }
-
 export function RecordingSectionFlashList({
   sections,
   renderRecording,
@@ -57,7 +54,6 @@ export function RecordingSectionFlashList({
 }: RecordingSectionFlashListProps) {
   const themeExtra = useResolvedColorScheme();
   const data = useMemo(() => flattenRecordingSections(sections), [sections]);
-
   const renderItem: ListRenderItem<FlatRecordingListItem> = useCallback(
     ({ item }) => {
       if (item.kind === 'header') {
@@ -70,11 +66,8 @@ export function RecordingSectionFlashList({
     },
     [renderRecording, sectionHeaderStyle],
   );
-
   const keyExtractor = useCallback((item: FlatRecordingListItem) => item.id, []);
-
   const getItemType = useCallback((item: FlatRecordingListItem) => item.kind, []);
-
   return (
     <FlashList
       style={styles.list}
@@ -92,7 +85,6 @@ export function RecordingSectionFlashList({
     />
   );
 }
-
 const styles = StyleSheet.create({
   list: {
     flex: 1,

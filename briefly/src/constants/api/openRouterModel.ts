@@ -1,5 +1,4 @@
 const OPENROUTER_DEFAULT_OPENAI_MODEL = 'openai/gpt-4.1-mini';
-
 /** Ensures an OpenAI model id is valid on OpenRouter (e.g. gpt-4o-mini → openai/gpt-4o-mini). */
 export function toOpenRouterOpenAIModelId(
   model: string,

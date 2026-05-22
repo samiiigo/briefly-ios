@@ -11,7 +11,6 @@ export type TranscriptionMode = 'cloud' | 'local';
  * "unlisted" is the default non-archived, non-deleted system bucket.
  */
 export type RecordingFolder = 'unlisted' | 'archived' | 'recently-deleted';
-
 export interface UserFolder {
   id: string;
   name: string;
@@ -20,7 +19,6 @@ export interface UserFolder {
   /** Set when pinned; most recently pinned sorts first among pinned folders. */
   pinnedAt?: number;
 }
-
 export type RecordingStatus =
   | 'idle'
   | 'recording'
@@ -30,7 +28,6 @@ export type RecordingStatus =
   | 'summarizing'
   | 'ready'
   | 'error';
-
 export interface TranscriptSegment {
   id: string;
   speaker?: string;
@@ -40,12 +37,10 @@ export interface TranscriptSegment {
   endTime: number;
   isFinal: boolean;
 }
-
 export interface KeyInsight {
   id: string;
   text: string;
 }
-
 export interface Recording {
   id: string;
   title: string;
@@ -71,4 +66,3 @@ export interface Recording {
   mainEmoji?: string;
   errorMessage?: string;
 }
-

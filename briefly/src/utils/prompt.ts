@@ -8,9 +8,7 @@
  * For a consistent approach, use the `promptText` function which
  * returns a Promise<string | null>.
  */
-
 import { Alert, Platform } from 'react-native';
-
 /**
  * Show a native text prompt (iOS) or a simple Alert with OK on Android.
  *
@@ -32,7 +30,6 @@ export function promptText(options: {
   onCancel?: () => void;
 }): void {
   const { title, message, defaultValue = '', onSubmit, onCancel } = options;
-
   if (Platform.OS === 'ios') {
     Alert.prompt(
       title,

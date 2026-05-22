@@ -3,23 +3,18 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCreateStyles, useThemedColors, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 /** Matches {@link SearchField} leading icon + trailing gap for row alignment. */
 const LEADING_ICON_SIZE = 18;
 const LEADING_ICON_GAP = Spacing.sm;
-
 export const RECENT_SEARCH_LEADING_INSET = LEADING_ICON_SIZE + LEADING_ICON_GAP;
-
 interface Props {
   query: string;
   onPress: () => void;
   onRemove: () => void;
 }
-
 export function RecentSearchCard({ query, onPress, onRemove }: Props) {
   const styles = useCreateStyles(createRecentSearchCardStyles);
   const colors = useThemedColors();
-
   return (
     <View style={styles.row}>
       <Pressable
@@ -47,7 +42,6 @@ export function RecentSearchCard({ query, onPress, onRemove }: Props) {
     </View>
   );
 }
-
 function createRecentSearchCardStyles(c: ColorPalette) {
   return StyleSheet.create({
     row: {

@@ -2,15 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useCreateStyles, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   bullets: string[];
 }
-
 export function SummaryBulletSection({ bullets }: Props) {
   const styles = useCreateStyles(createSummaryBulletSectionStyles);
   if (!bullets.length) return null;
-
   return (
     <View style={styles.section}>
       <Text style={styles.heading}>Summary</Text>
@@ -25,7 +22,6 @@ export function SummaryBulletSection({ bullets }: Props) {
     </View>
   );
 }
-
 function createSummaryBulletSectionStyles(c: ColorPalette) {
   return StyleSheet.create({
     section: {

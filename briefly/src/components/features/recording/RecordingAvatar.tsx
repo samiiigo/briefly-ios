@@ -9,11 +9,10 @@ import {
 import { RecordingEmojiCircle } from '@/components/features/recording/RecordingEmojiCircle';
 import { RecordingProcessingRetryCircle } from '@/components/features/recording/RecordingProcessingRetryCircle';
 import { RecordingProcessingFlashCircle } from '@/components/features/recording/RecordingProcessingFlashCircle';
-import { useRecordingProcessingRetry } from '@/hooks/useRecordingProcessingRetry';
+import { useRecordingProcessingRetry } from '@/hooks/recording/useRecordingProcessingRetry';
 import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
 import { Spacing, useCreateStyles, useThemedColors } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   recording: Recording;
   size?: 'md' | 'compact';
@@ -22,7 +21,6 @@ interface Props {
   /** List rows: show alert + row-level retry; no inline retry button on the avatar. */
   listRow?: boolean;
 }
-
 export function RecordingAvatar({
   recording,
   size = 'md',
@@ -41,7 +39,6 @@ export function RecordingAvatar({
     return until != null && Date.now() < until;
   });
   const showRetry = failed && retryAction != null && !showFlash && !listRow;
-
   return (
     <View
       style={[
@@ -78,9 +75,7 @@ export function RecordingAvatar({
     </View>
   );
 }
-
 const CIRCLE_DIM = 48;
-
 function createRecordingAvatarStyles(c: ColorPalette) {
   return StyleSheet.create({
     shell: {

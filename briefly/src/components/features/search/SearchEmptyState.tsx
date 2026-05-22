@@ -3,15 +3,12 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCreateStyles, useThemedColors, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   query: string;
 }
-
 export function SearchEmptyState({ query }: Props) {
   const styles = useCreateStyles(createSearchEmptyStateStyles);
   const colors = useThemedColors();
-
   return (
     <View style={styles.wrap}>
       <View style={styles.iconRing}>
@@ -26,7 +23,6 @@ export function SearchEmptyState({ query }: Props) {
     </View>
   );
 }
-
 function createSearchEmptyStateStyles(c: ColorPalette) {
   return StyleSheet.create({
     wrap: {

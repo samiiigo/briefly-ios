@@ -1,5 +1,4 @@
 export type ManualRerunSource = 'audio' | 'transcript' | 'none';
-
 export function resolveManualRerunSourceFromFlags(
   hasAudioOnDisk: boolean,
   hasTranscript: boolean,

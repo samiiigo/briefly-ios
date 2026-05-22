@@ -4,13 +4,10 @@ import { useCreateStyles, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 import { SummaryMarkdownBlock } from '@/utils/summary/parseSummaryMarkdown';
 import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
-
 interface Props {
   blocks: SummaryMarkdownBlock[];
 }
-
 type SummaryMarkdownStyles = ReturnType<typeof createSummaryMarkdownContentStyles>;
-
 function renderInline(
   text: string,
   baseStyle: TextStyle,
@@ -25,7 +22,6 @@ function renderInline(
     />
   );
 }
-
 function BlockView({
   block,
   index,
@@ -63,11 +59,9 @@ function BlockView({
       return null;
   }
 }
-
 export function SummaryMarkdownContent({ blocks }: Props) {
   const styles = useCreateStyles(createSummaryMarkdownContentStyles);
   if (!blocks.length) return null;
-
   return (
     <View style={styles.container}>
       {blocks.map((block, index) => (
@@ -76,7 +70,6 @@ export function SummaryMarkdownContent({ blocks }: Props) {
     </View>
   );
 }
-
 function createSummaryMarkdownContentStyles(c: ColorPalette) {
   return StyleSheet.create({
     container: {

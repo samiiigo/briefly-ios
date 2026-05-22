@@ -1,10 +1,8 @@
 import type { Recording } from '@/types';
-
 export type ResolvedRecordingAudio = {
   filePath: string;
   fileSize: number;
 };
-
 export type RecordingAudioPathProbe = {
   getPathInfo: (uri: string) => {
     exists: boolean;
@@ -16,14 +14,12 @@ export type RecordingAudioPathProbe = {
     sourcePath: string,
   ) => { exists: boolean; uri: string; size: number };
 };
-
 function effectiveFileSize(reportedSize: number, fallbackSize: number): number {
   if (reportedSize > 0) return reportedSize;
   if (fallbackSize > 0) return fallbackSize;
   // File.size can be 0/undefined while the file is still playable.
   return 1;
 }
-
 function resolvedFromProbe(
   filePath: string,
   exists: boolean,
@@ -36,7 +32,6 @@ function resolvedFromProbe(
     fileSize: effectiveFileSize(reportedSize, fallbackSize),
   };
 }
-
 /**
  * Locates recording audio on device using injectable filesystem probes (testable without Expo).
  */
@@ -45,7 +40,6 @@ export function resolveRecordingAudioOnDiskCore(
   probe: RecordingAudioPathProbe,
 ): ResolvedRecordingAudio | null {
   const stored = recording.filePath?.trim();
-
   if (stored) {
     const storedInfo = probe.getPathInfo(stored);
     if (storedInfo.exists) {
@@ -57,7 +51,6 @@ export function resolveRecordingAudioOnDiskCore(
       );
       if (resolved) return resolved;
     }
-
     const basename = stored.split('/').pop()?.split('?')[0] ?? '';
     if (basename) {
       const byName = probe.destFile('', basename);
@@ -70,7 +63,6 @@ export function resolveRecordingAudioOnDiskCore(
       if (resolved) return resolved;
     }
   }
-
   const byId = probe.destFile(recording.id, stored ?? '');
   const byIdResolved = resolvedFromProbe(
     byId.uri,
@@ -79,6 +71,5 @@ export function resolveRecordingAudioOnDiskCore(
     recording.fileSize,
   );
   if (byIdResolved) return byIdResolved;
-
   return null;
 }

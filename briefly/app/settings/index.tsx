@@ -7,43 +7,30 @@ import {
   ScrollView,
   Switch,
 } from 'react-native';
-import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useStackBack } from '@/components/navigation/useStackBack';
-import { useSettingsStore } from '@/context/useSettingsStore';
-import {
-  folderListLayoutTitle,
-  useFolderListLayoutStore,
-} from '@/context/useFolderListLayoutStore';
-import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
-import { themePreferenceTitle } from '@/utils/theme/themePreference';
-import { transcriptionModeTitle } from '@/utils/processing/transcriptionMode';
-import { processingModeTitle } from '@/utils/processing/processingMode';
+import { useStackBack } from '@/components/navigation/layout/useStackBack';
+import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
+import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
 import { useThemedColors, Spacing } from '@/theme';
-import { useTranscriptBackup } from '@/hooks/useTranscriptBackup';
-import { useClearCache } from '@/hooks/useClearCache';
+import { useSettingsHub } from '@/hooks/settings/useSettingsHub';
 
 export default function SettingsScreen() {
-  const router = useRouter();
   const goBack = useStackBack('/(tabs)');
   const { scrollPaddingTop } = useTopChromeLayout();
   const colors = useThemedColors();
   const sl = useScreenLayoutStyles();
   const {
-    summarizationMode,
-    transcriptionMode,
     showLivePreview,
     setShowLivePreview,
-    themePreference,
-  } = useSettingsStore();
-  const folderLayout = useFolderListLayoutStore((s) => s.layout);
-  const { busy: transcriptBackupBusy, exportTranscripts, importTranscripts } =
-    useTranscriptBackup();
-  const { busy: clearCacheBusy, confirmAndClearCache } = useClearCache();
-  const storageBusy = transcriptBackupBusy || clearCacheBusy;
+    labels,
+    routes,
+    storageBusy,
+    exportTranscripts,
+    importTranscripts,
+    confirmAndClearCache,
+    appVersionLabel,
+  } = useSettingsHub();
 
   return (
     <View style={sl.container}>
@@ -53,10 +40,7 @@ export default function SettingsScreen() {
       >
         <Text style={[sl.sectionLabel, styles.firstSectionLabel]}>Transcription</Text>
         <View style={sl.card}>
-          <TouchableOpacity
-            style={sl.settingsRow}
-            onPress={() => router.push('/settings/transcription-mode')}
-          >
+          <TouchableOpacity style={sl.settingsRow} onPress={routes.transcriptionMode}>
             <Ionicons
               name="mic-outline"
               size={20}
@@ -64,14 +48,10 @@ export default function SettingsScreen() {
               style={sl.settingsRowIcon}
             />
             <Text style={sl.settingsRowTitle}>Transcription mode</Text>
-            <Text style={sl.settingsRowValue}>
-              {transcriptionModeTitle(transcriptionMode)}
-            </Text>
+            <Text style={sl.settingsRowValue}>{labels.transcriptionMode}</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
-
           <View style={sl.cardDivider} />
-
           <View style={sl.settingsRow}>
             <Ionicons
               name="eye-outline"
@@ -87,13 +67,9 @@ export default function SettingsScreen() {
             />
           </View>
         </View>
-
         <Text style={sl.sectionLabel}>Summarization</Text>
         <View style={sl.card}>
-          <TouchableOpacity
-            style={sl.settingsRow}
-            onPress={() => router.push('/settings/processing-mode')}
-          >
+          <TouchableOpacity style={sl.settingsRow} onPress={routes.processingMode}>
             <Ionicons
               name="sparkles-outline"
               size={20}
@@ -101,13 +77,10 @@ export default function SettingsScreen() {
               style={sl.settingsRowIcon}
             />
             <Text style={sl.settingsRowTitle}>Summarization mode</Text>
-            <Text style={sl.settingsRowValue}>
-              {processingModeTitle(summarizationMode)}
-            </Text>
+            <Text style={sl.settingsRowValue}>{labels.summarizationMode}</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-
         <Text style={sl.sectionLabel}>Storage</Text>
         <View style={sl.card}>
           <TouchableOpacity
@@ -124,9 +97,7 @@ export default function SettingsScreen() {
             <Text style={sl.settingsRowTitle}>Export all transcripts</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
-
           <View style={sl.cardDivider} />
-
           <TouchableOpacity
             style={sl.settingsRow}
             disabled={storageBusy}
@@ -141,9 +112,7 @@ export default function SettingsScreen() {
             <Text style={sl.settingsRowTitle}>Import transcripts or audio</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
-
           <View style={sl.cardDivider} />
-
           <TouchableOpacity
             style={sl.settingsRow}
             disabled={storageBusy}
@@ -153,13 +122,9 @@ export default function SettingsScreen() {
             <Text style={[sl.settingsRowTitle, sl.settingsRowTitleDanger]}>Clear cache</Text>
           </TouchableOpacity>
         </View>
-
         <Text style={sl.sectionLabel}>Library</Text>
         <View style={sl.card}>
-          <TouchableOpacity
-            style={sl.settingsRow}
-            onPress={() => router.push('/settings/folder-layout')}
-          >
+          <TouchableOpacity style={sl.settingsRow} onPress={routes.folderLayout}>
             <Ionicons
               name="grid-outline"
               size={20}
@@ -167,29 +132,20 @@ export default function SettingsScreen() {
               style={sl.settingsRowIcon}
             />
             <Text style={sl.settingsRowTitle}>Folder layout</Text>
-            <Text style={sl.settingsRowValue}>{folderListLayoutTitle(folderLayout)}</Text>
+            <Text style={sl.settingsRowValue}>{labels.folderLayout}</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-
         <Text style={sl.sectionLabel}>Preferences</Text>
         <View style={sl.card}>
-          <TouchableOpacity
-            style={sl.settingsRow}
-            onPress={() => router.push('/settings/appearance')}
-          >
+          <TouchableOpacity style={sl.settingsRow} onPress={routes.appearance}>
             <Text style={sl.settingsRowTitle}>Theme</Text>
-            <Text style={sl.settingsRowValue}>{themePreferenceTitle(themePreference)}</Text>
+            <Text style={sl.settingsRowValue}>{labels.theme}</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-
-        <Text style={[sl.versionText, styles.versionText]}>
-          {Constants.expoConfig?.name ?? 'Briefly'}{' '}
-          {Constants.expoConfig?.version ?? '5.2.7'}
-        </Text>
+        <Text style={[sl.versionText, styles.versionText]}>{appVersionLabel}</Text>
       </ScrollView>
-
       <StackScreenHeader title="Settings" showBack onBack={goBack} />
     </View>
   );

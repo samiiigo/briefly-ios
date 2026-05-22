@@ -22,23 +22,18 @@ import { buildRecordingReadyFromSummarization } from '@/utils/recording/recordin
 import { applyResolvedAudioToRecording } from '@/utils/recording/recordingPlayableAudio';
 import { getLocalLlmSummarizationBlocker } from '@/services/summarization';
 import { resolveInterruptedProcessingResume } from '@/utils/recording/recordingProcessingResume';
-
 const PROCESSING_TIMEOUT_MS = 12 * 60 * 1000;
-
 type JobHandle = {
   cancelled: boolean;
   timeoutId: ReturnType<typeof setTimeout>;
 };
-
 const activeJobs = new Map<string, JobHandle>();
-
 function clearJob(recordingId: string): void {
   const job = activeJobs.get(recordingId);
   if (!job) return;
   clearTimeout(job.timeoutId);
   activeJobs.delete(recordingId);
 }
-
 async function failJob(recordingId: string, err: unknown, stage: 'transcribing' | 'summarizing') {
   const { getRecordingById, updateRecording } = useRecordingStore.getState();
   const rec = getRecordingById(recordingId);
@@ -48,7 +43,6 @@ async function failJob(recordingId: string, err: unknown, stage: 'transcribing' 
       ? 'summarization'
       : 'transcription',
   );
-
   try {
     await updateRecording(recordingId, {
       status: 'error',
@@ -57,14 +51,12 @@ async function failJob(recordingId: string, err: unknown, stage: 'transcribing' 
   } catch {
     // List UI still reflects error via in-memory store when update succeeds partially
   }
-
   logger.warn('RECORDING', 'Background processing failed', {
     recordingId,
     phase: failure.phase,
     message: failure.message,
   });
 }
-
 async function completeJob(
   recordingId: string,
   result: RecordingProcessingResult,
@@ -75,7 +67,6 @@ async function completeJob(
   const existingTitles = recordings
     .filter((r) => r.id !== recordingId)
     .map((r) => r.title);
-
   await updateRecording(recordingId, {
     status: 'ready',
     transcript: result.segments,
@@ -83,16 +74,13 @@ async function completeJob(
     errorMessage: undefined,
     ...buildRecordingReadyFromSummarization(result, { existingTitles }),
   });
-
   logger.info('RECORDING', 'Background processing completed', { recordingId });
 }
-
 type BackgroundJobOptions = {
   audioFallbackOnly: boolean;
   /** Keep transcript, summary, and insights visible until the job finishes. */
   preservePreviousResults?: boolean;
 };
-
 async function runJob(
   recordingId: string,
   options: BackgroundJobOptions,
@@ -103,11 +91,9 @@ async function runJob(
   if (!rec) {
     throw new Error('Recording not found.');
   }
-
   const recWithAudio = applyResolvedAudioToRecording(rec);
   const filePath = recWithAudio.filePath;
   const fileSize = recWithAudio.fileSize;
-
   const asset = {
     durationSec: rec.duration,
     filePath,
@@ -119,14 +105,12 @@ async function runJob(
   if (!options.audioFallbackOnly && isRecordingTooShort(asset)) {
     throw new Error('Recording is too short. Record for at least 10 seconds and try again.');
   }
-
   const settingsMode = normalizeTranscriptionMode(
     useSettingsStore.getState().transcriptionMode,
   );
   const pMode = useSettingsStore.getState().summarizationMode;
   const existingTranscript = options.audioFallbackOnly ? undefined : rec.transcript;
   const meta = { durationSec: rec.duration, fileSizeBytes: fileSize };
-
   const callbacks = {
     onStage: (nextStage: 'transcribing' | 'summarizing') => {
       const job = activeJobs.get(recordingId);
@@ -155,7 +139,6 @@ async function runJob(
       );
     },
   };
-
   if (options.audioFallbackOnly) {
     await updateRecording(recordingId, {
       status: 'transcribing',
@@ -173,7 +156,6 @@ async function runJob(
     });
     return processRecordingFromSavedAudio(pMode, filePath, callbacks, meta);
   }
-
   const pipeline = resolvePostRecordingPipeline(settingsMode, existingTranscript);
   if (pipeline.skipAsyncTranscription) {
     await updateRecording(recordingId, {
@@ -193,7 +175,6 @@ async function runJob(
     });
     stageRef.current = 'transcribing';
   }
-
   return processRecordingToReady(
     settingsMode,
     pMode,
@@ -203,7 +184,6 @@ async function runJob(
     meta,
   );
 }
-
 /**
  * Runs transcription (and summarization) without blocking navigation.
  * Safe to call multiple times; only one job runs per recording id.
@@ -220,24 +200,20 @@ async function abortBlockedOnDeviceProcessing(recordingId: string, message: stri
     message,
   });
 }
-
 export function startRecordingBackgroundProcessing(
   recordingId: string,
   options?: { audioFallbackOnly?: boolean; preservePreviousResults?: boolean },
 ): void {
   if (activeJobs.has(recordingId)) return;
-
   const pMode = useSettingsStore.getState().summarizationMode;
   const blocker = getLocalLlmSummarizationBlocker(pMode);
   if (blocker) {
     void abortBlockedOnDeviceProcessing(recordingId, blocker);
     return;
   }
-
   const stageRef = { current: 'transcribing' as 'transcribing' | 'summarizing' };
   const audioFallbackOnly = options?.audioFallbackOnly ?? false;
   const preservePreviousResults = options?.preservePreviousResults ?? false;
-
   const timeoutId = setTimeout(() => {
     const job = activeJobs.get(recordingId);
     if (!job || job.cancelled) return;
@@ -251,9 +227,7 @@ export function startRecordingBackgroundProcessing(
       stageRef.current,
     );
   }, PROCESSING_TIMEOUT_MS);
-
   activeJobs.set(recordingId, { cancelled: false, timeoutId });
-
   void (async () => {
     try {
       const result = await runJob(
@@ -275,30 +249,25 @@ export function startRecordingBackgroundProcessing(
     }
   })();
 }
-
 export function cancelRecordingBackgroundProcessing(recordingId: string): void {
   const job = activeJobs.get(recordingId);
   if (!job) return;
   job.cancelled = true;
   clearJob(recordingId);
 }
-
 /** Re-summarize an existing transcript without leaving the recording detail screen. */
 export function startRecordingSummarizationRetry(
   recordingId: string,
   summarizationMode?: ProcessingMode,
 ): void {
   if (activeJobs.has(recordingId)) return;
-
   const pMode = summarizationMode ?? useSettingsStore.getState().summarizationMode;
   const blocker = getLocalLlmSummarizationBlocker(pMode);
   if (blocker) {
     void abortBlockedOnDeviceProcessing(recordingId, blocker);
     return;
   }
-
   const stageRef = { current: 'summarizing' as const };
-
   const timeoutId = setTimeout(() => {
     const job = activeJobs.get(recordingId);
     if (!job || job.cancelled) return;
@@ -312,9 +281,7 @@ export function startRecordingSummarizationRetry(
       stageRef.current,
     );
   }, PROCESSING_TIMEOUT_MS);
-
   activeJobs.set(recordingId, { cancelled: false, timeoutId });
-
   void (async () => {
     try {
       const { getRecordingById, updateRecording, recordings } = useRecordingStore.getState();
@@ -322,31 +289,25 @@ export function startRecordingSummarizationRetry(
       if (!rec?.transcript || !hasMeaningfulTranscript(rec.transcript)) {
         throw new Error('No transcript available to summarize.');
       }
-
       await updateRecording(recordingId, {
         status: 'summarizing',
         errorMessage: undefined,
         processingMode: pMode,
       });
-
       const result = await retrySummarization(rec.transcript, pMode, {
         onStage: () => {},
       });
-
       const job = activeJobs.get(recordingId);
       if (job?.cancelled) return;
-
       const existingTitles = recordings
         .filter((r) => r.id !== recordingId)
         .map((r) => r.title);
-
       await updateRecording(recordingId, {
         status: 'ready',
         processingMode: pMode,
         errorMessage: undefined,
         ...buildRecordingReadyFromSummarization(result, { existingTitles }),
       });
-
       logger.info('RECORDING', 'Summarization retry completed', { recordingId });
     } catch (err: unknown) {
       const job = activeJobs.get(recordingId);
@@ -358,14 +319,12 @@ export function startRecordingSummarizationRetry(
     }
   })();
 }
-
 export function initialStatusAfterSave(settingsTranscriptionMode: string): 'transcribing' | 'summarizing' {
   const pipeline = resolvePostRecordingPipeline(
     normalizeTranscriptionMode(settingsTranscriptionMode),
   );
   return pipeline.skipAsyncTranscription ? 'summarizing' : 'transcribing';
 }
-
 /**
  * Restarts background jobs for recordings left in a processing status when the app
  * was killed or backgrounded. Safe to call on every cold start after recordings load.
@@ -375,14 +334,11 @@ export function resumeInterruptedRecordingProcessing(): void {
   const toResume = recordings.filter(
     (rec) => resolveInterruptedProcessingResume(rec) !== 'skip',
   );
-
   if (toResume.length === 0) return;
-
   logger.info('RECORDING', 'Resuming interrupted background processing', {
     count: toResume.length,
     ids: toResume.map((r) => r.id),
   });
-
   for (const rec of toResume) {
     const action = resolveInterruptedProcessingResume(rec);
     if (action === 'summarize-only') {

@@ -23,25 +23,20 @@ import {
   shadowElevated,
 } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 export type AnchoredMenuItem = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
 };
-
 const MENU_MIN_WIDTH = 220;
 const MENU_MAX_HEIGHT = 320;
 const ANCHOR_GAP = 6;
-
 const defaultTriggerWrapperStyle: ViewStyle = {
   flexShrink: 0,
   alignSelf: 'stretch',
 };
-
 export type MenuAlign = 'leading' | 'trailing' | 'center';
-
 function computeMenuPosition(
   anchor: LayoutRectangle,
   align: MenuAlign,
@@ -67,14 +62,12 @@ function computeMenuPosition(
     right: Math.max(Spacing.screenHorizontal, screenWidth - anchor.x - anchor.width),
   };
 }
-
 /** @param externalAnchorRef Share one ref when multiple menus anchor to the same control. */
 export function useAnchoredMenu(externalAnchorRef?: RefObject<View | null>) {
   const internalAnchorRef = useRef<View>(null);
   const anchorRef = externalAnchorRef ?? internalAnchorRef;
   const [visible, setVisible] = useState(false);
   const [anchor, setAnchor] = useState<LayoutRectangle | null>(null);
-
   const open = useCallback(() => {
     const measure = () => {
       anchorRef.current?.measureInWindow((x, y, width, height) => {
@@ -87,21 +80,17 @@ export function useAnchoredMenu(externalAnchorRef?: RefObject<View | null>) {
     };
     requestAnimationFrame(measure);
   }, [anchorRef]);
-
   /** Anchor below a screen coordinate (e.g. long-press `pageX` / `pageY`). */
   const openAtPoint = useCallback((pageX: number, pageY: number) => {
     setAnchor({ x: pageX, y: pageY, width: 0, height: 0 });
     setVisible(true);
   }, []);
-
   const close = useCallback(() => {
     setVisible(false);
     setAnchor(null);
   }, []);
-
   return { anchorRef, visible, anchor, open, openAtPoint, close };
 }
-
 interface AnchoredMenuModalProps {
   visible: boolean;
   anchor: LayoutRectangle | null;
@@ -109,7 +98,6 @@ interface AnchoredMenuModalProps {
   onClose: () => void;
   align?: MenuAlign;
 }
-
 /** Anchored menu panel; pair with {@link useAnchoredMenu} when the trigger lives outside this tree. */
 export function AnchoredMenuModal({
   visible,
@@ -121,13 +109,10 @@ export function AnchoredMenuModal({
   const styles = useCreateStyles(createAnchoredOverflowMenuStyles);
   const colors = useThemedColors();
   const resolvedScheme = useResolvedColorScheme();
-
   const rowRippleColor =
     resolvedScheme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)';
-
   const screenWidth = Dimensions.get('window').width;
   const menuPosition = anchor ? computeMenuPosition(anchor, align, screenWidth) : null;
-
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -185,7 +170,6 @@ export function AnchoredMenuModal({
     </Modal>
   );
 }
-
 interface AnchoredOverflowMenuProps {
   items: AnchoredMenuItem[];
   renderTrigger: (open: () => void) => React.ReactNode;
@@ -196,7 +180,6 @@ interface AnchoredOverflowMenuProps {
   /** Layout for the trigger wrapper (e.g. swipe actions need `alignSelf: 'stretch'`). */
   triggerWrapperStyle?: StyleProp<ViewStyle>;
 }
-
 /** Context menu anchored below the trigger. */
 export function AnchoredOverflowMenu({
   items,
@@ -205,7 +188,6 @@ export function AnchoredOverflowMenu({
   triggerWrapperStyle,
 }: AnchoredOverflowMenuProps) {
   const menu = useAnchoredMenu();
-
   return (
     <>
       <View
@@ -225,7 +207,6 @@ export function AnchoredOverflowMenu({
     </>
   );
 }
-
 function createAnchoredOverflowMenuStyles(c: ColorPalette) {
   return StyleSheet.create({
     overlay: {

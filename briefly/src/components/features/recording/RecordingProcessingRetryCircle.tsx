@@ -4,32 +4,26 @@ import { Ionicons } from '@expo/vector-icons';
 import type { RecordingRetryAction } from '@/utils/processing/recordingRetryAction';
 import { useCreateStyles, useThemedColors } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 type Size = 'md' | 'lg' | 'compact';
-
 const DIM: Record<Size, number> = {
   md: 48,
   lg: 56,
   compact: 48,
 };
-
 const ICON_SIZE: Record<Size, number> = {
   md: 24,
   lg: 26,
   compact: 22,
 };
-
 interface Props {
   action: RecordingRetryAction;
   onPress: () => void;
   size?: Size;
 }
-
 export function RecordingProcessingRetryCircle({ action, onPress, size = 'md' }: Props) {
   const styles = useCreateStyles(createRecordingProcessingRetryCircleStyles);
   const colors = useThemedColors();
   const dim = DIM[size];
-
   return (
     <Pressable
       style={({ pressed }) => [
@@ -45,7 +39,6 @@ export function RecordingProcessingRetryCircle({ action, onPress, size = 'md' }:
     </Pressable>
   );
 }
-
 function createRecordingProcessingRetryCircleStyles(c: ColorPalette) {
   return StyleSheet.create({
     circle: {

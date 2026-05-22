@@ -2,7 +2,6 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { Recording } from '@/types';
 import { computeLibraryFolderCounts } from './folderCounts';
-
 function mkRecording(overrides: Partial<Recording> = {}): Recording {
   return {
     id: 'r1',
@@ -16,7 +15,6 @@ function mkRecording(overrides: Partial<Recording> = {}): Recording {
     ...overrides,
   };
 }
-
 describe('computeLibraryFolderCounts', () => {
   it('counts built-in and user folders in one pass', () => {
     const counts = computeLibraryFolderCounts([
@@ -26,7 +24,6 @@ describe('computeLibraryFolderCounts', () => {
       mkRecording({ id: '4', isArchived: true, folder: 'archived' }),
       mkRecording({ id: '5', deletedAt: Date.now() }),
     ]);
-
     assert.equal(counts.all, 5);
     assert.equal(counts.unlisted, 3);
     assert.equal(counts.favorites, 1);

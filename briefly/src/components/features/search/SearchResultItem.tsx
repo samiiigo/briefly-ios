@@ -7,17 +7,14 @@ import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar
 import { HighlightedText } from './HighlightedText';
 import { useCreateStyles, useThemedColors, BorderRadius, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   recording: Recording;
   query: string;
   onPress: () => void;
 }
-
 function SearchResultItemComponent({ recording, query, onPress }: Props) {
   const styles = useCreateStyles(createSearchResultItemStyles);
   const colors = useThemedColors();
-
   return (
     <TouchableOpacity
       style={styles.card}
@@ -43,9 +40,7 @@ function SearchResultItemComponent({ recording, query, onPress }: Props) {
     </TouchableOpacity>
   );
 }
-
 export const SearchResultItem = memo(SearchResultItemComponent);
-
 function createSearchResultItemStyles(c: ColorPalette) {
   return StyleSheet.create({
     card: {

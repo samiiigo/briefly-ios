@@ -7,19 +7,16 @@ import type { RecordingListGroupPosition } from '@/utils/list/flattenRecordingSe
 import { RecordingAvatar } from '@/components/features/recording/RecordingAvatar';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { isInitialProcessingFailure } from '@/utils/recording/recordingEntryAccess';
-import { useRecordingProcessingRetry } from '@/hooks/useRecordingProcessingRetry';
+import { useRecordingProcessingRetry } from '@/hooks/recording/useRecordingProcessingRetry';
 import { useCreateStyles, useThemedColors, BorderRadius, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 const AVATAR_SIZE = 48;
 const CHEVRON_SIZE = 16;
-
 interface Props {
   recording: Recording;
   /** Position within a time-grouped card (Today, Yesterday, …). */
   groupPosition?: RecordingListGroupPosition;
 }
-
 function groupedCardStyle(position: RecordingListGroupPosition, c: ColorPalette) {
   const radius = BorderRadius.cardXL;
   const shared = {
@@ -45,7 +42,6 @@ function groupedCardStyle(position: RecordingListGroupPosition, c: ColorPalette)
       };
   }
 }
-
 export function RecentsEntryCard({ recording, groupPosition = 'only' }: Props) {
   const styles = useCreateStyles(createRecentsEntryCardStyles);
   const colors = useThemedColors();
@@ -56,7 +52,6 @@ export function RecentsEntryCard({ recording, groupPosition = 'only' }: Props) {
     forListAvatar: true,
   });
   const showRerunTrailing = initialFailure && retryAction != null;
-
   return (
       <View style={groupedCardStyle(groupPosition, colors)}>
         {showDivider ? (
@@ -86,7 +81,6 @@ export function RecentsEntryCard({ recording, groupPosition = 'only' }: Props) {
       </View>
   );
 }
-
 function createRecentsEntryCardStyles(c: ColorPalette) {
   return StyleSheet.create({
   row: {

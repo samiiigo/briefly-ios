@@ -1,8 +1,6 @@
 import type { Recording } from '@/types';
 import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
-
 export type InterruptedProcessingResumeAction = 'full' | 'summarize-only' | 'skip';
-
 /** Whether a persisted status should be picked up again after app restart. */
 export function resolveInterruptedProcessingResume(
   recording: Pick<Recording, 'status' | 'transcript' | 'folder' | 'deletedAt'>,

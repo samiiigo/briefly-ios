@@ -5,7 +5,6 @@
 export class RateLimitError extends Error {
   readonly status = 429;
   readonly retryAfterSec: number;
-
   constructor(message: string, retryAfterSec: number) {
     super(message);
     this.name = 'RateLimitError';

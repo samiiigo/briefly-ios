@@ -7,9 +7,7 @@ import React, {
 } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  TouchableOpacity,
   Pressable,
   Alert,
   Platform,
@@ -22,14 +20,14 @@ import type { Recording } from '@/types';
 import { useActiveSwipeableStore } from '@/context/useActiveSwipeableStore';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useUserFolderStore } from '@/context/useUserFolderStore';
-import { useExport } from '@/hooks/useExport';
+import { useExport } from '@/hooks/recording/useExport';
 import { folderFlagsFor } from '@/utils/folders/recordingFolder';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import {
   isInitialProcessingFailure,
   isRecordingEntryNavigationLocked,
 } from '@/utils/recording/recordingEntryAccess';
-import { useRecordingProcessingRetry } from '@/hooks/useRecordingProcessingRetry';
+import { useRecordingProcessingRetry } from '@/hooks/recording/useRecordingProcessingRetry';
 import { RecordingFolder } from '@/types';
 import { BUILTIN_MOVE_ORDER, BUILT_IN_FOLDERS } from '@/constants/builtInFolders';
 import { SWIPE_ACTION_GAP, SwipeableAnimatedAction } from './SwipeableAnimatedAction';
@@ -45,9 +43,8 @@ import {
   useAnchoredMenu,
   type AnchoredMenuItem,
 } from '@/components/ui/AnchoredOverflowMenu';
-import { useCreateStyles, Spacing } from '@/theme';
+import { useCreateStyles } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface RecordingSwipeableRowProps {
   recording: Recording;
   children: React.ReactNode;
@@ -60,9 +57,7 @@ interface RecordingSwipeableRowProps {
   /** Recently Deleted: no swipe-right Favorite; swipe left is Delete, Share, More (Recover). */
   isRecentlyDeleted?: boolean;
 }
-
 type MoveDestination = { type: 'built-in'; id: RecordingFolder } | { type: 'user'; id: string; name: string };
-
 export function RecordingSwipeableRow({
   recording,
   children,
@@ -78,13 +73,11 @@ export function RecordingSwipeableRow({
   const fallbackTranslation = useSharedValue(0);
   const [, syncSwipeTranslation] = useReducer((count) => count + 1, 0);
   const updateRecording = useRecordingStore((s) => s.updateRecording);
-
   const bindSwipeTranslation = useCallback((translation: SharedValue<number>) => {
     if (swipeTranslationRef.current === translation) return;
     swipeTranslationRef.current = translation;
     queueMicrotask(syncSwipeTranslation);
   }, []);
-
   const motionTranslation = swipeTranslationRef.current ?? fallbackTranslation;
   const { folders, loadFolders } = useUserFolderStore();
   const { shareBusy, shareMenuItems } = useExport(recording);
@@ -99,38 +92,31 @@ export function RecordingSwipeableRow({
   const longPressMenu = useAnchoredMenu();
   const moveMenu = useAnchoredMenu(moreAnchorRef);
   const moveMenuFromRow = useAnchoredMenu();
-
   const closeThisRow = useCallback(() => {
     swipeableRef.current?.close();
   }, []);
-
   useEffect(() => {
     return () => {
       useActiveSwipeableStore.getState().release(recording.id);
     };
   }, [recording.id]);
-
   const handleSwipeableOpen = useCallback(() => {
     useActiveSwipeableStore.getState().open(recording.id, closeThisRow);
     triggerHaptic();
   }, [closeThisRow, recording.id]);
-
   const handleSwipeableClose = useCallback(() => {
     useActiveSwipeableStore.getState().release(recording.id);
   }, [recording.id]);
-
   const handleSwipeableOpenStartDrag = useCallback(() => {
     const { activeId, closeActive } = useActiveSwipeableStore.getState();
     if (activeId && activeId !== recording.id) {
       closeActive();
     }
   }, [recording.id]);
-
   const toggleFavorite = useCallback(() => {
     swipeableRef.current?.close();
     updateRecording(recording.id, { isFavorite: !recording.isFavorite });
   }, [recording.id, recording.isFavorite, updateRecording]);
-
   const moveToArchive = useCallback(() => {
     swipeableRef.current?.close();
     updateRecording(recording.id, {
@@ -138,7 +124,6 @@ export function RecordingSwipeableRow({
       userFolderId: undefined,
     });
   }, [recording, updateRecording]);
-
   const removeFromArchive = useCallback(() => {
     swipeableRef.current?.close();
     updateRecording(recording.id, {
@@ -146,7 +131,6 @@ export function RecordingSwipeableRow({
       userFolderId: undefined,
     });
   }, [recording, updateRecording]);
-
   const handleMoveTo = useCallback(
     (dest: MoveDestination) => {
       swipeableRef.current?.close();
@@ -164,7 +148,6 @@ export function RecordingSwipeableRow({
     },
     [recording, updateRecording]
   );
-
   const moveDestinations = useCallback((folderList = folders): MoveDestination[] => {
     const builtIn: MoveDestination[] = BUILTIN_MOVE_ORDER.map((id) => ({
       type: 'built-in' as const,
@@ -177,9 +160,7 @@ export function RecordingSwipeableRow({
     }));
     return [...builtIn, ...user];
   }, [folders]);
-
   const [renameDialogVisible, setRenameDialogVisible] = React.useState(false);
-
   const moveMenuItems = React.useMemo((): AnchoredMenuItem[] => {
     return moveDestinations().map((dest) => ({
       label:
@@ -188,8 +169,7 @@ export function RecordingSwipeableRow({
           : dest.name,
       onPress: () => handleMoveTo(dest),
     }));
-  }, [folders, handleMoveTo, moveDestinations]);
-
+  }, [handleMoveTo, moveDestinations]);
   const openMenuAtLastPress = useCallback(
     (menu: { open: () => void; openAtPoint: (x: number, y: number) => void }) => {
       const point = pressAnchorRef.current;
@@ -201,7 +181,6 @@ export function RecordingSwipeableRow({
     },
     [],
   );
-
   const openMoveMenuFor = useCallback(
     async (menu: { open: () => void; openAtPoint: (x: number, y: number) => void }) => {
       await loadFolders();
@@ -211,7 +190,6 @@ export function RecordingSwipeableRow({
     },
     [loadFolders, openMenuAtLastPress],
   );
-
   const handleDelete = useCallback(() => {
     swipeableRef.current?.close();
     Alert.alert(
@@ -225,22 +203,18 @@ export function RecordingSwipeableRow({
       ]
     );
   }, [isRecentlyDeleted, recording.title, onDelete]);
-
   const handleRecover = useCallback(() => {
     swipeableRef.current?.close();
     onRestore?.();
   }, [onRestore]);
-
   const openShareAnchored = useCallback(() => {
     if (shareBusy) return;
     shareMenu.open();
-  }, [shareBusy, shareMenu.open]);
-
+  }, [shareBusy, shareMenu]);
   const openShareAnchoredToRow = useCallback(() => {
     if (shareBusy) return;
     requestAnimationFrame(() => openMenuAtLastPress(shareRowMenu));
-  }, [openMenuAtLastPress, shareBusy]);
-
+  }, [openMenuAtLastPress, shareBusy, shareRowMenu]);
   const promptRename = useCallback(() => {
     if (!onRename) return;
     closeThisRow();
@@ -259,12 +233,10 @@ export function RecordingSwipeableRow({
       setRenameDialogVisible(true);
     }
   }, [closeThisRow, onRename, recording.title]);
-
   const buildRecordingOptionsItems = useCallback(
     (handlers: { onShare: () => void; onMove: () => void }): AnchoredMenuItem[] => {
       const deleteLabel = isRecentlyDeleted ? 'Delete Forever' : 'Delete';
       const items: AnchoredMenuItem[] = [];
-
       if (isRecentlyDeleted) {
         if (onRename) {
           items.push({ label: 'Rename', onPress: promptRename });
@@ -276,7 +248,6 @@ export function RecordingSwipeableRow({
         items.push({ label: deleteLabel, onPress: handleDelete });
         return items;
       }
-
       items.push({
         label: recording.isFavorite ? 'Unfavorite' : 'Favorite',
         onPress: toggleFavorite,
@@ -308,25 +279,22 @@ export function RecordingSwipeableRow({
       toggleFavorite,
     ],
   );
-
   const moreMenuItems = React.useMemo(
     () =>
       buildRecordingOptionsItems({
         onShare: openShareAnchored,
         onMove: () => openMoveMenuFor(moveMenu),
       }),
-    [buildRecordingOptionsItems, openMoveMenuFor, openShareAnchored],
+    [buildRecordingOptionsItems, moveMenu, openMoveMenuFor, openShareAnchored],
   );
-
   const longPressMenuItems = React.useMemo(
     () =>
       buildRecordingOptionsItems({
         onShare: openShareAnchoredToRow,
         onMove: () => openMoveMenuFor(moveMenuFromRow),
       }),
-    [buildRecordingOptionsItems, openMoveMenuFor, openShareAnchoredToRow],
+    [buildRecordingOptionsItems, moveMenuFromRow, openMoveMenuFor, openShareAnchoredToRow],
   );
-
   const handleRowPress = useCallback(() => {
     useActiveSwipeableStore.getState().closeActive();
     if (isRecordingProcessing(recording)) return;
@@ -341,7 +309,6 @@ export function RecordingSwipeableRow({
       onPress();
     }
   }, [children, onPress, recording, retryAction, runRetry]);
-
   const handleRowLongPress = useCallback(
     (event: GestureResponderEvent) => {
       const { pageX, pageY } = event.nativeEvent;
@@ -349,15 +316,12 @@ export function RecordingSwipeableRow({
       triggerHaptic();
       longPressMenu.openAtPoint(pageX, pageY);
     },
-    [longPressMenu.openAtPoint],
+    [longPressMenu],
   );
-
   const renderRightActions = useCallback(
     (progress: SharedValue<number>, translation: SharedValue<number>) => {
       bindSwipeTranslation(translation);
-
       const actionCount = 3;
-
       return (
         <View style={styles.trailingActions}>
           <SwipeableAnimatedAction
@@ -404,17 +368,16 @@ export function RecordingSwipeableRow({
       moreMenu.open,
       openShareAnchored,
       shareBusy,
+      shareMenu.anchorRef,
+      styles.trailingActions,
     ]
   );
-
   const renderLeftActions = useCallback(
     (progress: SharedValue<number>, translation: SharedValue<number>) => {
       bindSwipeTranslation(translation);
-
       if (isRecentlyDeleted) {
         return null;
       }
-
       return (
         <SwipeableAnimatedAction
           progress={progress}
@@ -432,7 +395,6 @@ export function RecordingSwipeableRow({
     },
     [bindSwipeTranslation, isRecentlyDeleted, recording.isFavorite, toggleFavorite]
   );
-
   return (
     <>
       <Swipeable
@@ -463,7 +425,6 @@ export function RecordingSwipeableRow({
           </Pressable>
         </SwipeableMotionCard>
       </Swipeable>
-
       <AnchoredMenuModal
         visible={longPressMenu.visible}
         anchor={longPressMenu.anchor}
@@ -506,7 +467,6 @@ export function RecordingSwipeableRow({
         onClose={moveMenuFromRow.close}
         align="center"
       />
-
       {onRename ? (
         <TextInputDialog
           visible={renameDialogVisible}
@@ -525,7 +485,6 @@ export function RecordingSwipeableRow({
     </>
   );
 }
-
 function createRecordingSwipeableRowStyles(c: ColorPalette) {
   return StyleSheet.create({
   rowPressable: {

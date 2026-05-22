@@ -9,7 +9,6 @@
  * Works in Expo Go (no native module required). The slight latency from
  * file polling (~250–500 ms) is acceptable for speech transcription.
  */
-
 import { AudioModule, requestRecordingPermissionsAsync } from 'expo-audio';
 import type { AudioRecorder, RecordingOptions } from 'expo-audio';
 import {
@@ -29,17 +28,14 @@ import {
 import { base64ToArrayBuffer } from '@/utils/binary/base64ToArrayBuffer';
 import { PlaybackService } from './playbackService';
 import { prepareRecorderAsync } from './playbackSession';
-
 const POLL_INTERVAL_MS = 250;
 /** Caps per-tick decode/send work when the WAV grows faster than the poll interval. */
 const MAX_READ_BYTES_PER_POLL = 16_384;
-
 export class ExpoAudioStreamingCapture {
   /** Always available — expo-audio ships with the Expo managed runtime. */
   static get isSupported(): boolean {
     return Platform.OS === 'ios' || Platform.OS === 'android';
   }
-
   private recorder: AudioRecorder | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private sentBytes = 0;
@@ -49,7 +45,6 @@ export class ExpoAudioStreamingCapture {
   private isPaused = false;
   private meteringLevel = 0;
   private pollInFlight = false;
-
   async start(
     onChunk: (data: ArrayBuffer) => void,
     onError: (msg: string) => void,
@@ -58,17 +53,14 @@ export class ExpoAudioStreamingCapture {
     if (!granted) {
       throw new Error('Microphone permission denied.');
     }
-
     await PlaybackService.stop();
     await configureActiveRecordingSession();
-
     this.onChunk = onChunk;
     this.onCaptureError = onError;
     this.sentBytes = 0;
     this.isPaused = false;
     this.meteringLevel = 0;
     this.startTime = Date.now();
-
     const AudioRecorderCtor = (AudioModule as any)['AudioRecorder'] as new (
       options: Partial<RecordingOptions>
     ) => AudioRecorder;
@@ -77,10 +69,8 @@ export class ExpoAudioStreamingCapture {
     recorder.record();
     this.recorder = recorder;
     attachActiveRecordingControls(recorder);
-
     this.startPolling();
   }
-
   getMetering(): number {
     if (!this.recorder || this.isPaused) return 0;
     try {
@@ -93,28 +83,23 @@ export class ExpoAudioStreamingCapture {
     }
     return this.meteringLevel;
   }
-
   pause(): void {
     this.isPaused = true;
     this.meteringLevel = 0;
     this.recorder?.pause();
     this.stopPolling();
   }
-
   async resume(): Promise<void> {
     this.isPaused = false;
     await reapplyActiveRecordingSession();
     this.recorder?.record();
     this.startPolling();
   }
-
   async stop(): Promise<{ uri: string; duration: number }> {
     this.stopPolling();
-
     const fallbackDuration = (Date.now() - this.startTime) / 1000;
     let uri = this.recorder?.uri ?? '';
     let duration = fallbackDuration;
-
     if (this.recorder) {
       const recorder = this.recorder;
       let alreadyStopped = false;
@@ -126,56 +111,44 @@ export class ExpoAudioStreamingCapture {
       } catch {
         // Proceed with native stop.
       }
-
       await finalizeActiveRecorderStop(recorder, alreadyStopped);
       this.recorder = null;
     }
-
     this.onChunk = null;
     this.onCaptureError = null;
-
     return { uri, duration };
   }
-
   private startPolling(): void {
     this.stopPolling();
     this.pollTimer = setInterval(() => void this.pollFile(), POLL_INTERVAL_MS);
   }
-
   private stopPolling(): void {
     if (this.pollTimer !== null) {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
   }
-
   private async pollFile(): Promise<void> {
     if (this.pollInFlight || this.isPaused) return;
     const uri = this.recorder?.uri;
     if (!uri) return;
-
     this.pollInFlight = true;
     try {
       const info = await getInfoAsync(uri);
       if (!info.exists) return;
-
       const totalBytes: number = (info as { size?: number }).size ?? 0;
       // Skip the 44-byte WAV header on the very first read.
       const readFrom = this.sentBytes === 0 ? WAV_HEADER_BYTES : this.sentBytes;
       const pendingBytes = totalBytes - readFrom;
       if (pendingBytes <= 0) return;
-
       const readLength = Math.min(pendingBytes, MAX_READ_BYTES_PER_POLL);
-
       const b64 = await readAsStringAsync(uri, {
         encoding: EncodingType.Base64,
         position: readFrom,
         length: readLength,
       });
-
       const buffer = base64ToArrayBuffer(b64);
       if (buffer.byteLength === 0) return;
-
       const recorder = this.recorder;
       let usedNativeMetering = false;
       if (recorder) {
@@ -190,12 +163,10 @@ export class ExpoAudioStreamingCapture {
           // Fall back to PCM-derived metering.
         }
       }
-
       if (!usedNativeMetering) {
         const instant = pcmBufferToLevel(buffer);
         this.meteringLevel = smoothMeteringLevel(this.meteringLevel, instant);
       }
-
       this.onChunk?.(buffer);
       this.sentBytes = readFrom + readLength;
     } catch (err: unknown) {

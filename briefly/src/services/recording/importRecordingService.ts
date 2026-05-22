@@ -14,24 +14,22 @@ import {
   extensionFromFilename,
   titleFromImportFilename,
 } from '@/utils/recording/importKind';
-import { minRecordingDurationHint } from '@/utils/recording/recordingValidation';
-import { parseTranscriptBackupJson } from '@/utils/recording/transcriptBackup';
+import { minRecordingDurationHint ,
+  MIN_RECORDING_DURATION_SEC,
+  MIN_RECORDING_FILE_BYTES,
+} from '@/utils/recording/recordingValidation';
+import { parseTranscriptBackupJson , backupEntriesToRecordings } from '@/utils/recording/transcriptBackup';
 import { interceptOnDeviceSummarizationIfBlocked } from '@/utils/processing/localLlmSummarizationGate';
 import { logger } from '@/utils/logging/logger';
-import { backupEntriesToRecordings } from '@/utils/recording/transcriptBackup';
+
 import {
   filterNewBackupEntries,
   findDuplicateAudioRecording,
 } from '@/utils/recording/importDeduplication';
-import {
-  MIN_RECORDING_DURATION_SEC,
-  MIN_RECORDING_FILE_BYTES,
-} from '@/utils/recording/recordingValidation';
 
 export type ImportRecordingResult =
   | { kind: 'json-backup'; count: number; skipped: number }
   | { kind: 'audio'; recordingId: string; processingStarted: boolean };
-
 function confirmImport(message: string, confirmLabel = 'Import'): Promise<boolean> {
   return new Promise((resolve) => {
     Alert.alert('Import', message, [
@@ -40,14 +38,12 @@ function confirmImport(message: string, confirmLabel = 'Import'): Promise<boolea
     ]);
   });
 }
-
 async function importJsonBackup(
   jsonText: string,
 ): Promise<{ count: number; skipped: number }> {
   const parsed = parseTranscriptBackupJson(jsonText);
   const { recordings, importRecordings } = useRecordingStore.getState();
   const { entries, skipped } = filterNewBackupEntries(parsed, recordings);
-
   if (entries.length === 0) {
     throw new Error(
       skipped > 0
@@ -55,7 +51,6 @@ async function importJsonBackup(
         : 'No transcripts were found in this file.',
     );
   }
-
   const skippedNote =
     skipped > 0
       ? ` ${skipped} duplicate${skipped === 1 ? '' : 's'} will be skipped.`
@@ -64,7 +59,6 @@ async function importJsonBackup(
     `Import ${entries.length} transcript${entries.length === 1 ? '' : 's'} from this backup?${skippedNote}`,
   );
   if (!confirmed) return { count: 0, skipped };
-
   const { summarizationMode } = useSettingsStore.getState();
   const incoming = backupEntriesToRecordings(
     entries,
@@ -78,7 +72,6 @@ async function importJsonBackup(
   });
   return { count: incoming.length, skipped };
 }
-
 async function importAudioAsset(params: {
   uri: string;
   name: string;
@@ -91,25 +84,20 @@ async function importAudioAsset(params: {
   if (!onDisk.exists) {
     throw new Error('Could not copy the audio file into the app.');
   }
-
   const fileSize = onDisk.size ?? 0;
   let durationSec = await probeAudioDurationSec(filePath);
-
   if (fileSize < MIN_RECORDING_FILE_BYTES) {
     throw new Error(
       'This audio file is too small to transcribe. Use a longer recording (at least 10 seconds).',
     );
   }
-
   if (durationSec > 0 && durationSec < MIN_RECORDING_DURATION_SEC) {
     throw new Error(minRecordingDurationHint('save'));
   }
-
   if (durationSec <= 0) {
     // Compressed imports may not expose duration locally; transcription uses the file directly.
     durationSec = MIN_RECORDING_DURATION_SEC;
   }
-
   const { recordings } = useRecordingStore.getState();
   const duplicate = findDuplicateAudioRecording(recordings, {
     fileSize,
@@ -120,13 +108,11 @@ async function importAudioAsset(params: {
       `"${duplicate.title}" already uses this audio file. Import a different file or delete the existing recording first.`,
     );
   }
-
   const displayName = params.name.trim() || 'Audio file';
   const confirmed = await confirmImport(
     `Import "${displayName}" and run transcription and summarization?`,
   );
   if (!confirmed) return null;
-
   const { summarizationMode } = useSettingsStore.getState();
   const { id, summarizationBlocked } = await saveCapturedRecording({
     duration: durationSec,
@@ -135,43 +121,35 @@ async function importAudioAsset(params: {
     markImported: true,
     title: titleFromImportFilename(params.name),
   });
-
   if (summarizationBlocked) {
     interceptOnDeviceSummarizationIfBlocked(summarizationMode);
   }
-
   logger.info('Import', 'Imported audio for processing', {
     recordingId: id,
     durationSec,
     fileSize,
     processingStarted: !summarizationBlocked,
   });
-
   return {
     kind: 'audio',
     recordingId: id,
     processingStarted: !summarizationBlocked,
   };
 }
-
 export async function importFromPicker(): Promise<ImportRecordingResult | null> {
   const result = await pickImportDocument();
-
   if (result.canceled || !result.assets?.[0]) {
     return null;
   }
-
   const asset = result.assets[0];
   const kind = detectImportKind({ name: asset.name, mimeType: asset.mimeType });
   if (!kind) {
     throw new Error('Unsupported file type. Choose a Briefly JSON backup or an audio file.');
   }
-
   const picked = new File(asset.uri);
   if (!picked.exists) {
     throw new Error('Could not read the selected file.');
   }
-
   if (kind === 'json-backup') {
     const jsonText = await picked.text();
     const { count, skipped } = await importJsonBackup(jsonText);
@@ -186,13 +164,11 @@ export async function importFromPicker(): Promise<ImportRecordingResult | null> 
     );
     return { kind: 'json-backup', count, skipped };
   }
-
   const audioResult = await importAudioAsset({
     uri: asset.uri,
     name: asset.name ?? 'Imported audio',
   });
   if (!audioResult || audioResult.kind !== 'audio') return null;
-
   Alert.alert(
     'Import started',
     audioResult.processingStarted

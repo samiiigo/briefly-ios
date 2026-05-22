@@ -4,14 +4,12 @@ import { RECORDING_LIST_HEADER_GAP } from '@/utils/list/flattenRecordingSections
 import { RecentSearchCard } from './RecentSearchCard';
 import { useCreateStyles, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   queries: string[];
   onSelect: (query: string) => void;
   onRemove: (query: string) => void;
   onClearAll: () => void;
 }
-
 export function RecentSearchesSection({
   queries,
   onSelect,
@@ -20,7 +18,6 @@ export function RecentSearchesSection({
 }: Props) {
   const styles = useCreateStyles(createRecentSearchesSectionStyles);
   if (queries.length === 0) return null;
-
   return (
     <View style={styles.section}>
       <View style={styles.headerRow}>
@@ -42,7 +39,6 @@ export function RecentSearchesSection({
     </View>
   );
 }
-
 function createRecentSearchesSectionStyles(c: ColorPalette) {
   return StyleSheet.create({
     section: {

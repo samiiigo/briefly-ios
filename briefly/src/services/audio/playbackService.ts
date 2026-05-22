@@ -1,26 +1,20 @@
 /**
- * PlaybackService (SRP + ISP)
+ * PlaybackService
  *
- * Single responsibility: audio playback control.
  * Consumers that only need playback (e.g. TranscriptScreen) depend on
- * this small interface instead of the entire AudioService (ISP).
  */
-
 import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
 import { logger } from '@/utils/logging/logger';
 import { PlaybackControls, PlaybackStatusUpdate } from './contracts';
 import { configurePlaybackAudioSession, releasePlaybackAudioSession } from './playbackSession';
-
 class PlaybackServiceClass implements PlaybackControls {
   private player: AudioPlayer | null = null;
   private statusListener: { remove: () => void } | null = null;
-
   private detachStatusListener(): void {
     this.statusListener?.remove();
     this.statusListener = null;
   }
-
   async play(
     uri: string,
     onPlaybackStatusUpdate?: (status: PlaybackStatusUpdate) => void,
@@ -29,20 +23,16 @@ class PlaybackServiceClass implements PlaybackControls {
     if (!trimmed) {
       throw new Error('No audio file path for playback');
     }
-
     logger.info('AUDIO', 'Starting playback', { uri: trimmed });
     await this.stop();
     await configurePlaybackAudioSession();
-
     const player = createAudioPlayer(trimmed, {
       downloadFirst: Platform.OS === 'ios' || Platform.OS === 'android',
       updateInterval: 250,
     });
-
     await new Promise<void>((resolve, reject) => {
       let started = false;
       let settled = false;
-
       const fail = (error: unknown) => {
         if (settled) return;
         settled = true;
@@ -54,7 +44,6 @@ class PlaybackServiceClass implements PlaybackControls {
         }
         reject(error instanceof Error ? error : new Error(String(error)));
       };
-
       const listener = player.addListener('playbackStatusUpdate', (status) => {
         onPlaybackStatusUpdate?.({
           position: status.currentTime,
@@ -62,7 +51,6 @@ class PlaybackServiceClass implements PlaybackControls {
           playing: status.playing,
           didJustFinish: status.didJustFinish,
         });
-
         if (!started && status.isLoaded) {
           started = true;
           try {
@@ -75,9 +63,7 @@ class PlaybackServiceClass implements PlaybackControls {
           }
         }
       });
-
       this.statusListener = listener;
-
       setTimeout(() => {
         if (!started && !settled) {
           fail(new Error('Audio failed to load'));
@@ -85,21 +71,17 @@ class PlaybackServiceClass implements PlaybackControls {
       }, 15_000);
     });
   }
-
   async pause(): Promise<void> {
     if (this.player) this.player.pause();
   }
-
   async resume(): Promise<void> {
     if (!this.player) return;
     await configurePlaybackAudioSession();
     this.player.play();
   }
-
   async seekTo(seconds: number): Promise<void> {
     if (this.player) await this.player.seekTo(seconds);
   }
-
   async stop(): Promise<void> {
     this.detachStatusListener();
     if (this.player) {
@@ -116,10 +98,8 @@ class PlaybackServiceClass implements PlaybackControls {
     }
     await releasePlaybackAudioSession();
   }
-
   async setSpeed(rate: number): Promise<void> {
     if (this.player) this.player.playbackRate = rate;
   }
 }
-
 export const PlaybackService = new PlaybackServiceClass();

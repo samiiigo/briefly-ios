@@ -1,7 +1,5 @@
 import { create } from 'zustand';
-
 const FLASH_MS = 3000;
-
 interface RecordingRetryFlashState {
   pendingRetryIds: Record<string, true>;
   flashUntilById: Record<string, number>;
@@ -9,17 +7,14 @@ interface RecordingRetryFlashState {
   clearRetryPending: (recordingId: string) => void;
   triggerRetryFlash: (recordingId: string) => void;
 }
-
 export const useRecordingRetryFlashStore = create<RecordingRetryFlashState>((set, get) => ({
   pendingRetryIds: {},
   flashUntilById: {},
-
   markRetryPending: (recordingId) => {
     set((s) => ({
       pendingRetryIds: { ...s.pendingRetryIds, [recordingId]: true },
     }));
   },
-
   clearRetryPending: (recordingId) => {
     set((s) => {
       if (!s.pendingRetryIds[recordingId]) return s;
@@ -28,7 +23,6 @@ export const useRecordingRetryFlashStore = create<RecordingRetryFlashState>((set
       return { pendingRetryIds };
     });
   },
-
   triggerRetryFlash: (recordingId) => {
     const until = Date.now() + FLASH_MS;
     set((s) => ({
@@ -51,5 +45,4 @@ export const useRecordingRetryFlashStore = create<RecordingRetryFlashState>((set
     }, FLASH_MS);
   },
 }));
-
 export { FLASH_MS as RECORDING_RETRY_FLASH_MS };

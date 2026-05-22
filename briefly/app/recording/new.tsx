@@ -1,30 +1,18 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  Alert,
-  BackHandler,
   Pressable,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { useFloatingTabBarLayout } from '@/components/navigation/useFloatingTabBarLayout';
-import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import {
-  RecordingService,
-  DecorativeLivePreview,
-  DecorativeOnDeviceLivePreview,
-  LiveTranscriptionService,
-} from '@/services/audio';
-import { saveCapturedRecording } from '@/services/recording/saveCapturedRecording';
-import { interceptOnDeviceSummarizationIfBlocked } from '@/utils/processing/localLlmSummarizationGate';
-import { RecordingFolder } from '@/types';
+import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
+import { useFloatingTabBarLayout } from '@/components/navigation/layout/useFloatingTabBarLayout';
+import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
+import { useLocalSearchParams } from 'expo-router';
 import { WaveformVisualizer } from '@/components/features/recording/WaveformVisualizer';
 import {
   Spacing,
@@ -35,33 +23,9 @@ import {
   withAppFont,
 } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-import { useRecordingStore } from '@/context/useRecordingStore';
-import { useSettingsStore } from '@/context/useSettingsStore';
-import {
-  normalizeTranscriptionMode,
-  resolveDecorativePreviewEngine,
-  canRunDecorativeLivePreview,
-} from '@/utils/processing/transcriptionMode';
+import { RecordingFolder } from '@/types';
 import { formatTimestamp } from '@/utils';
-import {
-  isRecordingTooShort,
-  minRecordingDurationHint,
-  STOP_EARLY_CONFIRM_THRESHOLD_SEC,
-} from '@/utils/recording/recordingValidation';
-import { openAppSettings } from '@/utils/recording/recordingPermissions';
-import { useTimer } from '@/hooks/useTimer';
-import { useLiveTranscript } from '@/hooks/useLiveTranscript';
-import { useAppInterruptGuard } from '@/hooks/useAppInterruptGuard';
-import {
-  onRecordingEnteredBackground,
-  onRecordingReturnedForeground,
-  registerRecordingStoppedHandler,
-} from '@/services/audio/recordingSession';
-import { updateRecordingLiveActivity } from '@/services/audio/recordingLiveActivity';
-import { isAndroid } from '@/utils/platform';
-function isPermissionError(message: string): boolean {
-  return /microphone|permission|speech recognition/i.test(message);
-}
+import { useNewRecordingSession } from '@/hooks/recording/useNewRecordingSession';
 
 /** Pause/stop row + labels (above bottom chrome fade). */
 const RECORDING_CONTROLS_HEIGHT = 96;
@@ -73,441 +37,40 @@ export default function NewRecordingScreen() {
   const isLight = useResolvedColorScheme() === 'light';
   const { scrollPaddingTop } = useTopChromeLayout();
   const { bottomOffset } = useFloatingTabBarLayout();
-  const router = useRouter();
+  const livePreviewScrollRef = useRef<ScrollView | null>(null);
   const params = useLocalSearchParams<{
     targetFolder?: string;
     targetUserFolderId?: string;
     markImported?: string;
   }>();
-  const setLiveTranscript = useRecordingStore((s) => s.setLiveTranscript);
-  const { transcriptionMode: settingsTranscriptionMode, showLivePreview } = useSettingsStore();
-  const { elapsed, elapsedRef, start: startTimer, stop: stopTimer } = useTimer();
-  const live = useLiveTranscript(setLiveTranscript, elapsedRef);
-  const { finalText, partialText, liveSegments, isStopped, onPartial, onFinal, flush, reset, cleanup } =
-    live;
-  const [isPaused, setIsPaused] = useState(false);
-  const [isStarted, setIsStarted] = useState(false);
-  const [isStopping, setIsStopping] = useState(false);
-  const [startFailed, setStartFailed] = useState(false);
-  const [interruptHint, setInterruptHint] = useState<string | null>(null);
-  const livePreviewScrollRef = useRef<ScrollView | null>(null);
-  const isPausedRef = useRef(false);
-  const previewEngineRef = useRef<'cloud' | 'on-device' | 'none'>('none');
-  const isMountedRef = useRef(true);
-
-  const settingsMode = normalizeTranscriptionMode(settingsTranscriptionMode);
-  const previewEngine = resolveDecorativePreviewEngine(settingsMode, {
-    canCloudLive: LiveTranscriptionService.isSupported,
-    canOnDeviceLive: LiveTranscriptionService.isOnDeviceSupported,
-  });
-  const showLivePreviewPanel = canRunDecorativeLivePreview(showLivePreview, previewEngine);
-
-  const getMetering = useCallback(() => RecordingService.getMetering(), []);
-
-  const stopDecorativePreview = useCallback(() => {
-    if (previewEngineRef.current === 'cloud') {
-      DecorativeLivePreview.stop();
-    } else if (previewEngineRef.current === 'on-device') {
-      DecorativeOnDeviceLivePreview.stop();
-    }
-    previewEngineRef.current = 'none';
-  }, []);
-
-  const startDecorativePreview = useCallback(async () => {
-    if (!showLivePreviewPanel) return;
-    previewEngineRef.current = previewEngine;
-    if (previewEngine === 'cloud') {
-      await DecorativeLivePreview.start(
-        () => RecordingService.getActiveRecordingUri(),
-        {
-          onPartial,
-          onFinal,
-          onConnectionState: () => {},
-          onError: (msg) => {
-            if (liveSegments.current.length === 0) {
-              setLiveTranscript('Reconnecting…');
-            }
-            if (/permission|denied|not authorized/i.test(msg)) {
-              setInterruptHint('Speech recognition may be unavailable. Check Settings.');
-            }
-          },
-        },
-      );
-      return;
-    }
-    if (previewEngine === 'on-device') {
-      await DecorativeOnDeviceLivePreview.start({
-        onPartial,
-        onFinal,
-        onConnectionState: () => {},
-        onError: (msg) => {
-          if (/permission|denied|not authorized/i.test(msg)) {
-            setInterruptHint('Speech recognition may be unavailable. Check Settings.');
-          }
-        },
-      });
-    }
-  }, [onFinal, onPartial, previewEngine, setLiveTranscript, showLivePreviewPanel]);
-
-  const teardownCapture = useCallback(async () => {
-    try {
-      stopDecorativePreview();
-      if (isStarted) {
-        await RecordingService.stop();
-      }
-    } catch {
-      // Best-effort cleanup
-    }
-  }, [isStarted, stopDecorativePreview]);
-
-  const showPermissionAlert = useCallback(
-    (message: string) => {
-      Alert.alert('Microphone access needed', message, [
-        { text: 'Cancel', style: 'cancel', onPress: () => router.replace('/(tabs)') },
-        { text: 'Open Settings', onPress: () => openAppSettings() },
-      ]);
-    },
-    [router],
+  const saveParams = useMemo(
+    () => ({
+      targetFolder: params.targetFolder as RecordingFolder | undefined,
+      targetUserFolderId: params.targetUserFolderId,
+      markImported: params.markImported === 'true',
+    }),
+    [params.markImported, params.targetFolder, params.targetUserFolderId],
   );
-
-  const executeStopAndSaveRef = useRef<() => Promise<void>>(async () => {});
-
-  useEffect(() => {
-    if (!isAndroid) return;
-
-    registerRecordingStoppedHandler(() => {
-      void executeStopAndSaveRef.current();
-    });
-    return () => registerRecordingStoppedHandler(null);
-  }, []);
-
-  useEffect(() => {
-    if (!isStarted || startFailed || isStopped.current) return;
-
-    updateRecordingLiveActivity(elapsedRef.current, isPausedRef.current);
-    const interval = setInterval(() => {
-      updateRecordingLiveActivity(elapsedRef.current, isPausedRef.current);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isStarted, startFailed, isPaused, elapsed]);
-
-  useAppInterruptGuard({
-    enabled: isStarted && !startFailed && !isStopped.current,
-    onBackground: () => {
-      void (async () => {
-        const hint = await onRecordingEnteredBackground();
-        if (hint) setInterruptHint(hint);
-      })();
-    },
-    onForeground: () => {
-      void onRecordingReturnedForeground();
-      setInterruptHint(null);
-    },
-  });
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    reset();
-    setLiveTranscript('');
-
-    (async () => {
-      try {
-        await RecordingService.start();
-        if (showLivePreviewPanel) {
-          await new Promise((r) => setTimeout(r, 300));
-          try {
-            await startDecorativePreview();
-          } catch {
-            // Decorative preview is optional; recording still works without it.
-          }
-        }
-        if (!isMountedRef.current) {
-          await teardownCapture();
-          return;
-        }
-        setIsStarted(true);
-        startTimer();
-      } catch (err: unknown) {
-        if (!isMountedRef.current) return;
-        setStartFailed(true);
-        const message = err instanceof Error ? err.message : 'Could not start recording.';
-        if (isPermissionError(message)) {
-          showPermissionAlert(message);
-        } else {
-          Alert.alert('Could not start recording', message, [
-            { text: 'OK', onPress: () => router.replace('/(tabs)') },
-          ]);
-        }
-      }
-    })();
-
-    return () => {
-      isMountedRef.current = false;
-      stopTimer();
-      cleanup();
-      void teardownCapture();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const resumeRecording = useCallback(async () => {
-    if (!isStarted || startFailed || isStopped.current || !isPausedRef.current) return;
-    try {
-      if (previewEngineRef.current === 'cloud') DecorativeLivePreview.resume();
-      else if (previewEngineRef.current === 'on-device') await DecorativeOnDeviceLivePreview.resume();
-      await RecordingService.resume();
-      startTimer();
-      setIsPaused(false);
-      isPausedRef.current = false;
-      updateRecordingLiveActivity(elapsedRef.current, false);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Could not resume recording.';
-      Alert.alert('Error', message);
-    }
-  }, [isStarted, startFailed, startTimer]);
-
-  const pauseRecording = useCallback(async () => {
-    if (!isStarted || startFailed || isStopped.current || isPausedRef.current) return;
-    try {
-      if (previewEngineRef.current === 'cloud') DecorativeLivePreview.pause();
-      else if (previewEngineRef.current === 'on-device') await DecorativeOnDeviceLivePreview.pause();
-      await RecordingService.pause();
-      stopTimer();
-      setIsPaused(true);
-      isPausedRef.current = true;
-      updateRecordingLiveActivity(elapsedRef.current, true);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Could not pause recording.';
-      Alert.alert('Error', message);
-    }
-  }, [isStarted, startFailed, stopTimer]);
-
-  const handlePause = async () => {
-    if (isPausedRef.current) await resumeRecording();
-    else await pauseRecording();
-  };
-
-  const handleDiscard = useCallback(() => {
-    Alert.alert('Discard recording', 'This recording will be permanently deleted.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Discard',
-        style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            if (!isStopped.current && isStarted && !startFailed) {
-              isStopped.current = true;
-              stopTimer();
-              cleanup();
-              await teardownCapture();
-            }
-            router.replace('/(tabs)');
-          })();
-        },
-      },
-    ]);
-  }, [cleanup, isStarted, router, startFailed, stopTimer, teardownCapture]);
-
-  const handleBack = useCallback(() => {
-    if (isStarted && !isStopped.current && !startFailed) {
-      handleDiscard();
-      return;
-    }
-    router.replace('/(tabs)');
-  }, [handleDiscard, isStarted, router, startFailed]);
-
-  useEffect(() => {
-    const onBackPress = () => {
-      if (isStarted && !isStopped.current && !startFailed) {
-        handleDiscard();
-        return true; // Prevent default behavior
-      }
-      return false; // Let default behavior happen (e.g., if failed to start)
-    };
-
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      onBackPress
-    );
-
-    return () => backHandler.remove();
-  }, [isStarted, startFailed, handleDiscard]);
-
-  const pauseIfRecording = useCallback(async (): Promise<boolean> => {
-    if (!isStarted || startFailed || isPausedRef.current) return true;
-    await pauseRecording();
-    return isPausedRef.current;
-  }, [isStarted, pauseRecording, startFailed]);
-
-  const discardActiveRecording = useCallback(async () => {
-    if (isStopped.current) {
-      router.replace('/(tabs)');
-      return;
-    }
-    setIsStopping(true);
-    isStopped.current = true;
-    stopTimer();
-    cleanup();
-    await teardownCapture();
-    router.replace('/(tabs)');
-  }, [cleanup, router, stopTimer, teardownCapture]);
-
-  const executeStopAndSave = useCallback(async () => {
-    if (isStopped.current || isStopping || startFailed) return;
-
-    setIsStopping(true);
-    isStopped.current = true;
-    stopTimer();
-    cleanup();
-
-    let result;
-    try {
-      stopDecorativePreview();
-      result = await RecordingService.stop();
-    } catch (e: unknown) {
-      try {
-        await new Promise((r) => setTimeout(r, 300));
-        result = await RecordingService.stop();
-      } catch (retryErr: unknown) {
-        isStopped.current = false;
-        setIsStopping(false);
-        if (!isPausedRef.current) startTimer();
-        const message =
-          retryErr instanceof Error ? retryErr.message : 'Could not stop recording.';
-        Alert.alert('Error', message);
-        return;
-      }
-    }
-
-    flush();
-    const stoppedDurationSec = result?.duration || elapsed;
-    const filePath = result?.uri ?? '';
-    const fileSize = result?.fileSize ?? 0;
-
-    if (
-      isRecordingTooShort({
-        durationSec: stoppedDurationSec,
-        filePath,
-        fileSizeBytes: fileSize,
-      })
-    ) {
-      setIsStopping(false);
-      isStopped.current = false;
-      Alert.alert('Recording too short', minRecordingDurationHint('stop'), [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') },
-      ]);
-      return;
-    }
-
-    if (!filePath) {
-      setIsStopping(false);
-      Alert.alert(
-        'Recording unavailable',
-        'No audio was saved. Check microphone permissions and try again.',
-        [
-          { text: 'Cancel', style: 'cancel', onPress: () => router.replace('/(tabs)') },
-          { text: 'Open Settings', onPress: () => openAppSettings() },
-        ],
-      );
-      return;
-    }
-
-    try {
-      const { summarizationBlocked } = await saveCapturedRecording({
-        duration: stoppedDurationSec,
-        filePath,
-        fileSize,
-        targetFolder: (params.targetFolder as RecordingFolder) ?? 'unlisted',
-        targetUserFolderId: params.targetUserFolderId,
-        markImported: params.markImported === 'true',
-      });
-      if (summarizationBlocked) {
-        interceptOnDeviceSummarizationIfBlocked(useSettingsStore.getState().summarizationMode);
-      }
-      router.replace('/(tabs)');
-    } catch {
-      isStopped.current = false;
-      setIsStopping(false);
-      Alert.alert('Could not save', 'Something went wrong while saving. Please try again.');
-    }
-  }, [
-    cleanup,
-    elapsed,
-    flush,
+  const session = useNewRecordingSession({ saveParams });
+  const {
+    hrs,
+    min,
+    sec,
+    isPaused,
+    isStarted,
     isStopping,
-    params.markImported,
-    params.targetFolder,
-    params.targetUserFolderId,
-    router,
     startFailed,
-    startTimer,
-    stopDecorativePreview,
-    stopTimer,
-  ]);
-
-  executeStopAndSaveRef.current = executeStopAndSave;
-
-  const handleStop = async () => {
-    if (isStopped.current || isStopping || startFailed) return;
-
-    const durationSec = elapsedRef.current || elapsed;
-    if (durationSec < STOP_EARLY_CONFIRM_THRESHOLD_SEC) {
-      const paused = await pauseIfRecording();
-      if (!paused) return;
-
-      Alert.alert(
-        'Stop recording?',
-        `Recordings under ${STOP_EARLY_CONFIRM_THRESHOLD_SEC} seconds won't be saved. Are you sure you want to stop?`,
-        [
-          {
-            text: 'Resume',
-            style: 'cancel',
-            onPress: () => {
-              void resumeRecording();
-            },
-          },
-          {
-            text: 'Stop',
-            style: 'destructive',
-            onPress: () => {
-              void discardActiveRecording();
-            },
-          },
-        ],
-      );
-      return;
-    }
-
-    const paused = await pauseIfRecording();
-    if (!paused) return;
-
-    Alert.alert(
-      'Save recording?',
-      'Your recording will be saved and processing will start.',
-      [
-        {
-          text: 'Keep Recording',
-          style: 'cancel',
-          onPress: () => {
-            void resumeRecording();
-          },
-        },
-        {
-          text: 'Save',
-          onPress: () => {
-            void executeStopAndSave();
-          },
-        },
-      ],
-    );
-  };
-
-  const hrs = Math.floor(elapsed / 3600);
-  const min = Math.floor((elapsed % 3600) / 60);
-  const sec = elapsed % 60;
-  const hasAnyText = finalText.length > 0 || partialText.length > 0;
-  const placeholder = showLivePreviewPanel ? 'Listening…' : 'Transcription after you stop.';
+    interruptHint,
+    showLivePreviewPanel,
+    partialText,
+    liveSegments,
+    hasAnyText,
+    placeholder,
+    getMetering,
+    handlePause,
+    handleStop,
+    handleBack,
+  } = session;
 
   return (
     <View style={sl.container}>
@@ -557,7 +120,6 @@ export default function NewRecordingScreen() {
             getMetering={getMetering}
           />
         </View>
-
         {showLivePreviewPanel ? (
           <View style={s.lpC}>
             <View style={s.lpH}>
@@ -594,7 +156,6 @@ export default function NewRecordingScreen() {
           </View>
         ) : null}
       </View>
-
       <View style={s.ctrlsChrome} pointerEvents="box-none">
         <View style={[s.ctrls, { paddingBottom: bottomOffset }]} pointerEvents="box-none">
           <View style={s.ctrlItem}>
@@ -627,7 +188,6 @@ export default function NewRecordingScreen() {
           </View>
         </View>
       </View>
-
       <StackScreenHeader title="New Recording" showBack onBack={handleBack} />
     </View>
   );

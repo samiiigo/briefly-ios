@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { Recording } from '@/types';
 import { buildRecordingSummaryMarkdown } from './recordingSummaryMarkdown';
-
 const baseRecording: Recording = {
   id: 'rec-1',
   title: 'Team Sync: Q2 Planning',
@@ -19,7 +18,6 @@ const baseRecording: Recording = {
     { id: '2', text: 'Hire two contractors for mobile polish' },
   ],
 };
-
 describe('buildRecordingSummaryMarkdown', () => {
   it('includes title, meta, insights, and multi-sentence summary bullets', () => {
     const md = buildRecordingSummaryMarkdown(baseRecording, { folderLabel: 'Work' });
@@ -33,7 +31,6 @@ describe('buildRecordingSummaryMarkdown', () => {
     assert.match(md, /- Launch timeline moved to mid-June/);
     assert.match(md, /_Generated with Briefly_/);
   });
-
   it('keeps a single-sentence summary as prose', () => {
     const md = buildRecordingSummaryMarkdown({
       ...baseRecording,
@@ -43,7 +40,6 @@ describe('buildRecordingSummaryMarkdown', () => {
     assert.match(md, /## Key insights/);
     assert.ok(md.indexOf('## Key insights') < md.indexOf('## Summary'));
   });
-
   it('can include transcript segments', () => {
     const md = buildRecordingSummaryMarkdown(
       {

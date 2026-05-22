@@ -1,11 +1,9 @@
 import { formatRecentsCardDate } from '@/utils/formatting/formatting';
-
 function toTimestampMs(timestamp: number): number {
   if (timestamp <= 0 || !Number.isFinite(timestamp)) return timestamp;
   if (timestamp < 1e12 && timestamp > 1e9) return timestamp * 1000;
   return timestamp;
 }
-
 /** Lowercase date/month tokens appended to recording search haystacks. */
 export function buildRecordingDateSearchTerms(timestamp: number): string {
   const ts = toTimestampMs(timestamp);
@@ -16,9 +14,7 @@ export function buildRecordingDateSearchTerms(timestamp: number): string {
   const month = date.getMonth() + 1;
   const year = date.getFullYear();
   const yearShort = String(year).slice(-2);
-
   const recentsLine = formatRecentsCardDate(ts).toLowerCase();
-
   const parts = [
     monthLong,
     monthShort,
@@ -37,6 +33,5 @@ export function buildRecordingDateSearchTerms(timestamp: number): string {
     recentsLine,
     recentsLine.replace(' . ', ' '),
   ];
-
   return parts.join('\u0001');
 }

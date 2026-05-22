@@ -1,7 +1,6 @@
 import { CLIENT_RATE_LIMIT_RETRY_AFTER_SEC } from './limits';
 import { RateLimitError } from './RateLimitError';
 import { assertPublicEndpointRateLimit } from './rateLimiter';
-
 function parseRetryAfterSec(response: Response): number | undefined {
   const header = response.headers.get('Retry-After');
   if (!header) return undefined;
@@ -14,7 +13,6 @@ function parseRetryAfterSec(response: Response): number | undefined {
   }
   return undefined;
 }
-
 /**
  * Outbound fetch for third-party APIs: applies client rate limits, surfaces 429s clearly.
  * Non-public URLs pass through unchanged (local file URLs, etc.).
@@ -29,11 +27,8 @@ export async function secureFetch(
       : input instanceof URL
         ? input.toString()
         : (input as Request).url;
-
   await assertPublicEndpointRateLimit(url);
-
   const response = await fetch(input, init);
-
   if (response.status === 429) {
     const retryAfterSec =
       parseRetryAfterSec(response) ?? CLIENT_RATE_LIMIT_RETRY_AFTER_SEC;
@@ -45,6 +40,5 @@ export async function secureFetch(
       retryAfterSec
     );
   }
-
   return response;
 }

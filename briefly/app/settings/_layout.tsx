@@ -1,10 +1,8 @@
 import { View, Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import { useThemedStackShell } from '@/components/navigation/themedStackLayout';
-
+import { useThemedStackShell } from '@/components/navigation/layout/themedStackLayout';
 export default function SettingsLayout() {
   const shell = useThemedStackShell();
-
   return (
     <View style={shell.root}>
       <Stack

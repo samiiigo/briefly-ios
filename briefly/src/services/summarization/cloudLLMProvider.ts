@@ -1,14 +1,3 @@
-/**
- * CloudLLMProvider — base class for OpenAI-compatible chat completion APIs (OCP)
- *
- * Encapsulates the shared HTTP request/response logic. Concrete subclasses
- * only supply their endpoint URL, model name, and request headers — so new
- * LLM providers can be added by extending this class without modifying it.
- *
- * This also satisfies DIP: callers depend on the SummarizationProvider
- * interface, not on any concrete cloud provider.
- */
-
 import { TranscriptSegment } from '@/types';
 import { SummarizationProvider, SummarizationResult } from './summarizationProvider';
 import {
@@ -18,7 +7,6 @@ import {
   SYSTEM_PROMPT,
 } from './summarizationUtils';
 import { logger } from '@/utils/logging/logger';
-
 export interface CloudLLMConfig {
   /** Full URL for the chat completions endpoint. */
   endpoint: string;
@@ -27,26 +15,21 @@ export interface CloudLLMConfig {
   /** HTTP headers (must include Authorization). */
   headers: Record<string, string>;
 }
-
 /**
  * Abstract base for any provider that speaks the OpenAI chat-completion protocol.
  * Subclasses implement `resolveConfig()` to supply credentials and endpoint.
  */
 export abstract class CloudLLMProvider implements SummarizationProvider {
   abstract readonly name: string;
-
   /** Resolve provider-specific config (endpoint, model, headers). */
   protected abstract resolveConfig(): CloudLLMConfig;
-
   async summarize(segments: TranscriptSegment[]): Promise<SummarizationResult> {
     const text = segmentsToText(segments);
     const config = this.resolveConfig();
-
     logger.info('SUMMARY', `${this.name} summarization request starting`, {
       endpoint: config.endpoint,
       chars: text.length,
     });
-
     const fetchOptions: RequestInit = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...config.headers },
@@ -60,7 +43,6 @@ export abstract class CloudLLMProvider implements SummarizationProvider {
         max_tokens: 2000,
       }),
     };
-
     let response: Response;
     try {
       response = await fetchWithTimeout(config.endpoint, fetchOptions);
@@ -75,7 +57,6 @@ export abstract class CloudLLMProvider implements SummarizationProvider {
       }
       throw e;
     }
-
     if (!response.ok) {
       const err = await response.text();
       logger.error('SUMMARY', `${this.name} summarization response not OK`, {
@@ -84,7 +65,6 @@ export abstract class CloudLLMProvider implements SummarizationProvider {
       });
       throw new Error(`${this.name} summarization failed: ${response.status} ${err}`);
     }
-
     const data = await response.json();
     logger.info('SUMMARY', `${this.name} summarization completed`, {
       status: response.status,

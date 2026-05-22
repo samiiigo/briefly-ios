@@ -6,12 +6,10 @@ import Animated, {
   SharedValue,
   useAnimatedStyle,
 } from 'react-native-reanimated';
-
 interface SwipeableMotionCardProps {
   translation: SharedValue<number>;
   children: React.ReactNode;
 }
-
 /** Subtle scale while swiping so the row feels connected to the gesture. */
 export function SwipeableMotionCard({ translation, children }: SwipeableMotionCardProps) {
   const animatedStyle = useAnimatedStyle(() => {
@@ -24,10 +22,8 @@ export function SwipeableMotionCard({ translation, children }: SwipeableMotionCa
       ],
     };
   });
-
   return <Animated.View style={[styles.card, animatedStyle]}>{children}</Animated.View>;
 }
-
 const styles = StyleSheet.create({
   card: {
     width: '100%',

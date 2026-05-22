@@ -4,14 +4,11 @@ import { TranscriptSegment } from '@/types';
 import { formatTimestamp } from '@/utils';
 import { useCreateStyles, useThemedColors, Spacing, BorderRadius, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   segment: TranscriptSegment;
   isActive?: boolean;
 }
-
 const SPEAKER_ACCENT = ['#34C759', '#FF9500', '#AF52DE', '#FF2D55'] as const;
-
 function speakerColor(primary: string, speaker?: string): string {
   if (!speaker) return primary;
   let hash = 0;
@@ -21,7 +18,6 @@ function speakerColor(primary: string, speaker?: string): string {
   const accents = [primary, ...SPEAKER_ACCENT];
   return accents[Math.abs(hash) % accents.length];
 }
-
 export function TranscriptSegmentView({ segment, isActive }: Props) {
   const styles = useCreateStyles(createTranscriptSegmentStyles);
   const colors = useThemedColors();
@@ -29,7 +25,6 @@ export function TranscriptSegmentView({ segment, isActive }: Props) {
     () => speakerColor(colors.primary, segment.speaker),
     [colors.primary, segment.speaker],
   );
-
   return (
     <View style={[styles.container, isActive && styles.active]}>
       {segment.speakerInitial ? (
@@ -39,9 +34,7 @@ export function TranscriptSegmentView({ segment, isActive }: Props) {
           </View>
         </View>
       ) : null}
-
       <Text style={styles.timestamp}>{formatTimestamp(segment.startTime)}</Text>
-
       <View style={styles.content}>
         {segment.speaker ? (
           <Text style={[styles.speaker, { color }]}>{segment.speaker}</Text>
@@ -51,7 +44,6 @@ export function TranscriptSegmentView({ segment, isActive }: Props) {
     </View>
   );
 }
-
 function createTranscriptSegmentStyles(c: ColorPalette) {
   return StyleSheet.create({
     container: {

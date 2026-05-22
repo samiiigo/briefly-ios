@@ -6,19 +6,14 @@ import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-import { useRecordingStore } from '@/context/useRecordingStore';
-import { useSettingsStore } from '@/context/useSettingsStore';
-import { installRealtimeTerminalLogs, logger } from '@/utils/logging/logger';
-import { checkEnvironment } from '@/utils/environment/environmentCheck';
-import { resumeInterruptedRecordingProcessing } from '@/services/recording/recordingBackgroundProcessing';
-import { refreshLocalLlmModelStateFromDisk } from '@/services/summarization';
-import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
-import { LibraryFabChromeOverlay } from '@/components/navigation/LibraryFabChromeOverlay';
+import { useAppBootstrap } from '@/hooks/app/useAppBootstrap';
+import { NavigatorBottomBlur } from '@/components/navigation/chrome/NavigatorBottomBlur';
+import { LibraryFabChromeOverlay } from '@/components/navigation/overlays/LibraryFabChromeOverlay';
 import { ThemeProvider, useResolvedColorScheme, useThemedColors } from '@/theme';
 import { iconFonts } from '@/theme/iconFonts';
+import { logger } from '@/utils/logging/logger';
 
 function RootLayoutContent() {
-  const loadRecordings = useRecordingStore((s) => s.loadRecordings);
   const colors = useThemedColors();
   const resolvedScheme = useResolvedColorScheme();
   const [iconFontsLoaded, iconFontError] = useFonts(iconFonts);
@@ -43,44 +38,7 @@ function RootLayoutContent() {
     }
   }, [iconFontError]);
 
-  useEffect(() => {
-    if (!iconFontsLoaded) return;
-
-    installRealtimeTerminalLogs();
-
-    const runAfterSettingsHydrated = () => {
-      refreshLocalLlmModelStateFromDisk();
-      const env = checkEnvironment();
-      logger.info('SYSTEM', 'Environment check', {
-        hasNative: env.hasNativeModule,
-        hasOnDeviceSpeech: env.hasOnDeviceSpeech,
-        hasKey: env.hasAssemblyAIKey,
-        canLive: env.canLiveTranscribe,
-        canRecord: env.canRecord,
-        recommended: env.recommendedTranscriptionMode,
-      });
-      useSettingsStore.getState().applyEnvironmentDefaults(
-        env.recommendedTranscriptionMode,
-      );
-      resumeInterruptedRecordingProcessing();
-    };
-
-    let hydrationUnsub: (() => void) | undefined;
-
-    void (async () => {
-      logger.info('SYSTEM', 'App startup: loading recordings from storage');
-      await loadRecordings();
-      if (useSettingsStore.persist.hasHydrated()) {
-        runAfterSettingsHydrated();
-      } else {
-        hydrationUnsub = useSettingsStore.persist.onFinishHydration(
-          runAfterSettingsHydrated,
-        );
-      }
-    })();
-
-    return () => hydrationUnsub?.();
-  }, [iconFontsLoaded, loadRecordings]);
+  useAppBootstrap(iconFontsLoaded);
 
   const rootStyle = useRootBackgroundStyle();
 

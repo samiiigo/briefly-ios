@@ -11,9 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useCreateStyles, useThemedColors } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
-
 interface CircularIconButtonProps {
   icon: IconName;
   onPress?: () => void;
@@ -22,7 +20,6 @@ interface CircularIconButtonProps {
   loading?: boolean;
   disabled?: boolean;
 }
-
 export function CircularIconButton({
   icon,
   onPress,
@@ -34,7 +31,6 @@ export function CircularIconButton({
   const styles = useCreateStyles(createCircularIconButtonStyles);
   const colors = useThemedColors();
   const disabled = loading || disabledProp || onPress == null;
-
   return (
     <Pressable
       style={({ pressed }) => [
@@ -63,7 +59,6 @@ export function CircularIconButton({
     </Pressable>
   );
 }
-
 function createCircularIconButtonStyles(c: ColorPalette) {
   return StyleSheet.create({
   button: {

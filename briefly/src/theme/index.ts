@@ -1,7 +1,6 @@
 import { Easing, Platform } from 'react-native';
 import { appFont, withAppFont } from './fonts';
-import { Colors, Spacing, BorderRadius } from './constants';
-
+import { Colors } from './constants';
 export { Colors, Spacing, BorderRadius, applyColorPalette } from './constants';
 export type { ColorPalette } from './colorPalettes';
 export { ThemeProvider, useThemedColors, useResolvedColorScheme } from './ThemeProvider';
@@ -24,7 +23,6 @@ export {
   shadowHigh,
 } from './tokens';
 export type { ThemeTokens, ShadowToken } from './tokens';
-
 /** SF Pro scale — Display for ≥20pt, Text below (Apple HIG). */
 export const Typography = {
   largeTitle: withAppFont({
@@ -44,13 +42,11 @@ export const Typography = {
   caption1: appFont(12, '400', Colors.textSecondary),
   caption2: appFont(11, '400', Colors.textSecondary),
 };
-
 /** Short, unobtrusive animation for sliders/progress (iOS HIG). */
 export const SliderAnimation = {
   duration: 220,
   easing: Easing.out(Easing.cubic),
 };
-
 // Liquid glass simulation — uses blur + translucency on iOS,
 // elevated surface on Android.
 export const LiquidGlass = {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,45 +7,27 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useStackBack } from '@/components/navigation/useStackBack';
-import { useSettingsStore } from '@/context/useSettingsStore';
-import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
+import { useStackBack } from '@/components/navigation/layout/useStackBack';
+import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
+import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
 import {
   useModePickerStyles,
   useScreenLayoutStyles,
-} from '@/components/navigation/screenLayout';
-import { ProcessingMode } from '@/types';
+} from '@/components/navigation/layout/screenLayout';
 import { processingModeDescription, processingModeTitle } from '@/utils/processing/processingMode';
-import {
-  getProviderTitle,
-  getApiKeyPlaceholder,
-  isValidApiKeyFormat,
-  detectCloudProviderFromKey,
-} from '@/utils/providers/cloudProvider';
 import { Colors, withAppFont } from '@/theme';
 import {
-  cancelLocalGemmaModelDownload,
-  ensureLocalGemmaModelDownloaded,
   LOCAL_LLM_NATIVE_FALLBACK_HINT,
   LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE,
-  refreshLocalLlmModelStateFromDisk,
 } from '@/services/summarization';
+import { NATIVE_BUILD_REQUIRED_HINT } from '@/utils/platformCapabilities';
+import { ModePickerOption } from '@/components/navigation/header/ModePickerOption';
 import {
-  NATIVE_BUILD_REQUIRED_HINT,
-  supportsLocalLlamaSummarization,
-  supportsNativeOnDeviceSummarization,
-} from '@/utils/platformCapabilities';
-import { ModePickerOption } from '@/components/navigation/ModePickerOption';
-
-const PROCESSING_MODES: ProcessingMode[] = [
-  'cloud-shared-openrouter',
-  'cloud-user-key',
-  'on-device',
-];
+  PROCESSING_MODE_OPTIONS,
+  useProcessingModeSettings,
+} from '@/hooks/settings/useProcessingModeSettings';
 
 export default function ProcessingModePickerScreen() {
   const goBack = useStackBack('/settings');
@@ -55,69 +37,28 @@ export default function ProcessingModePickerScreen() {
   const {
     summarizationMode,
     setSummarizationMode,
-    cloudProvider,
-    setCloudProvider,
-    setProviderApiKey,
-    getActiveApiKey,
+    isCloudUserKey,
+    canRunLocalLlama,
+    canUseNativeExtractive,
+    canUseOnDeviceSummarization,
+    showUnsupportedBuild,
     localLlmModelReady,
     localLlmDownloadProgress,
     localLlmDownloadStatus,
     localLlmDownloadError,
-    deleteLocalLlmModel,
-  } = useSettingsStore();
-
-  useEffect(() => {
-    refreshLocalLlmModelStateFromDisk();
-  }, []);
-
-  const isDownloading = localLlmDownloadStatus === 'downloading';
-  const canRunLocalLlama = supportsLocalLlamaSummarization();
-  const canUseNativeExtractive = supportsNativeOnDeviceSummarization();
-  const canUseOnDeviceSummarization = canRunLocalLlama || canUseNativeExtractive;
-  const showUnsupportedBuild = !canUseOnDeviceSummarization;
-
-  const handleDownloadLocalModel = useCallback(async () => {
-    if (isDownloading) return;
-    try {
-      await ensureLocalGemmaModelDownloaded();
-    } catch {
-      // Error message is stored on the settings slice
-    }
-  }, [isDownloading]);
-
-  const handleCancelDownload = useCallback(async () => {
-    await cancelLocalGemmaModelDownload();
-  }, []);
-
-  const handleDeleteLocalModel = useCallback(() => {
-    Alert.alert(
-      'Delete on-device model?',
-      'This removes the Gemma model from your device (~3.5 GB). You can download it again later.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void deleteLocalLlmModel();
-          },
-        },
-      ],
-    );
-  }, [deleteLocalLlmModel]);
-
-  const isCloudUserKey =
-    summarizationMode === 'cloud-user-key' || summarizationMode === 'cloud';
-  const [apiKeyInput, setApiKeyInput] = useState(getActiveApiKey());
-  const isValidFormat = isValidApiKeyFormat(apiKeyInput, cloudProvider);
-
-  const handleApiKeyChange = (value: string) => {
-    setApiKeyInput(value);
-    const detected = detectCloudProviderFromKey(value);
-    const p = detected ?? cloudProvider;
-    if (detected && detected !== cloudProvider) setCloudProvider(detected);
-    setProviderApiKey(p, value);
-  };
+    isDownloading,
+    handleDownloadLocalModel,
+    handleCancelDownload,
+    handleDeleteLocalModel,
+    cloudProvider,
+    apiKeyInput,
+    isValidFormat,
+    handleApiKeyChange,
+    clearApiKey,
+    commitApiKeyOnBlur,
+    getApiKeyPlaceholder,
+    getProviderTitle,
+  } = useProcessingModeSettings();
 
   return (
     <View style={sl.container}>
@@ -129,7 +70,7 @@ export default function ProcessingModePickerScreen() {
           Choose how Briefly generates your final summary after transcription.
         </Text>
         <View style={sl.card}>
-          {PROCESSING_MODES.map((mode, index) => {
+          {PROCESSING_MODE_OPTIONS.map((mode, index) => {
             const selected = summarizationMode === mode;
             const disabled = mode === 'on-device' && !canUseOnDeviceSummarization;
             return (
@@ -142,14 +83,13 @@ export default function ProcessingModePickerScreen() {
                   unavailableHint={NATIVE_BUILD_REQUIRED_HINT}
                   onPress={() => setSummarizationMode(mode)}
                 />
-                {index !== PROCESSING_MODES.length - 1 ? (
+                {index !== PROCESSING_MODE_OPTIONS.length - 1 ? (
                   <View style={mp.optionDivider} />
                 ) : null}
               </React.Fragment>
             );
           })}
         </View>
-
         {summarizationMode === 'on-device' ? (
           <>
             {showUnsupportedBuild ? (
@@ -160,70 +100,78 @@ export default function ProcessingModePickerScreen() {
             ) : null}
             {canRunLocalLlama ? (
               <>
-            <Text style={sl.sectionLabel}>On-device model</Text>
-            <Text style={sl.sectionDescription}>
-              Gemma 4 E2B (Q4) is stored in your app documents (~3.5 GB). Download once while on Wi‑Fi.
-            </Text>
-            <View style={sl.card}>
-              {localLlmModelReady && localLlmDownloadStatus === 'ready' ? (
-                <>
-                  <View style={styles.modelStatusRow}>
-                    <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
-                    <Text style={styles.modelStatusText}>Model ready for offline summarization</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.deleteModelButton}
-                    onPress={handleDeleteLocalModel}
-                  >
-                    <Ionicons name="trash-outline" size={18} color={Colors.orange} />
-                    <Text style={styles.deleteModelButtonText}>Delete model from device</Text>
-                  </TouchableOpacity>
-                </>
-              ) : isDownloading ? (
-                <>
-                  <View style={styles.modelStatusRow}>
-                    <ActivityIndicator size="small" color={Colors.primary} />
-                    <Text style={styles.modelStatusText}>
-                      Downloading…{' '}
-                      {localLlmDownloadProgress != null
-                        ? `${Math.round(localLlmDownloadProgress * 100)}%`
-                        : '0%'}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.cancelDownloadButton}
-                    onPress={() => {
-                      void handleCancelDownload();
-                    }}
-                  >
-                    <Text style={styles.cancelDownloadButtonText}>Cancel download</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={styles.downloadModelButton}
-                    onPress={() => {
-                      void handleDownloadLocalModel();
-                    }}
-                    disabled={isDownloading}
-                  >
-                    <Ionicons name="cloud-download-outline" size={18} color={Colors.textPrimary} />
-                    <Text style={styles.downloadModelButtonText}>
-                      {localLlmDownloadStatus === 'error' ? 'Retry download' : 'Download Gemma model'}
-                    </Text>
-                  </TouchableOpacity>
-                  {localLlmDownloadError ? (
-                    <Text style={styles.modelErrorText}>{localLlmDownloadError}</Text>
-                  ) : null}
-                </>
-              )}
-            </View>
+                <Text style={sl.sectionLabel}>On-device model</Text>
+                <Text style={sl.sectionDescription}>
+                  Gemma 4 E2B (Q4) is stored in your app documents (~3.5 GB). Download once while on
+                  Wi‑Fi.
+                </Text>
+                <View style={sl.card}>
+                  {localLlmModelReady && localLlmDownloadStatus === 'ready' ? (
+                    <>
+                      <View style={styles.modelStatusRow}>
+                        <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
+                        <Text style={styles.modelStatusText}>
+                          Model ready for offline summarization
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.deleteModelButton}
+                        onPress={handleDeleteLocalModel}
+                      >
+                        <Ionicons name="trash-outline" size={18} color={Colors.orange} />
+                        <Text style={styles.deleteModelButtonText}>Delete model from device</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : isDownloading ? (
+                    <>
+                      <View style={styles.modelStatusRow}>
+                        <ActivityIndicator size="small" color={Colors.primary} />
+                        <Text style={styles.modelStatusText}>
+                          Downloading…{' '}
+                          {localLlmDownloadProgress != null
+                            ? `${Math.round(localLlmDownloadProgress * 100)}%`
+                            : '0%'}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.cancelDownloadButton}
+                        onPress={() => {
+                          void handleCancelDownload();
+                        }}
+                      >
+                        <Text style={styles.cancelDownloadButtonText}>Cancel download</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        style={styles.downloadModelButton}
+                        onPress={() => {
+                          void handleDownloadLocalModel();
+                        }}
+                        disabled={isDownloading}
+                      >
+                        <Ionicons
+                          name="cloud-download-outline"
+                          size={18}
+                          color={Colors.textPrimary}
+                        />
+                        <Text style={styles.downloadModelButtonText}>
+                          {localLlmDownloadStatus === 'error'
+                            ? 'Retry download'
+                            : 'Download Gemma model'}
+                        </Text>
+                      </TouchableOpacity>
+                      {localLlmDownloadError ? (
+                        <Text style={styles.modelErrorText}>{localLlmDownloadError}</Text>
+                      ) : null}
+                    </>
+                  )}
+                </View>
               </>
             ) : null}
           </>
         ) : null}
-
         {isCloudUserKey ? (
           <>
             <Text style={sl.sectionLabel}>API key</Text>
@@ -239,7 +187,7 @@ export default function ProcessingModePickerScreen() {
                   style={styles.apiKeyInput}
                   value={apiKeyInput}
                   onChangeText={handleApiKeyChange}
-                  onBlur={() => setProviderApiKey(cloudProvider, apiKeyInput)}
+                  onBlur={commitApiKeyOnBlur}
                   placeholder={getApiKeyPlaceholder(cloudProvider)}
                   placeholderTextColor={Colors.textTertiary}
                   secureTextEntry
@@ -247,12 +195,7 @@ export default function ProcessingModePickerScreen() {
                   autoCorrect={false}
                 />
                 {apiKeyInput.length > 0 ? (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setApiKeyInput('');
-                      setProviderApiKey(cloudProvider, '');
-                    }}
-                  >
+                  <TouchableOpacity onPress={clearApiKey}>
                     <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
                   </TouchableOpacity>
                 ) : null}
@@ -281,12 +224,7 @@ export default function ProcessingModePickerScreen() {
           </>
         ) : null}
       </ScrollView>
-
-      <StackScreenHeader
-        title="Summarization"
-        showBack
-        onBack={goBack}
-      />
+      <StackScreenHeader title="Summarization" showBack onBack={goBack} />
     </View>
   );
 }

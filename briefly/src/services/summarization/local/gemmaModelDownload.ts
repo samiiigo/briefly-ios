@@ -17,35 +17,28 @@ import {
   markLocalLlmDownloadStarting,
   resetLocalLlmDownloadStateToIdle,
 } from './localLlmDownloadState';
-
 export type ModelDownloadProgress = {
   totalBytes: number;
   downloadedBytes: number;
   fraction: number;
 };
-
 export function getLocalGemmaModelPath(): string {
   return LocalModelStorageService.getModelUri();
 }
-
 export function isLocalGemmaModelDownloaded(): boolean {
   return LocalModelStorageService.isCompleteModelOnDisk();
 }
-
 /** True when a partial GGUF is on disk (download interrupted or in progress). */
 export function isPartialLocalGemmaModelOnDisk(): boolean {
   return LocalModelStorageService.isPartialModelOnDisk();
 }
-
 export function isLocalLlmDownloadInProgress(): boolean {
   if (activeDownload !== null || activeDownloadPromise !== null) return true;
   if (getMirroredLocalLlmDownloadStatus() === 'downloading') return true;
   return isPartialLocalGemmaModelOnDisk();
 }
-
 let activeDownload: ReturnType<typeof createDownloadResumable> | null = null;
 let activeDownloadPromise: Promise<string> | null = null;
-
 /**
  * Downloads the quantized Gemma GGUF into the app document directory if missing.
  * Progress and status are mirrored on the settings store (idle → downloading → ready).
@@ -57,16 +50,13 @@ export async function ensureLocalGemmaModelDownloaded(options?: {
   if (activeDownloadPromise) {
     return activeDownloadPromise;
   }
-
   const run = async (): Promise<string> => {
     LocalModelStorageService.ensureModelsDirectory();
     const destUri = LocalModelStorageService.getModelUri();
-
     if (!options?.force && isLocalGemmaModelDownloaded()) {
       markLocalLlmDownloadReady();
       return destUri;
     }
-
     const freeBytes = await getFreeDiskStorageAsync();
     if (freeBytes < LOCAL_GEMMA_MIN_FREE_BYTES) {
       const err = new LocalLlamaError(
@@ -76,18 +66,14 @@ export async function ensureLocalGemmaModelDownloaded(options?: {
       markLocalLlmDownloadFailed(err.message);
       throw err;
     }
-
     if (options?.force || isPartialLocalGemmaModelOnDisk()) {
       LocalModelStorageService.deleteModelFile();
     }
-
     markLocalLlmDownloadStarting();
-
     logger.info('SUMMARY', 'Downloading local Gemma model', {
       url: LOCAL_GEMMA_MODEL_DOWNLOAD_URL,
       dest: destUri,
     });
-
     const download = createDownloadResumable(
       LOCAL_GEMMA_MODEL_DOWNLOAD_URL,
       destUri,
@@ -104,22 +90,18 @@ export async function ensureLocalGemmaModelDownloaded(options?: {
         });
       },
     );
-
     activeDownload = download;
-
     try {
       const result = await download.downloadAsync();
       if (!result?.uri) {
         throw new LocalLlamaError('download', 'Model download did not return a file path.');
       }
-
       if (!isLocalGemmaModelDownloaded()) {
         throw new LocalLlamaError(
           'download',
           'Download finished but the model file looks incomplete. Try again on a stable connection.',
         );
       }
-
       markLocalLlmDownloadReady();
       logger.info('SUMMARY', 'Local Gemma model ready', { uri: result.uri });
       return result.uri;
@@ -136,14 +118,11 @@ export async function ensureLocalGemmaModelDownloaded(options?: {
       activeDownload = null;
     }
   };
-
   activeDownloadPromise = run().finally(() => {
     activeDownloadPromise = null;
   });
-
   return activeDownloadPromise;
 }
-
 export async function cancelLocalGemmaModelDownload(): Promise<void> {
   if (activeDownload) {
     try {
@@ -156,7 +135,6 @@ export async function cancelLocalGemmaModelDownload(): Promise<void> {
   LocalModelStorageService.deleteModelFile();
   resetLocalLlmDownloadStateToIdle();
 }
-
 /**
  * Removes the on-device model file and resets download state to not downloaded.
  */

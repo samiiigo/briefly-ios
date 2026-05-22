@@ -1,5 +1,4 @@
 import { Recording, UserFolder } from '@/types';
-
 export interface RecordingRepository {
   loadAll(): Promise<Recording[]>;
   save(recording: Recording): Promise<void>;
@@ -7,7 +6,6 @@ export interface RecordingRepository {
   remove(id: string): Promise<void>;
   saveAll(recordings: Recording[]): Promise<void>;
 }
-
 export interface FolderRepository {
   loadAll(): Promise<UserFolder[]>;
   save(folder: UserFolder): Promise<void>;

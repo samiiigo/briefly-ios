@@ -5,7 +5,6 @@ import {
   isInitialProcessingFailure,
   isRecordingEntryNavigationLocked,
 } from './recordingEntryAccess';
-
 function baseRecording(overrides: Partial<Recording> = {}): Recording {
   return {
     id: 'r1',
@@ -19,7 +18,6 @@ function baseRecording(overrides: Partial<Recording> = {}): Recording {
     ...overrides,
   };
 }
-
 describe('recordingEntryAccess', () => {
   it('locks navigation while transcribing or summarizing', () => {
     assert.equal(
@@ -31,7 +29,6 @@ describe('recordingEntryAccess', () => {
       true,
     );
   });
-
   it('locks navigation for initial processing failure without a transcript', () => {
     assert.equal(
       isInitialProcessingFailure(baseRecording({ status: 'error', transcript: [] })),
@@ -42,7 +39,6 @@ describe('recordingEntryAccess', () => {
       true,
     );
   });
-
   it('allows navigation when summarization failed but transcript exists', () => {
     const recording = baseRecording({
       status: 'error',

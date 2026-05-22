@@ -5,10 +5,8 @@ import {
   backupEntryFingerprint,
   filterNewBackupEntries,
   findDuplicateAudioRecording,
-  recordingImportFingerprint,
 } from './importDeduplication';
 import type { TranscriptBackupEntry } from './transcriptBackup';
-
 const existing: Recording = {
   id: 'rec-1',
   title: 'Standup',
@@ -23,7 +21,6 @@ const existing: Recording = {
   ],
   summary: 'Beta shipped.',
 };
-
 describe('importDeduplication', () => {
   it('skips backup entries that match library content', () => {
     const incoming: TranscriptBackupEntry[] = [
@@ -41,13 +38,11 @@ describe('importDeduplication', () => {
         summary: 'Only in the backup file.',
       },
     ];
-
     const { entries, skipped } = filterNewBackupEntries(incoming, [existing]);
     assert.equal(skipped, 1);
     assert.equal(entries.length, 1);
     assert.equal(entries[0]?.title, 'New note');
   });
-
   it('skips duplicate rows within the same backup file', () => {
     const row: TranscriptBackupEntry = {
       title: 'A',
@@ -60,7 +55,6 @@ describe('importDeduplication', () => {
     assert.equal(entries.length, 1);
     assert.equal(backupEntryFingerprint(row), backupEntryFingerprint(entries[0]!));
   });
-
   it('detects duplicate audio by size and duration', () => {
     assert.ok(
       findDuplicateAudioRecording([existing], {
@@ -83,7 +77,6 @@ describe('importDeduplication', () => {
       undefined,
     );
   });
-
   it('does not treat transcript-only rows as audio duplicates', () => {
     const transcriptOnly: Recording = {
       ...existing,

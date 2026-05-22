@@ -1,13 +1,3 @@
-/**
- * Audio services — barrel export (ISP)
- *
- * Consumers import only the service they need:
- *   import { PlaybackService } from '@/services/audio';
- *   import { RecordingService } from '@/services/audio';
- *   import { LiveTranscriptionService } from '@/services/audio';
- *   import { AudioFileService } from '@/services/audio';
- */
-
 export { PlaybackService } from './playbackService';
 export { RecordingService } from './recordingService';
 export { LiveTranscriptionService } from './liveTranscriptionService';

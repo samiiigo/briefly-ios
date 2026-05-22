@@ -4,17 +4,13 @@
  * consume on the destination screen.
  */
 import type { TranscriptSegment } from '@/types';
-
 interface TransitData {
   preTranscript?: TranscriptSegment[];
 }
-
 let _transit: TransitData = {};
-
 export function setTransitData(data: Partial<TransitData>) {
   _transit = { ..._transit, ...data };
 }
-
 export function consumeTransitData(): TransitData {
   const data = _transit;
   _transit = {};

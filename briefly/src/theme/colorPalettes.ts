@@ -33,7 +33,6 @@ export type ColorPalette = {
   folderUserIconBackground: string;
   headerButtonMuted: string;
 };
-
 export const darkColors: ColorPalette = {
   background: '#000000',
   surface: '#1C1C1E',
@@ -69,7 +68,6 @@ export const darkColors: ColorPalette = {
   folderUserIconBackground: 'rgba(255,255,255,0.08)',
   headerButtonMuted: '#2B2D2D',
 };
-
 /** iOS light semantic colors (grouped backgrounds, system grays, separator). */
 export const lightColors: ColorPalette = {
   background: '#F2F2F7',

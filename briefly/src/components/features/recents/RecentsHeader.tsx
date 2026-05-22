@@ -7,16 +7,14 @@ import {
   TOP_HEADER_BUTTON_ROW_HEIGHT,
   TOP_HEADER_PADDING_BOTTOM,
   TOP_HEADER_PADDING_TOP,
-} from '@/components/navigation/topHeaderMetrics';
-import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
-import { openSettingsRoot } from '@/components/navigation/useStackBack';
+} from '@/components/navigation/layout/topHeaderMetrics';
+import { TopChromeOverlay } from '@/components/navigation/chrome/TopChromeOverlay';
+import { openSettingsRoot } from '@/components/navigation/layout/useStackBack';
 import { useCreateStyles, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 export function RecentsHeader() {
   const styles = useCreateStyles(createRecentsHeaderStyles);
   const router = useRouter();
-
   return (
     <TopChromeOverlay>
       <View style={styles.header}>
@@ -43,7 +41,6 @@ export function RecentsHeader() {
     </TopChromeOverlay>
   );
 }
-
 function createRecentsHeaderStyles(c: ColorPalette) {
   return StyleSheet.create({
   header: {

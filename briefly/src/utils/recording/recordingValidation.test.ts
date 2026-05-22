@@ -6,7 +6,6 @@ import {
   isRecordingTooShort,
   validateRecordingAsset,
 } from './recordingValidation';
-
 describe('recordingValidation', () => {
   it('treats whitespace-only segments as empty', () => {
     assert.equal(
@@ -14,7 +13,6 @@ describe('recordingValidation', () => {
       false,
     );
   });
-
   it('detects short recordings', () => {
     assert.equal(isRecordingTooShort({ durationSec: 0.2, filePath: 'a.wav', fileSizeBytes: 100 }), true);
     assert.equal(
@@ -26,14 +24,12 @@ describe('recordingValidation', () => {
       false,
     );
   });
-
   it('throws when file path is missing', () => {
     assert.throws(
       () => validateRecordingAsset({ durationSec: 5, filePath: '', fileSizeBytes: 50_000 }),
       /No audio file/,
     );
   });
-
   it('detects transcript-only imports without audio', () => {
     assert.equal(hasRecordingAudio('', 0), false);
     assert.equal(hasRecordingAudio('  ', 1000), false);

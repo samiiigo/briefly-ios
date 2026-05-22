@@ -1,26 +1,23 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Recording } from '@/types';
-import { getRecordingContentEmoji } from '@/utils/recording/recordingContentEmoji';
+import { getRecordingContentEmoji , isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { formatDate, formatDuration } from '@/utils';
 import { RecordingEmojiCircle } from '@/components/features/recording/RecordingEmojiCircle';
 import { RecordingProcessingRetryCircle } from '@/components/features/recording/RecordingProcessingRetryCircle';
 import { RecordingProcessingFlashCircle } from '@/components/features/recording/RecordingProcessingFlashCircle';
 import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
-import { useRecordingProcessingRetry } from '@/hooks/useRecordingProcessingRetry';
-import { useRecordingRetryFlashActive } from '@/hooks/useRecordingRetryFlashActive';
+import { useRecordingProcessingRetry } from '@/hooks/recording/useRecordingProcessingRetry';
+import { useRecordingRetryFlashActive } from '@/hooks/recording/useRecordingRetryFlashActive';
 import { Ionicons } from '@expo/vector-icons';
-import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
+
 import { isInitialProcessingFailure } from '@/utils/recording/recordingEntryAccess';
 import { useCreateStyles, useThemedColors, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   recording: Recording;
 }
-
 const HERO_CIRCLE = 56;
-
 export function RecordingTitleHero({ recording }: Props) {
   const styles = useCreateStyles(createRecordingTitleHeroStyles);
   const colors = useThemedColors();
@@ -37,7 +34,6 @@ export function RecordingTitleHero({ recording }: Props) {
     !showOpenableContent &&
     !flashActive &&
     !initialFailure;
-
   const leading = flashActive ? (
     <RecordingProcessingFlashCircle size="lg" />
   ) : processing ? (
@@ -53,7 +49,6 @@ export function RecordingTitleHero({ recording }: Props) {
   ) : (
     <RecordingEmojiCircle emoji={emoji} size="lg" />
   );
-
   return (
     <View style={styles.wrap}>
       {leading}
@@ -64,7 +59,6 @@ export function RecordingTitleHero({ recording }: Props) {
     </View>
   );
 }
-
 function createRecordingTitleHeroStyles(c: ColorPalette) {
   return StyleSheet.create({
     processingCircle: {

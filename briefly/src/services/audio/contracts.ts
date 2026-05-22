@@ -4,7 +4,6 @@ export interface PlaybackStatusUpdate {
   playing: boolean;
   didJustFinish: boolean;
 }
-
 export interface PlaybackControls {
   play(
     uri: string,
@@ -16,7 +15,6 @@ export interface PlaybackControls {
   stop(): Promise<void>;
   setSpeed(rate: number): Promise<void>;
 }
-
 export interface MeteringSource {
   getMetering(): number;
 }

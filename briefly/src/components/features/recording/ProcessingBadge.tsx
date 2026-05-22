@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { ProcessingMode } from '@/types';
 import { useCreateStyles, useThemedColors, BorderRadius } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   mode: ProcessingMode;
   size?: 'sm' | 'md';
@@ -14,13 +13,11 @@ interface Props {
    */
   showLabel?: boolean;
 }
-
 export function ProcessingBadge({ mode, size = 'md', showLabel = true }: Props) {
   const styles = useCreateStyles(createProcessingBadgeStyles);
   const colors = useThemedColors();
   const isCloud = mode !== 'on-device';
   const isSmall = size === 'sm';
-
   return (
     <View style={[styles.badge, isCloud ? styles.cloudBadge : styles.onDeviceBadge]}>
       <Ionicons
@@ -43,7 +40,6 @@ export function ProcessingBadge({ mode, size = 'md', showLabel = true }: Props) 
     </View>
   );
 }
-
 function createProcessingBadgeStyles(c: ColorPalette) {
   return StyleSheet.create({
     badge: {

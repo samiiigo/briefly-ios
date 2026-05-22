@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { Recording } from '@/types';
 import { countByLibraryTab, filterByLibraryTab } from './libraryFilters';
-
 function mkRecording(id: string, overrides: Partial<Recording> = {}): Recording {
   return {
     id,
@@ -16,7 +15,6 @@ function mkRecording(id: string, overrides: Partial<Recording> = {}): Recording 
     ...overrides,
   };
 }
-
 describe('library filters', () => {
   const recordings: Recording[] = [
     mkRecording('1', { status: 'ready' }),
@@ -25,7 +23,6 @@ describe('library filters', () => {
     mkRecording('4', { status: 'transcribing' }),
     mkRecording('5', { status: 'error' }),
   ];
-
   it('counts all tabs from source state', () => {
     assert.deepEqual(countByLibraryTab(recordings), {
       all: 5,
@@ -35,12 +32,10 @@ describe('library filters', () => {
       errors: 1,
     });
   });
-
   it('filters archived and favorites correctly', () => {
     assert.deepEqual(filterByLibraryTab(recordings, 'favorites').map((r) => r.id), ['2']);
     assert.deepEqual(filterByLibraryTab(recordings, 'archived').map((r) => r.id), ['3']);
   });
-
   it('excludes archived recordings from errors tab (archived is a separate bucket)', () => {
     const withArchivedError = [
       ...recordings,
@@ -49,7 +44,6 @@ describe('library filters', () => {
     assert.deepEqual(filterByLibraryTab(withArchivedError, 'errors').map((r) => r.id), ['5']);
     assert.deepEqual(filterByLibraryTab(withArchivedError, 'archived').map((r) => r.id), ['3', '6']);
   });
-
   it('excludes recently-deleted recordings from all library tabs', () => {
     const withDeleted = [
       ...recordings,

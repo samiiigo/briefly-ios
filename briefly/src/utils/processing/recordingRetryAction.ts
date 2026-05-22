@@ -2,25 +2,21 @@ import type { ProcessingMode, Recording } from '@/types';
 import { getNextSummarizationFallback } from '@/utils/processing/summarizationFallback';
 import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
 import { getRecordingAudioAvailability } from '@/utils/recording/recordingPlayableAudio';
-
 export type RecordingRetryKind =
   | 'transcription'
   | 'summarization'
   | 'summarization-fallback'
   | 'full';
-
 export type RecordingRetryAction = {
   icon: 'mic-outline' | 'sparkles' | 'refresh-outline';
   accessibilityLabel: string;
   kind: RecordingRetryKind;
   summarizationMode?: ProcessingMode;
 };
-
 export type ResolveRecordingRetryOptions = {
   /** List rows: retry only when transcription failed; open when a transcript exists. */
   forListAvatar?: boolean;
 };
-
 /** Primary retry affordance for a failed or stuck recording. */
 export function resolveRecordingRetryAction(
   recording: Recording,
@@ -28,16 +24,13 @@ export function resolveRecordingRetryAction(
   options?: ResolveRecordingRetryOptions,
 ): RecordingRetryAction | null {
   if (recording.status !== 'error') return null;
-
   const hasAudio = getRecordingAudioAvailability(recording).hasAudio;
   const hasTranscript = hasMeaningfulTranscript(recording.transcript);
-
   if (options?.forListAvatar && hasTranscript) return null;
   const lastSummarizationMode = recording.processingMode ?? defaultSummarizationMode;
   const summarizationFallback = hasTranscript
     ? getNextSummarizationFallback(lastSummarizationMode, [lastSummarizationMode])
     : null;
-
   if (summarizationFallback) {
     return {
       icon: 'sparkles',
@@ -46,7 +39,6 @@ export function resolveRecordingRetryAction(
       summarizationMode: summarizationFallback.mode,
     };
   }
-
   if (hasAudio && (!hasTranscript || !summarizationFallback)) {
     return {
       icon: 'mic-outline',
@@ -54,7 +46,6 @@ export function resolveRecordingRetryAction(
       kind: 'transcription',
     };
   }
-
   if (hasTranscript) {
     return {
       icon: 'sparkles',
@@ -63,7 +54,6 @@ export function resolveRecordingRetryAction(
       summarizationMode: defaultSummarizationMode,
     };
   }
-
   if (hasAudio) {
     return {
       icon: 'refresh-outline',
@@ -71,6 +61,5 @@ export function resolveRecordingRetryAction(
       kind: 'full',
     };
   }
-
   return null;
 }

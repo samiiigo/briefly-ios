@@ -1,19 +1,16 @@
 import { Recording } from '@/types';
 import { LibraryDatePreset, LibraryScopeRefinement } from '@/context/useLibraryFolderPreferencesStore';
 import { resolveRecordingFolder } from './recordingFolder';
-
 export function filterRecordingsByDatePreset(
   recordings: Recording[],
   preset: LibraryDatePreset,
   now: number
 ): Recording[] {
   if (preset === 'all') return recordings;
-
   const d = new Date(now);
   const startOfToday = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const ms7 = 7 * 24 * 60 * 60 * 1000;
   const ms30 = 30 * 24 * 60 * 60 * 1000;
-
   return recordings.filter((r) => {
     if (preset === 'today') return r.createdAt >= startOfToday;
     if (preset === 'last7') return r.createdAt >= now - ms7;
@@ -21,13 +18,11 @@ export function filterRecordingsByDatePreset(
     return true;
   });
 }
-
 export function filterRecordingsByScope(
   recordings: Recording[],
   scope: LibraryScopeRefinement
 ): Recording[] {
   if (scope === 'none') return recordings;
-
   return recordings.filter((r) => {
     if (scope === 'favorites') return !!r.isFavorite;
     if (scope === 'archived') return resolveRecordingFolder(r) === 'archived';
@@ -37,7 +32,6 @@ export function filterRecordingsByScope(
     return true;
   });
 }
-
 /** Library hub filters only (date + scope). Sorting is controlled per folder in the folder screen. */
 export function applyFolderRecordingPreferences(
   recordings: Recording[],

@@ -15,10 +15,8 @@ import {
   resolveManualRerunSourceFromFlags,
   type ManualRerunSource,
 } from '@/utils/recording/manualRecordingRerunSource';
-
 export type { ManualRerunSource } from '@/utils/recording/manualRecordingRerunSource';
 export { resolveManualRerunSourceFromFlags } from '@/utils/recording/manualRecordingRerunSource';
-
 /** Chooses audio file processing (post/local) or transcript-only summarization. */
 export function resolveManualRerunSource(recording: Recording): ManualRerunSource {
   return resolveManualRerunSourceFromFlags(
@@ -26,7 +24,6 @@ export function resolveManualRerunSource(recording: Recording): ManualRerunSourc
     hasMeaningfulTranscript(recording.transcript),
   );
 }
-
 export type ExecuteManualRerunOptions = {
   /** Keep transcript/summary visible while reprocessing (e.g. transcript screen). */
   preservePreviousResults?: boolean;
@@ -35,7 +32,6 @@ export type ExecuteManualRerunOptions = {
   /** Pre-resolved on-disk audio (e.g. from useRecordingAudioAvailability). */
   audio?: RecordingAudioAvailability;
 };
-
 /**
  * Manual rerun on an existing entry: process from on-disk audio when available,
  * otherwise summarize from the saved transcript using current settings.
@@ -46,19 +42,15 @@ export function executeManualRecordingRerun(
 ): ManualRerunSource {
   const rec = useRecordingStore.getState().getRecordingById(recordingId);
   if (!rec) return 'none';
-
   const audio = options?.audio ?? getRecordingAudioAvailability(rec);
   const source = resolveManualRerunSourceFromFlags(
     audio.hasAudio,
     hasMeaningfulTranscript(rec.transcript),
   );
   if (source === 'none') return 'none';
-
   const mode =
     options?.summarizationMode ?? useSettingsStore.getState().summarizationMode;
-
   cancelRecordingBackgroundProcessing(recordingId);
-
   if (source === 'audio') {
     startRecordingBackgroundProcessing(recordingId, {
       audioFallbackOnly: true,
@@ -66,11 +58,9 @@ export function executeManualRecordingRerun(
     });
     return 'audio';
   }
-
   startRecordingSummarizationRetry(recordingId, mode);
   return 'transcript';
 }
-
 /** Re-summarize from the saved transcript using current provider settings. */
 export function executeSummarizationOnlyRerun(
   recordingId: string,
@@ -78,10 +68,8 @@ export function executeSummarizationOnlyRerun(
 ): boolean {
   const rec = useRecordingStore.getState().getRecordingById(recordingId);
   if (!rec || !hasMeaningfulTranscript(rec.transcript)) return false;
-
   const mode =
     options?.summarizationMode ?? useSettingsStore.getState().summarizationMode;
-
   cancelRecordingBackgroundProcessing(recordingId);
   startRecordingSummarizationRetry(recordingId, mode);
   return true;

@@ -1,28 +1,21 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useSettingsStore } from '@/context/useSettingsStore';
-import {
-  themePreferenceDescription,
-  themePreferenceTitle,
-  type ThemePreference,
-} from '@/utils/theme/themePreference';
-import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
+import { View, Text, ScrollView } from 'react-native';
+import { useStackBack } from '@/components/navigation/layout/useStackBack';
+import { ModePickerOption } from '@/components/navigation/header/ModePickerOption';
+import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
+import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
 import {
   useModePickerStyles,
   useScreenLayoutStyles,
-} from '@/components/navigation/screenLayout';
-import { useStackBack } from '@/components/navigation/useStackBack';
-
-const THEME_OPTIONS: ThemePreference[] = ['system', 'light', 'dark'];
+} from '@/components/navigation/layout/screenLayout';
+import { useThemePreferenceSettings } from '@/hooks/settings/useThemePreferenceSettings';
 
 export default function ThemePickerScreen() {
   const goBack = useStackBack('/settings');
   const { scrollPaddingTop } = useTopChromeLayout();
   const sl = useScreenLayoutStyles();
   const mp = useModePickerStyles();
-  const themePreference = useSettingsStore((s) => s.themePreference);
-  const setThemePreference = useSettingsStore((s) => s.setThemePreference);
+  const { options, selectPreference } = useThemePreferenceSettings();
 
   return (
     <View style={sl.container}>
@@ -34,33 +27,19 @@ export default function ThemePickerScreen() {
           Choose how Briefly looks. System follows your device light or dark mode.
         </Text>
         <View style={sl.card}>
-          {THEME_OPTIONS.map((option, index) => {
-            const selected = themePreference === option;
-            return (
-              <React.Fragment key={option}>
-                <TouchableOpacity
-                  style={mp.optionRow}
-                  onPress={() => setThemePreference(option)}
-                >
-                  <View style={[mp.radio, selected && mp.radioSelected]}>
-                    {selected ? <View style={mp.radioDot} /> : null}
-                  </View>
-                  <View style={mp.optionText}>
-                    <Text style={mp.optionTitle}>{themePreferenceTitle(option)}</Text>
-                    <Text style={mp.optionSubtitle}>
-                      {themePreferenceDescription(option)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                {index !== THEME_OPTIONS.length - 1 ? (
-                  <View style={mp.optionDivider} />
-                ) : null}
-              </React.Fragment>
-            );
-          })}
+          {options.map((option, index) => (
+            <React.Fragment key={option.option}>
+              <ModePickerOption
+                selected={option.selected}
+                title={option.title}
+                subtitle={option.subtitle}
+                onPress={() => selectPreference(option.option)}
+              />
+              {index !== options.length - 1 ? <View style={mp.optionDivider} /> : null}
+            </React.Fragment>
+          ))}
         </View>
       </ScrollView>
-
       <StackScreenHeader title="Theme" showBack onBack={goBack} />
     </View>
   );

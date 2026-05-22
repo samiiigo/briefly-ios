@@ -10,7 +10,6 @@ import {
 } from '@/services/recording/recordingBackgroundProcessing';
 import { getLocalLlmSummarizationBlocker } from '@/services/summarization';
 import { persistRecordingAudio } from '@/utils/fileSystem/persistRecordingAudio';
-
 export type SaveCapturedRecordingParams = {
   duration: number;
   filePath: string;
@@ -20,27 +19,22 @@ export type SaveCapturedRecordingParams = {
   markImported?: boolean;
   title?: string;
 };
-
 export type SaveCapturedRecordingResult = {
   id: string;
   summarizationBlocked: boolean;
 };
-
 export async function saveCapturedRecording(
   params: SaveCapturedRecordingParams,
 ): Promise<SaveCapturedRecordingResult> {
   const { addRecording, recordings } = useRecordingStore.getState();
   const existingTitles = recordings.map((r) => r.title);
   const { summarizationMode, transcriptionMode } = useSettingsStore.getState();
-
   const id = generateId();
   const targetFolder = params.targetFolder ?? 'unlisted';
   const baseTitle = params.title?.trim() || generateTitle();
   const safeTitle = ensureUniqueTitle(baseTitle, existingTitles);
   const summarizationBlocked = !!getLocalLlmSummarizationBlocker(summarizationMode);
-
   const { filePath, fileSize } = await persistRecordingAudio(id, params.filePath);
-
   await addRecording({
     id,
     title: safeTitle,
@@ -57,7 +51,6 @@ export async function saveCapturedRecording(
     status: summarizationBlocked ? 'saved' : initialStatusAfterSave(transcriptionMode),
     transcript: undefined,
   });
-
   if (!summarizationBlocked) {
     startRecordingBackgroundProcessing(id);
   }

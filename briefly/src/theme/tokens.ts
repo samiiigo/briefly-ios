@@ -5,13 +5,11 @@
  * iOS (SF Pro, iOS shadows) and Android (Roboto, Material elevation)
  * conventions, while sharing a common color palette and spacing scale.
  */
-
 import { useMemo } from 'react';
-import { Platform, type ViewStyle, type TextStyle } from 'react-native';
+import { Platform, type ViewStyle } from 'react-native';
 import { Spacing, BorderRadius } from './constants';
 import type { ColorPalette } from './colorPalettes';
 import { useThemedColors } from './ThemeProvider';
-
 // ─── Font Stacks ────────────────────────────────────────────────────────
 export const FontStack = Platform.select({
   ios: {
@@ -30,10 +28,8 @@ export const FontStack = Platform.select({
     serif: undefined,
   },
 })!;
-
 // ─── Shadows / Elevation ────────────────────────────────────────────────
 export type ShadowToken = ViewStyle;
-
 /** Card-level shadow / elevation. */
 export const shadowCard: ShadowToken = Platform.select({
   ios: {
@@ -47,7 +43,6 @@ export const shadowCard: ShadowToken = Platform.select({
   },
   default: {},
 })!;
-
 /** Elevated surface shadow (modals, sheets). */
 export const shadowElevated: ShadowToken = Platform.select({
   ios: {
@@ -61,7 +56,6 @@ export const shadowElevated: ShadowToken = Platform.select({
   },
   default: {},
 })!;
-
 /** High-prominence shadow (floating buttons, overlays). */
 export const shadowHigh: ShadowToken = Platform.select({
   ios: {
@@ -75,7 +69,6 @@ export const shadowHigh: ShadowToken = Platform.select({
   },
   default: {},
 })!;
-
 // ─── Corner Radii (platform-tuned) ─────────────────────────────────────
 export const CornerRadius = {
   /** Tighter on Android for Material feel; softer on iOS. */
@@ -86,7 +79,6 @@ export const CornerRadius = {
   card: Platform.select({ ios: 24, android: 20, default: 24 })!,
   full: 9999,
 } as const;
-
 // ─── Full Token Set ─────────────────────────────────────────────────────
 export interface ThemeTokens {
   colors: ColorPalette;
@@ -100,7 +92,6 @@ export interface ThemeTokens {
     high: ShadowToken;
   };
 }
-
 function buildTokens(colors: ThemeTokens['colors']): ThemeTokens {
   return {
     colors,
@@ -115,7 +106,6 @@ function buildTokens(colors: ThemeTokens['colors']): ThemeTokens {
     },
   };
 }
-
 /**
  * Returns the platform-aware design token set for the active color scheme.
  */

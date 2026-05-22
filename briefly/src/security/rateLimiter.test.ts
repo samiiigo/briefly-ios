@@ -4,14 +4,12 @@ import { assertPublicEndpointRateLimit, resetRateLimiterState } from './rateLimi
 import { resetDeviceRateLimitIdCache, setDeviceRateLimitIdForTests } from './deviceIdentity';
 import { RateLimitError } from './RateLimitError';
 import { PUBLIC_ENDPOINT_RATE_LIMITS } from './limits';
-
 describe('rateLimiter', () => {
   beforeEach(() => {
     resetRateLimiterState();
     resetDeviceRateLimitIdCache();
     setDeviceRateLimitIdForTests('test-device');
   });
-
   it('allows requests under both device and user limits', async () => {
     const url = 'https://api.assemblyai.com/v2/transcript';
     const limits = PUBLIC_ENDPOINT_RATE_LIMITS['api.assemblyai.com'];
@@ -21,7 +19,6 @@ describe('rateLimiter', () => {
     }
     assert.equal(max > 0, true);
   });
-
   it('throws RateLimitError with 429 semantics when exceeded', async () => {
     const url = 'https://openrouter.ai/api/v1/chat/completions';
     const limits = PUBLIC_ENDPOINT_RATE_LIMITS['openrouter.ai'];
@@ -39,7 +36,6 @@ describe('rateLimiter', () => {
       }
     );
   });
-
   it('ignores non-public hosts', async () => {
     await assertPublicEndpointRateLimit('file:///local/recording.m4a');
   });

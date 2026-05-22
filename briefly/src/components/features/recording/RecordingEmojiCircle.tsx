@@ -2,25 +2,20 @@ import React from 'react';
 import { Platform, View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { BorderRadius, useCreateStyles } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 type Size = 'md' | 'lg';
-
 const SIZE_CONFIG: Record<Size, { dim: number; fontSize: number }> = {
   lg: { dim: 56, fontSize: 24 },
   md: { dim: 48, fontSize: 22 },
 };
-
 interface Props {
   emoji: string;
   size?: Size;
   style?: ViewStyle;
 }
-
 /** Circular emoji badge (Figma: Background+Border, 56×56). */
 export function RecordingEmojiCircle({ emoji, size = 'lg', style }: Props) {
   const styles = useCreateStyles(createRecordingEmojiCircleStyles);
   const { dim, fontSize } = SIZE_CONFIG[size];
-
   return (
     <View
       style={[
@@ -45,7 +40,6 @@ export function RecordingEmojiCircle({ emoji, size = 'lg', style }: Props) {
     </View>
   );
 }
-
 function createRecordingEmojiCircleStyles(c: ColorPalette) {
   return StyleSheet.create({
     circle: {

@@ -1,15 +1,12 @@
 import { TranscriptSegment, TranscriptionMode } from '@/types';
 import { hasMeaningfulTranscript } from '../recording/recordingValidation';
-
 export type DecorativePreviewEngine = 'cloud' | 'on-device' | 'none';
-
 export interface PostRecordingPipeline {
   /** When true, use the live transcript and skip file upload / async transcription. */
   skipAsyncTranscription: boolean;
   /** Mode for TranscriptionService when async file transcription is required. */
   asyncTranscriptionMode: TranscriptionMode;
 }
-
 export function normalizeTranscriptionMode(mode: string | undefined | null): TranscriptionMode {
   if (mode === 'cloud' || mode === 'local') {
     return mode;
@@ -28,12 +25,10 @@ export function normalizeTranscriptionMode(mode: string | undefined | null): Tra
   }
   return 'cloud';
 }
-
 export function transcriptionModeTitle(mode: TranscriptionMode | string): string {
   const normalized = normalizeTranscriptionMode(mode);
   return normalized === 'local' ? 'Local' : 'Cloud';
 }
-
 export function transcriptionModeDescription(mode: TranscriptionMode | string): string {
   const normalized = normalizeTranscriptionMode(mode);
   if (normalized === 'local') {
@@ -41,7 +36,6 @@ export function transcriptionModeDescription(mode: TranscriptionMode | string): 
   }
   return 'Transcribes your recording in the cloud after you stop, then summarizes.';
 }
-
 /**
  * Post-recording transcription always runs from the saved audio file.
  * Live preview text is never used for processing.
@@ -56,11 +50,9 @@ export function resolvePostRecordingPipeline(
     asyncTranscriptionMode: mode,
   };
 }
-
 export function hasUsableTranscript(transcript?: TranscriptSegment[] | null): boolean {
   return hasMeaningfulTranscript(transcript);
 }
-
 /**
  * Engine used only for optional decorative live preview while recording.
  * Does not affect save, transcription, or summarization pipelines.
@@ -78,7 +70,6 @@ export function resolveDecorativePreviewEngine(
   }
   return 'none';
 }
-
 export function canRunDecorativeLivePreview(
   showLivePreview: boolean,
   engine: DecorativePreviewEngine,

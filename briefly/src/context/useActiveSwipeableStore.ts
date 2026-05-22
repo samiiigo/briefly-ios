@@ -1,7 +1,5 @@
 import { create } from 'zustand';
-
 type CloseFn = () => void;
-
 interface ActiveSwipeableState {
   activeId: string | null;
   closeFn: CloseFn | null;
@@ -12,7 +10,6 @@ interface ActiveSwipeableState {
   /** Closes the open row, if any. */
   closeActive: () => void;
 }
-
 export const useActiveSwipeableStore = create<ActiveSwipeableState>((set, get) => ({
   activeId: null,
   closeFn: null,

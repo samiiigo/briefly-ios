@@ -1,8 +1,6 @@
 import { Linking, Platform } from 'react-native';
 import { requestRecordingPermissionsAsync, getRecordingPermissionsAsync } from 'expo-audio';
-
 export type MicrophonePermissionStatus = 'granted' | 'denied' | 'undetermined';
-
 export async function getMicrophonePermissionStatus(): Promise<MicrophonePermissionStatus> {
   try {
     const { granted, canAskAgain } = await getRecordingPermissionsAsync();
@@ -13,7 +11,6 @@ export async function getMicrophonePermissionStatus(): Promise<MicrophonePermiss
     return 'undetermined';
   }
 }
-
 export async function requestMicrophonePermission(): Promise<boolean> {
   try {
     const { granted } = await requestRecordingPermissionsAsync();
@@ -22,22 +19,18 @@ export async function requestMicrophonePermission(): Promise<boolean> {
     return false;
   }
 }
-
 /**
  * Ensures microphone access before starting capture. Throws with a clear message if denied.
  */
 export async function ensureMicrophonePermission(): Promise<void> {
   const status = await getMicrophonePermissionStatus();
   if (status === 'granted') return;
-
   const granted = await requestMicrophonePermission();
   if (granted) return;
-
   throw new Error(
     'Microphone access is required to record. Enable it in Settings and try again.',
   );
 }
-
 export function openAppSettings(): void {
   void Linking.openSettings().catch(() => {
     // iOS-specific fallback URL scheme
