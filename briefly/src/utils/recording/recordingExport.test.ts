@@ -53,5 +53,6 @@ describe('buildRecordingExportPdfHtml', () => {
     assert.match(html, /Ship beta by June/);
     assert.doesNotMatch(html, />Transcript</);
     assert.doesNotMatch(html, /class="segment"/);
+    assert.match(html, /@page\s*\{\s*margin:\s*48px/);
   });
 });

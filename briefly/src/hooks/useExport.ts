@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { Alert, Share } from 'react-native';
+import { Alert, Platform, Share } from 'react-native';
 import type { AnchoredMenuItem } from '@/components/ui/AnchoredOverflowMenu';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -14,6 +14,7 @@ import { Recording } from '@/types';
 import {
   buildRecordingExportPdfHtml,
   buildRecordingExportPlainText,
+  PDF_PAGE_MARGIN_PX,
 } from '@/utils/recording/recordingExport';
 import { ensureUploadableAudioUri } from '@/utils/fileSystem/repairWavForUpload';
 import { normalizeFileUri } from '@/utils/fileSystem/normalizeFileUri';
@@ -46,7 +47,17 @@ export function useExport(recording: Recording | undefined) {
     try {
       setIsExportingPdf(true);
       const html = buildRecordingExportPdfHtml(recording);
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      const pageMargins = {
+        left: PDF_PAGE_MARGIN_PX,
+        top: PDF_PAGE_MARGIN_PX,
+        right: PDF_PAGE_MARGIN_PX,
+        bottom: PDF_PAGE_MARGIN_PX,
+      };
+      const { uri } = await Print.printToFileAsync({
+        html,
+        base64: false,
+        ...(Platform.OS === 'ios' ? { margins: pageMargins } : {}),
+      });
       const available = await Sharing.isAvailableAsync();
       if (available) {
         await Sharing.shareAsync(uri, {

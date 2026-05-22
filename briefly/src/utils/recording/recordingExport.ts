@@ -181,8 +181,12 @@ export function buildRecordingExportPlainText(
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
+/** Page inset for PDF export (iOS `margins` option + `@page` for Android). */
+export const PDF_PAGE_MARGIN_PX = 48;
+
 const PDF_STYLES = `
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 36px 40px; color: #111; line-height: 1.5; }
+  @page { margin: ${PDF_PAGE_MARGIN_PX}px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 0; color: #111; line-height: 1.5; }
   .doc-title { font-size: 28px; font-weight: 700; margin: 0 0 8px; line-height: 1.25; }
   .doc-meta { font-size: 13px; color: #666; margin: 0 0 28px; }
   .section { margin-bottom: 28px; }
