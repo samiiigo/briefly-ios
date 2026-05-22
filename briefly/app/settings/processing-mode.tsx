@@ -35,9 +35,11 @@ import {
   refreshLocalLlmModelStateFromDisk,
 } from '@/services/summarization';
 import {
+  NATIVE_BUILD_REQUIRED_HINT,
   supportsLocalLlamaSummarization,
   supportsNativeOnDeviceSummarization,
 } from '@/utils/platformCapabilities';
+import { ModePickerOption } from '@/components/navigation/ModePickerOption';
 
 const PROCESSING_MODES: ProcessingMode[] = [
   'cloud-shared-openrouter',
@@ -71,7 +73,8 @@ export default function ProcessingModePickerScreen() {
   const isDownloading = localLlmDownloadStatus === 'downloading';
   const canRunLocalLlama = supportsLocalLlamaSummarization();
   const canUseNativeExtractive = supportsNativeOnDeviceSummarization();
-  const showUnsupportedBuild = !canRunLocalLlama && !canUseNativeExtractive;
+  const canUseOnDeviceSummarization = canRunLocalLlama || canUseNativeExtractive;
+  const showUnsupportedBuild = !canUseOnDeviceSummarization;
 
   const handleDownloadLocalModel = useCallback(async () => {
     if (isDownloading) return;
@@ -128,22 +131,17 @@ export default function ProcessingModePickerScreen() {
         <View style={sl.card}>
           {PROCESSING_MODES.map((mode, index) => {
             const selected = summarizationMode === mode;
+            const disabled = mode === 'on-device' && !canUseOnDeviceSummarization;
             return (
               <React.Fragment key={mode}>
-                <TouchableOpacity
-                  style={mp.optionRow}
+                <ModePickerOption
+                  selected={selected}
+                  disabled={disabled}
+                  title={processingModeTitle(mode)}
+                  subtitle={processingModeDescription(mode)}
+                  unavailableHint={NATIVE_BUILD_REQUIRED_HINT}
                   onPress={() => setSummarizationMode(mode)}
-                >
-                  <View style={[mp.radio, selected && mp.radioSelected]}>
-                    {selected ? <View style={mp.radioDot} /> : null}
-                  </View>
-                  <View style={mp.optionText}>
-                    <Text style={mp.optionTitle}>{processingModeTitle(mode)}</Text>
-                    <Text style={mp.optionSubtitle}>
-                      {processingModeDescription(mode)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                />
                 {index !== PROCESSING_MODES.length - 1 ? (
                   <View style={mp.optionDivider} />
                 ) : null}

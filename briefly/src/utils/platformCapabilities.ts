@@ -62,6 +62,10 @@ export function needsAndroidRecordingNotificationPermission(): boolean {
   return isAndroid;
 }
 
+/** Short hint for settings pickers when a native-only option is unavailable (e.g. Expo Go). */
+export const NATIVE_BUILD_REQUIRED_HINT =
+  'Requires a development build (not available in Expo Go).';
+
 /** On-device Gemma summarization via llama.rn (dev client / production build only). */
 export function supportsLocalLlamaSummarization(): boolean {
   try {

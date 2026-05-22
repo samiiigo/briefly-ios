@@ -145,6 +145,22 @@ function createModePickerStyles(colors: ColorPalette) {
       lineHeight: 20,
       marginTop: 4,
     }),
+    optionRowDisabled: {
+      opacity: 0.45,
+    },
+    optionTitleDisabled: {
+      color: colors.subtext,
+    },
+    optionSubtitleDisabled: {
+      color: colors.subtext,
+    },
+    radioDisabled: {
+      borderColor: colors.subtext,
+    },
+    radioSelectedDisabled: {
+      borderColor: colors.subtext,
+      backgroundColor: colors.subtext,
+    },
   });
 }
 
