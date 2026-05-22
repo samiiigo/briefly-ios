@@ -13,7 +13,7 @@ import {
   Pressable,
   Alert,
   Platform,
-  ActionSheetIOS,
+  type GestureResponderEvent,
 } from 'react-native';
 import { triggerHaptic } from '@/utils/haptics';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -82,11 +82,15 @@ export function RecordingSwipeableRow({
 
   const motionTranslation = swipeTranslationRef.current ?? fallbackTranslation;
   const { folders, loadFolders } = useUserFolderStore();
-  const { shareBusy, shareMenuItems, openShareMenu } = useExport(recording);
+  const { shareBusy, shareMenuItems } = useExport(recording);
+  const pressAnchorRef = useRef<{ x: number; y: number } | null>(null);
   const moreAnchorRef = useRef<View>(null);
   const shareMenu = useAnchoredMenu();
+  const shareRowMenu = useAnchoredMenu();
   const moreMenu = useAnchoredMenu(moreAnchorRef);
+  const longPressMenu = useAnchoredMenu();
   const moveMenu = useAnchoredMenu(moreAnchorRef);
+  const moveMenuFromRow = useAnchoredMenu();
 
   const closeThisRow = useCallback(() => {
     swipeableRef.current?.close();
@@ -178,12 +182,27 @@ export function RecordingSwipeableRow({
     }));
   }, [folders, handleMoveTo, moveDestinations]);
 
-  const openMoveMenu = useCallback(async () => {
-    await loadFolders();
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => moveMenu.open());
-    });
-  }, [loadFolders, moveMenu.open]);
+  const openMenuAtLastPress = useCallback(
+    (menu: { open: () => void; openAtPoint: (x: number, y: number) => void }) => {
+      const point = pressAnchorRef.current;
+      if (point) {
+        menu.openAtPoint(point.x, point.y);
+      } else {
+        menu.open();
+      }
+    },
+    [],
+  );
+
+  const openMoveMenuFor = useCallback(
+    async (menu: { open: () => void; openAtPoint: (x: number, y: number) => void }) => {
+      await loadFolders();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => openMenuAtLastPress(menu));
+      });
+    },
+    [loadFolders, openMenuAtLastPress],
+  );
 
   const handleDelete = useCallback(() => {
     swipeableRef.current?.close();
@@ -204,17 +223,15 @@ export function RecordingSwipeableRow({
     onRestore?.();
   }, [onRestore]);
 
-  /** Opens share options anchored to the swipe Share button (row should stay open). */
   const openShareAnchored = useCallback(() => {
     if (shareBusy) return;
     shareMenu.open();
   }, [shareBusy, shareMenu.open]);
 
-  /** Share from long-press sheet when the swipe actions are not exposed. */
-  const handleShareFromSheet = useCallback(() => {
-    swipeableRef.current?.close();
-    openShareMenu();
-  }, [openShareMenu]);
+  const openShareAnchoredToRow = useCallback(() => {
+    if (shareBusy) return;
+    requestAnimationFrame(() => openMenuAtLastPress(shareRowMenu));
+  }, [openMenuAtLastPress, shareBusy]);
 
   const promptRename = useCallback(() => {
     if (!onRename) return;
@@ -235,164 +252,72 @@ export function RecordingSwipeableRow({
     }
   }, [closeThisRow, onRename, recording.title]);
 
-  const moreMenuItems = React.useMemo((): AnchoredMenuItem[] => {
-    const deleteLabel = isRecentlyDeleted ? 'Delete Forever' : 'Delete';
-    const items: AnchoredMenuItem[] = [];
+  const buildRecordingOptionsItems = useCallback(
+    (handlers: { onShare: () => void; onMove: () => void }): AnchoredMenuItem[] => {
+      const deleteLabel = isRecentlyDeleted ? 'Delete Forever' : 'Delete';
+      const items: AnchoredMenuItem[] = [];
 
-    if (isRecentlyDeleted) {
+      if (isRecentlyDeleted) {
+        if (onRename) {
+          items.push({ label: 'Rename', onPress: promptRename });
+        }
+        if (onRestore) {
+          items.push({ label: 'Recover', onPress: handleRecover });
+        }
+        items.push({ label: 'Share', onPress: handlers.onShare, disabled: shareBusy });
+        items.push({ label: deleteLabel, onPress: handleDelete });
+        return items;
+      }
+
+      items.push({
+        label: recording.isFavorite ? 'Unfavorite' : 'Favorite',
+        onPress: toggleFavorite,
+      });
+      items.push({ label: 'Share', onPress: handlers.onShare, disabled: shareBusy });
       if (onRename) {
         items.push({ label: 'Rename', onPress: promptRename });
       }
-      if (onRestore) {
-        items.push({ label: 'Recover', onPress: handleRecover });
-      }
-      items.push({ label: 'Share', onPress: openShareAnchored, disabled: shareBusy });
+      items.push({
+        label: recording.isArchived ? 'Unarchive' : 'Archive',
+        onPress: recording.isArchived ? removeFromArchive : moveToArchive,
+      });
+      items.push({ label: 'Move to…', onPress: handlers.onMove });
       items.push({ label: deleteLabel, onPress: handleDelete });
       return items;
-    }
+    },
+    [
+      handleDelete,
+      handleRecover,
+      isRecentlyDeleted,
+      moveToArchive,
+      onRename,
+      onRestore,
+      promptRename,
+      recording.isArchived,
+      recording.isFavorite,
+      removeFromArchive,
+      shareBusy,
+      toggleFavorite,
+    ],
+  );
 
-    items.push({
-      label: recording.isFavorite ? 'Unfavorite' : 'Favorite',
-      onPress: toggleFavorite,
-    });
-    items.push({ label: 'Share', onPress: openShareAnchored, disabled: shareBusy });
-    if (onRename) {
-      items.push({ label: 'Rename', onPress: promptRename });
-    }
-    items.push({
-      label: recording.isArchived ? 'Unarchive' : 'Archive',
-      onPress: recording.isArchived ? removeFromArchive : moveToArchive,
-    });
-    items.push({ label: 'Move to…', onPress: openMoveMenu });
-    items.push({ label: deleteLabel, onPress: handleDelete });
-    return items;
-  }, [
-    handleDelete,
-    handleRecover,
-    openShareAnchored,
-    isRecentlyDeleted,
-    moveToArchive,
-    onRename,
-    onRestore,
-    promptRename,
-    recording.isArchived,
-    recording.isFavorite,
-    removeFromArchive,
-    shareBusy,
-    openMoveMenu,
-    toggleFavorite,
-  ]);
+  const moreMenuItems = React.useMemo(
+    () =>
+      buildRecordingOptionsItems({
+        onShare: openShareAnchored,
+        onMove: () => openMoveMenuFor(moveMenu),
+      }),
+    [buildRecordingOptionsItems, openMoveMenuFor, openShareAnchored],
+  );
 
-  const showOptionsMenu = useCallback(() => {
-    closeThisRow();
-    const favoriteLabel = recording.isFavorite ? 'Unfavorite' : 'Favorite';
-    const archiveLabel = recording.isArchived ? 'Unarchive' : 'Archive';
-    const deleteLabel = isRecentlyDeleted ? 'Delete Forever' : 'Delete';
-
-    if (isRecentlyDeleted) {
-      if (Platform.OS === 'ios') {
-        const options = ['Cancel'];
-        const handlers: (() => void)[] = [];
-        if (onRename) {
-          options.push('Rename');
-          handlers.push(promptRename);
-        }
-        if (onRestore) {
-          options.push('Recover');
-          handlers.push(handleRecover);
-        }
-        options.push('Share', deleteLabel);
-        handlers.push(handleShareFromSheet, handleDelete);
-        ActionSheetIOS.showActionSheetWithOptions(
-          {
-            options,
-            cancelButtonIndex: 0,
-            destructiveButtonIndex: options.length - 1,
-          },
-          (index) => {
-            if (index <= 0) return;
-            handlers[index - 1]?.();
-          }
-        );
-        return;
-      }
-
-      const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] =
-        [];
-      if (onRename) buttons.push({ text: 'Rename', onPress: promptRename });
-      if (onRestore) buttons.push({ text: 'Recover', onPress: handleRecover });
-      buttons.push({ text: 'Share', onPress: handleShareFromSheet });
-      buttons.push({ text: deleteLabel, style: 'destructive', onPress: handleDelete });
-      buttons.push({ text: 'Cancel', style: 'cancel' });
-      Alert.alert(recording.title, undefined, buttons);
-      return;
-    }
-
-    if (Platform.OS === 'ios') {
-      const options = ['Cancel'];
-      const handlers: (() => void)[] = [];
-      options.push(favoriteLabel);
-      handlers.push(toggleFavorite);
-      options.push('Share');
-      handlers.push(handleShareFromSheet);
-      if (onRename) {
-        options.push('Rename');
-        handlers.push(promptRename);
-      }
-      options.push(archiveLabel, 'Move to…', deleteLabel);
-      handlers.push(
-        () => (recording.isArchived ? removeFromArchive() : moveToArchive()),
-        openMoveMenu,
-        handleDelete
-      );
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options,
-          cancelButtonIndex: 0,
-          destructiveButtonIndex: options.length - 1,
-        },
-        (index) => {
-          if (index <= 0) return;
-          handlers[index - 1]?.();
-        }
-      );
-      return;
-    }
-
-    const androidButtons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] =
-      [];
-    androidButtons.push({ text: favoriteLabel, onPress: toggleFavorite });
-    androidButtons.push({ text: 'Share', onPress: handleShareFromSheet });
-    if (onRename) {
-      androidButtons.push({ text: 'Rename', onPress: promptRename });
-    }
-    androidButtons.push(
-      {
-        text: archiveLabel,
-        onPress: recording.isArchived ? removeFromArchive : moveToArchive,
-      },
-      { text: 'Move to…', onPress: openMoveMenu },
-      { text: deleteLabel, style: 'destructive', onPress: handleDelete },
-      { text: 'Cancel', style: 'cancel' }
-    );
-    Alert.alert(recording.title, undefined, androidButtons);
-  }, [
-    closeThisRow,
-    handleDelete,
-    handleRecover,
-    handleShareFromSheet,
-    isRecentlyDeleted,
-    moveToArchive,
-    onRename,
-    onRestore,
-    promptRename,
-    recording.isArchived,
-    recording.isFavorite,
-    recording.title,
-    removeFromArchive,
-    openMoveMenu,
-    toggleFavorite,
-  ]);
+  const longPressMenuItems = React.useMemo(
+    () =>
+      buildRecordingOptionsItems({
+        onShare: openShareAnchoredToRow,
+        onMove: () => openMoveMenuFor(moveMenuFromRow),
+      }),
+    [buildRecordingOptionsItems, openMoveMenuFor, openShareAnchoredToRow],
+  );
 
   const handleRowPress = useCallback(() => {
     useActiveSwipeableStore.getState().closeActive();
@@ -404,10 +329,15 @@ export function RecordingSwipeableRow({
     }
   }, [children, onPress, recording]);
 
-  const handleRowLongPress = useCallback(() => {
-    triggerHaptic();
-    showOptionsMenu();
-  }, [showOptionsMenu]);
+  const handleRowLongPress = useCallback(
+    (event: GestureResponderEvent) => {
+      const { pageX, pageY } = event.nativeEvent;
+      pressAnchorRef.current = { x: pageX, y: pageY };
+      triggerHaptic();
+      longPressMenu.openAtPoint(pageX, pageY);
+    },
+    [longPressMenu.openAtPoint],
+  );
 
   const renderRightActions = useCallback(
     (progress: SharedValue<number>, translation: SharedValue<number>) => {
@@ -522,11 +452,25 @@ export function RecordingSwipeableRow({
       </Swipeable>
 
       <AnchoredMenuModal
+        visible={longPressMenu.visible}
+        anchor={longPressMenu.anchor}
+        items={longPressMenuItems}
+        onClose={longPressMenu.close}
+        align="center"
+      />
+      <AnchoredMenuModal
         visible={shareMenu.visible}
         anchor={shareMenu.anchor}
         items={shareMenuItems}
         onClose={shareMenu.close}
         align="trailing"
+      />
+      <AnchoredMenuModal
+        visible={shareRowMenu.visible}
+        anchor={shareRowMenu.anchor}
+        items={shareMenuItems}
+        onClose={shareRowMenu.close}
+        align="center"
       />
       <AnchoredMenuModal
         visible={moreMenu.visible}
@@ -541,6 +485,13 @@ export function RecordingSwipeableRow({
         items={moveMenuItems}
         onClose={moveMenu.close}
         align="trailing"
+      />
+      <AnchoredMenuModal
+        visible={moveMenuFromRow.visible}
+        anchor={moveMenuFromRow.anchor}
+        items={moveMenuItems}
+        onClose={moveMenuFromRow.close}
+        align="center"
       />
 
       {onRename ? (

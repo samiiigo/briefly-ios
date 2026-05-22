@@ -40,6 +40,34 @@ const defaultTriggerWrapperStyle: ViewStyle = {
   alignSelf: 'stretch',
 };
 
+export type MenuAlign = 'leading' | 'trailing' | 'center';
+
+function computeMenuPosition(
+  anchor: LayoutRectangle,
+  align: MenuAlign,
+  screenWidth: number,
+): { top: number; left?: number; right?: number } {
+  const menuTop = anchor.y + anchor.height + ANCHOR_GAP;
+  if (align === 'leading') {
+    return { top: menuTop, left: Math.max(Spacing.screenHorizontal, anchor.x) };
+  }
+  if (align === 'center') {
+    const centerX = anchor.x + anchor.width / 2;
+    const left = Math.max(
+      Spacing.screenHorizontal,
+      Math.min(
+        centerX - MENU_MIN_WIDTH / 2,
+        screenWidth - MENU_MIN_WIDTH - Spacing.screenHorizontal,
+      ),
+    );
+    return { top: menuTop, left };
+  }
+  return {
+    top: menuTop,
+    right: Math.max(Spacing.screenHorizontal, screenWidth - anchor.x - anchor.width),
+  };
+}
+
 /** @param externalAnchorRef Share one ref when multiple menus anchor to the same control. */
 export function useAnchoredMenu(externalAnchorRef?: RefObject<View | null>) {
   const internalAnchorRef = useRef<View>(null);
@@ -60,12 +88,18 @@ export function useAnchoredMenu(externalAnchorRef?: RefObject<View | null>) {
     requestAnimationFrame(measure);
   }, [anchorRef]);
 
+  /** Anchor below a screen coordinate (e.g. long-press `pageX` / `pageY`). */
+  const openAtPoint = useCallback((pageX: number, pageY: number) => {
+    setAnchor({ x: pageX, y: pageY, width: 0, height: 0 });
+    setVisible(true);
+  }, []);
+
   const close = useCallback(() => {
     setVisible(false);
     setAnchor(null);
   }, []);
 
-  return { anchorRef, visible, anchor, open, close };
+  return { anchorRef, visible, anchor, open, openAtPoint, close };
 }
 
 interface AnchoredMenuModalProps {
@@ -73,7 +107,7 @@ interface AnchoredMenuModalProps {
   anchor: LayoutRectangle | null;
   items: AnchoredMenuItem[];
   onClose: () => void;
-  align?: 'leading' | 'trailing';
+  align?: MenuAlign;
 }
 
 /** Anchored menu panel; pair with {@link useAnchoredMenu} when the trigger lives outside this tree. */
@@ -92,15 +126,7 @@ export function AnchoredMenuModal({
     resolvedScheme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)';
 
   const screenWidth = Dimensions.get('window').width;
-  const menuTop = anchor ? anchor.y + anchor.height + ANCHOR_GAP : 0;
-  const menuPosition = !anchor
-    ? null
-    : align === 'leading'
-      ? { top: menuTop, left: Math.max(Spacing.screenHorizontal, anchor.x) }
-      : {
-          top: menuTop,
-          right: Math.max(Spacing.screenHorizontal, screenWidth - anchor.x - anchor.width),
-        };
+  const menuPosition = anchor ? computeMenuPosition(anchor, align, screenWidth) : null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -164,7 +190,7 @@ interface AnchoredOverflowMenuProps {
   items: AnchoredMenuItem[];
   renderTrigger: (open: () => void) => React.ReactNode;
   /** Menu horizontal alignment relative to the trigger. */
-  align?: 'leading' | 'trailing';
+  align?: MenuAlign;
   /** Shows a spinner on the trigger (e.g. while a menu action runs). */
   triggerLoading?: boolean;
   /** Layout for the trigger wrapper (e.g. swipe actions need `alignSelf: 'stretch'`). */
