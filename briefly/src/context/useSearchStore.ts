@@ -5,7 +5,6 @@ import {
   commitRecentSearchList,
   sanitizeRecentSearchList,
 } from '@/utils/search/recentSearchPersistence';
-
 interface SearchState {
   recentQueries: string[];
   /**
@@ -16,12 +15,10 @@ interface SearchState {
   removeRecentQuery: (raw: string) => void;
   clearRecentQueries: () => void;
 }
-
 export const useSearchStore = create<SearchState>()(
   persist(
     (set, get) => ({
       recentQueries: [],
-
       commitRecentQuery: (raw) => {
         const prev = get().recentQueries;
         const next = commitRecentSearchList(prev, raw);
@@ -30,7 +27,6 @@ export const useSearchStore = create<SearchState>()(
         }
         set({ recentQueries: next });
       },
-
       removeRecentQuery: (raw) => {
         const lower = raw.trim().toLowerCase();
         if (!lower) return;
@@ -38,7 +34,6 @@ export const useSearchStore = create<SearchState>()(
         if (next.length === get().recentQueries.length) return;
         set({ recentQueries: next });
       },
-
       clearRecentQueries: () => set({ recentQueries: [] }),
     }),
     {

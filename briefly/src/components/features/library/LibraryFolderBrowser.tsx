@@ -9,10 +9,8 @@ import {
   SectionList,
   Alert,
   Platform,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
   useWindowDimensions,
+  type GestureResponderEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -20,11 +18,11 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { useUserFolderStore } from '@/context/useUserFolderStore';
 import { useFolderListLayoutStore } from '@/context/useFolderListLayoutStore';
 import { LibraryHeader } from './LibraryHeader';
-import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
+import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
 import { TextInputDialog } from '@/components/ui/TextInputDialog';
+import { AnchoredMenuModal, useAnchoredMenu } from '@/components/ui/AnchoredOverflowMenu';
 import { computeLibraryFolderCounts } from '@/utils/folders/folderCounts';
-import { resolveRecordingFolder } from '@/utils/folders/recordingFolder';
-import { showUserFolderActions } from '@/utils/folders/userFolderActions';
+import { buildUserFolderMenuItems } from '@/utils/folders/userFolderActions';
 import {
   folderIconBadgeBackground,
   folderIconColor,
@@ -41,28 +39,22 @@ import {
   MAX_YOUR_FOLDERS_PREVIEW,
   type UserFolderListFilter,
 } from '@/constants/userFolders';
-import { FolderUserSwipeableRow } from './FolderUserSwipeableRow';
-
 const LIST_BOTTOM_PADDING = 140;
 /** Matches {@link styles.folderCard} width in the two-column grid. */
 const FOLDER_GRID_CARD_WIDTH_RATIO = 0.485;
-
 function useFolderGridCardWidth(): number {
   const { width: windowWidth } = useWindowDimensions();
   return (windowWidth - 2 * Spacing.md) * FOLDER_GRID_CARD_WIDTH_RATIO;
 }
-
 function folderItemCountLabel(count: number, variant: 'grid' | 'list'): string {
   if (variant === 'grid') {
     return `${count} ${count === 1 ? 'item' : 'items'}`;
   }
   return `${count} ${count === 1 ? 'recording' : 'recordings'}`;
 }
-
 function userFolderCountLabel(count: number): string {
   return `${count} ${count === 1 ? 'folder' : 'folders'}`;
 }
-
 interface FolderTile {
   id: string;
   name: string;
@@ -73,11 +65,9 @@ interface FolderTile {
   /** User folders only; shown in the Pinned section when true. */
   pinned?: boolean;
 }
-
 const UTILITIES_SECTION_TITLE = 'Utilities';
 /** Extra space between the pinned folder row and the Your folders header. */
 const PINNED_TO_YOUR_FOLDERS_GAP = Spacing.md-4;
-
 type Section = {
   title: string;
   data: FolderTile[];
@@ -91,7 +81,6 @@ type Section = {
   /** Your folders: no pin badge, border, or list pin icon (pin state unchanged for actions). */
   plainUserFolders?: boolean;
 };
-
 export interface LibraryFolderBrowserProps {
   /** When set (Library tab), only pinned folders are shown, up to this limit; "See all" opens all folders. */
   maxPinnedFolders?: number;
@@ -104,7 +93,6 @@ export interface LibraryFolderBrowserProps {
   /** Full-list mode when opened from a section’s See all. */
   folderListFilter?: UserFolderListFilter;
 }
-
 export function LibraryFolderBrowser({
   maxPinnedFolders,
   maxYourFolders = MAX_YOUR_FOLDERS_PREVIEW,
@@ -128,18 +116,17 @@ export function LibraryFolderBrowser({
     toggleFolderPinned,
   } = useUserFolderStore();
   const layout = useFolderListLayoutStore((s) => s.layout);
-
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [renameFolderTarget, setRenameFolderTarget] = useState<FolderTile | null>(null);
+  const folderMenu = useAnchoredMenu();
+  const [folderMenuTarget, setFolderMenuTarget] = useState<FolderTile | null>(null);
   useEffect(() => {
     loadFolders();
   }, [loadFolders]);
-
   const folderCounts = useMemo(
     () => computeLibraryFolderCounts(recordings),
     [recordings],
   );
-
   const countForBuiltIn = useCallback(
     (id: string) => {
       switch (id) {
@@ -161,12 +148,10 @@ export function LibraryFolderBrowser({
     },
     [folderCounts],
   );
-
   const countForUserFolder = useCallback(
     (id: string) => folderCounts.byUserFolderId.get(id) ?? 0,
     [folderCounts],
   );
-
   const mapBuiltInTile = useCallback(
     (f: BuiltInFolderDef): FolderTile => ({
       id: f.id,
@@ -178,7 +163,6 @@ export function LibraryFolderBrowser({
     }),
     [countForBuiltIn]
   );
-
   const { builtInTiles, utilityTiles, userTiles } = useMemo(() => {
     const builtIn = BUILT_IN_LIBRARY_FOLDERS.map(mapBuiltInTile);
     const utility = BUILT_IN_UTILITY_FOLDERS.map(mapBuiltInTile);
@@ -193,7 +177,6 @@ export function LibraryFolderBrowser({
     }));
     return { builtInTiles: builtIn, utilityTiles: utility, userTiles: user };
   }, [colors.folderUserIcon, folders, mapBuiltInTile, countForUserFolder]);
-
   const appendUtilitySection = useCallback(
     (s: Section[]) => {
       if (utilityTiles.length > 0) {
@@ -207,7 +190,6 @@ export function LibraryFolderBrowser({
     },
     [utilityTiles]
   );
-
   const allUserTilesByName = useMemo(
     () =>
       [...userTiles].sort((a, b) =>
@@ -215,7 +197,6 @@ export function LibraryFolderBrowser({
       ),
     [userTiles]
   );
-
   const sections = useMemo<Section[]>(() => {
     if (showBack && folderListFilter === 'pinned') {
       const pinned = userTiles.filter((t) => t.pinned);
@@ -231,7 +212,6 @@ export function LibraryFolderBrowser({
             },
           ];
     }
-
     if (showBack && folderListFilter === 'all-user') {
       return allUserTilesByName.length > 0
         ? [
@@ -251,17 +231,14 @@ export function LibraryFolderBrowser({
             },
           ];
     }
-
     const systemSection: Section = {
       title: userFolderCountLabel(userTiles.length),
       data: builtInTiles,
     };
     const s: Section[] = [systemSection];
-
     if (maxPinnedFolders != null) {
       const pinnedTiles = userTiles.filter((t) => t.pinned);
       const previewYourFolders = allUserTilesByName.slice(0, maxYourFolders);
-
       if (pinnedTiles.length > 0) {
         s.push({
           title: 'Pinned',
@@ -272,7 +249,6 @@ export function LibraryFolderBrowser({
           seeAllFilter: 'pinned',
         });
       }
-
       if (userTiles.length > 0) {
         s.push({
           title: 'Your folders',
@@ -288,10 +264,8 @@ export function LibraryFolderBrowser({
           variant: 'empty-user-folders',
         });
       }
-
       return appendUtilitySection(s);
     }
-
     if (userTiles.length > 0) {
       s.push({ title: 'Folders', data: userTiles });
     } else {
@@ -302,32 +276,44 @@ export function LibraryFolderBrowser({
     builtInTiles,
     userTiles,
     allUserTilesByName,
-    utilityTiles,
     maxPinnedFolders,
     maxYourFolders,
     showBack,
     folderListFilter,
     appendUtilitySection,
   ]);
-
   const openSeeAll = useCallback(
     (filter: UserFolderListFilter) => {
       router.push({ pathname: '/folder', params: { list: filter } });
     },
     [router]
   );
-
   const handleAddFolder = useCallback(() => {
-    setAddModalVisible(true);
-  }, []);
-
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        'New Folder',
+        undefined,
+        (text) => {
+          const trimmed = text?.trim();
+          if (trimmed) {
+            addFolder(trimmed).catch((err: unknown) =>
+              Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
+            );
+          }
+        },
+        'plain-text',
+        ''
+      );
+    } else {
+      setAddModalVisible(true);
+    }
+  }, [addFolder]);
   const openFolder = useCallback(
     (folderId: string, folderName: string, folderType: 'built-in' | 'user') => {
       router.push({ pathname: `/folder/${folderId}` as any, params: { folderName, folderType } });
     },
     [router]
   );
-
   const handleToggleUserFolderPin = useCallback(
     (id: string) => {
       void toggleFolderPinned(id).catch((err: unknown) =>
@@ -336,61 +322,73 @@ export function LibraryFolderBrowser({
     },
     [toggleFolderPinned]
   );
-
-  const handleUserFolderLongPress = useCallback(
-    (folder: FolderTile) => {
-      const recordingCount = recordings.filter((r) => r.userFolderId === folder.id).length;
-
-      showUserFolderActions(
-        folder.name,
-        !!folder.pinned,
-        {
-          onRename: (newName) =>
-            renameFolder(folder.id, newName).catch((err: unknown) =>
-              Alert.alert('Error', err instanceof Error ? err.message : 'Could not rename folder')
-            ),
-          onTogglePin: () => handleToggleUserFolderPin(folder.id),
-          onDelete: () => {
-            Alert.alert(
-              'Delete Folder',
-              recordingCount > 0
-                ? `Delete "${folder.name}"? ${recordingCount} recording${recordingCount === 1 ? '' : 's'} will move to Unlisted.`
-                : `Delete "${folder.name}"?`,
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete',
-                  style: 'destructive',
-                  onPress: () => {
-                    void (async () => {
-                      try {
-                        const inFolder = recordings.filter((r) => r.userFolderId === folder.id);
-                        await Promise.all(
-                          inFolder.map((r) => updateRecording(r.id, { userFolderId: undefined }))
-                        );
-                        await deleteFolder(folder.id);
-                      } catch (err: unknown) {
-                        Alert.alert(
-                          'Error',
-                          err instanceof Error ? err.message : 'Could not delete folder'
-                        );
-                      }
-                    })();
-                  },
+  const folderMenuItems = useMemo(() => {
+    if (!folderMenuTarget) return [];
+    const folder = folderMenuTarget;
+    const recordingCount = recordings.filter((r) => r.userFolderId === folder.id).length;
+    return buildUserFolderMenuItems(
+      folder.name,
+      !!folder.pinned,
+      {
+        onRename: (newName) =>
+          renameFolder(folder.id, newName).catch((err: unknown) =>
+            Alert.alert('Error', err instanceof Error ? err.message : 'Could not rename folder')
+          ),
+        onTogglePin: () => handleToggleUserFolderPin(folder.id),
+        onDelete: () => {
+          Alert.alert(
+            'Delete Folder',
+            recordingCount > 0
+              ? `Delete "${folder.name}"? ${recordingCount} recording${recordingCount === 1 ? '' : 's'} will move to Unlisted.`
+              : `Delete "${folder.name}"?`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => {
+                  void (async () => {
+                    try {
+                      const inFolder = recordings.filter((r) => r.userFolderId === folder.id);
+                      await Promise.all(
+                        inFolder.map((r) => updateRecording(r.id, { userFolderId: undefined }))
+                      );
+                      await deleteFolder(folder.id);
+                    } catch (err: unknown) {
+                      Alert.alert(
+                        'Error',
+                        err instanceof Error ? err.message : 'Could not delete folder'
+                      );
+                    }
+                  })();
                 },
-              ]
-            );
-          },
+              },
+            ]
+          );
         },
-        () => {
-          // Store the active folder for rename in state to render the dialog
-          setRenameFolderTarget(folder);
-        }
-      );
+      },
+      () => setRenameFolderTarget(folder),
+    );
+  }, [
+    folderMenuTarget,
+    recordings,
+    renameFolder,
+    deleteFolder,
+    handleToggleUserFolderPin,
+    updateRecording,
+  ]);
+  const handleUserFolderLongPress = useCallback(
+    (folder: FolderTile, event: GestureResponderEvent) => {
+      setFolderMenuTarget(folder);
+      const { pageX, pageY } = event.nativeEvent;
+      requestAnimationFrame(() => folderMenu.openAtPoint(pageX, pageY));
     },
-    [recordings, renameFolder, deleteFolder, handleToggleUserFolderPin, updateRecording]
+    [folderMenu],
   );
-
+  const closeFolderMenu = useCallback(() => {
+    folderMenu.close();
+    setFolderMenuTarget(null);
+  }, [folderMenu]);
   const renderGridFolderCard = useCallback(
     (f: FolderTile, showPinnedChrome = true) => {
       const showPinVisuals =
@@ -436,24 +434,22 @@ export function LibraryFolderBrowser({
           </Text>
         </View>
       );
-
       if (f.folderType === 'user') {
         return (
           <View key={f.id} style={styles.folderCard}>
-            <FolderUserSwipeableRow
-              pinned={!!f.pinned}
+            <Pressable
               onPress={() => openFolder(f.id, f.name, f.folderType)}
-              onTogglePin={() => handleToggleUserFolderPin(f.id)}
-              onLongPress={() => handleUserFolderLongPress(f)}
-              pinInteractionEnabled
-              layout="grid"
+              onLongPress={(e) => handleUserFolderLongPress(f, e)}
+              delayLongPress={450}
+              accessibilityRole="button"
+              accessibilityLabel={f.name}
+              accessibilityHint="Long press for folder options"
             >
               {cardInner}
-            </FolderUserSwipeableRow>
+            </Pressable>
           </View>
         );
       }
-
       return (
         <TouchableOpacity
           key={f.id}
@@ -465,9 +461,8 @@ export function LibraryFolderBrowser({
         </TouchableOpacity>
       );
     },
-    [colors, openFolder, handleToggleUserFolderPin, handleUserFolderLongPress]
+    [colors, openFolder, handleUserFolderLongPress, styles]
   );
-
   const renderPinnedFolderCard = useCallback(
     (f: FolderTile) => (
       <View key={f.id} style={[styles.pinnedCard, { width: folderGridCardWidth }]}>
@@ -478,7 +473,7 @@ export function LibraryFolderBrowser({
             f.pinned && styles.folderCardPinned,
           ]}
           onPress={() => openFolder(f.id, f.name, f.folderType)}
-          onLongPress={() => handleUserFolderLongPress(f)}
+          onLongPress={(e) => handleUserFolderLongPress(f, e)}
           delayLongPress={450}
           accessibilityRole="button"
           accessibilityLabel={f.name}
@@ -512,9 +507,8 @@ export function LibraryFolderBrowser({
         </Pressable>
       </View>
     ),
-    [colors, folderGridCardWidth, openFolder, handleUserFolderLongPress]
+    [colors, folderGridCardWidth, openFolder, handleUserFolderLongPress, styles]
   );
-
   const renderPinnedRow = useCallback(
     (tiles: FolderTile[]) => (
       <ScrollView
@@ -527,15 +521,13 @@ export function LibraryFolderBrowser({
         {tiles.map((f) => renderPinnedFolderCard(f))}
       </ScrollView>
     ),
-    [renderPinnedFolderCard]
+    [renderPinnedFolderCard, styles]
   );
-
   const listIconBackground = useCallback(
     (f: FolderTile) =>
       folderListIconBackground(f.accent, f.folderType === 'user', colors),
     [colors],
   );
-
   const renderUtilityRow = useCallback(
     (f: FolderTile) => (
       <TouchableOpacity
@@ -551,9 +543,8 @@ export function LibraryFolderBrowser({
         </Text>
       </TouchableOpacity>
     ),
-    [openFolder, colors.subtext]
+    [openFolder, colors.subtext, styles]
   );
-
   const renderListItem = useCallback(
     ({ item: f, showPinnedChrome = true }: { item: FolderTile; showPinnedChrome?: boolean }) => {
       const showPinVisuals =
@@ -594,22 +585,20 @@ export function LibraryFolderBrowser({
           <Ionicons name="chevron-forward" size={16} color={colors.subtext} />
         </View>
       );
-
       if (f.folderType === 'user') {
         return (
-          <FolderUserSwipeableRow
-            pinned={!!f.pinned}
+          <Pressable
             onPress={() => openFolder(f.id, f.name, f.folderType)}
-            onTogglePin={() => handleToggleUserFolderPin(f.id)}
-            onLongPress={() => handleUserFolderLongPress(f)}
-            pinInteractionEnabled
-            layout="list"
+            onLongPress={(e) => handleUserFolderLongPress(f, e)}
+            delayLongPress={450}
+            accessibilityRole="button"
+            accessibilityLabel={f.name}
+            accessibilityHint="Long press for folder options"
           >
             {rowContent}
-          </FolderUserSwipeableRow>
+          </Pressable>
         );
       }
-
       return (
         <TouchableOpacity
           onPress={() => openFolder(f.id, f.name, f.folderType)}
@@ -619,11 +608,9 @@ export function LibraryFolderBrowser({
         </TouchableOpacity>
       );
     },
-    [colors, openFolder, listIconBackground, handleToggleUserFolderPin, handleUserFolderLongPress]
+    [colors, openFolder, listIconBackground, handleUserFolderLongPress, styles]
   );
-
   const listKeyExtractor = useCallback((item: FolderTile) => item.id, []);
-
   const renderNoFoldersPlaceholder = useCallback(
     (message = 'No folders') => (
       <View style={styles.emptyFoldersCard} accessibilityRole="text">
@@ -631,9 +618,8 @@ export function LibraryFolderBrowser({
         <Text style={styles.emptyFoldersText}>{message}</Text>
       </View>
     ),
-    [colors.subtext]
+    [colors.subtext, styles]
   );
-
   const renderSectionItem = useCallback(
     ({ item, section }: { item: FolderTile; section: Section }) => {
       if (section.variant === 'pinned-row') {
@@ -649,7 +635,6 @@ export function LibraryFolderBrowser({
     },
     [renderListItem, renderUtilityRow]
   );
-
   const renderSectionFooter = useCallback(
     ({ section }: { section: Section }) => {
       if (section.variant === 'empty-user-folders') {
@@ -662,7 +647,6 @@ export function LibraryFolderBrowser({
     },
     [renderNoFoldersPlaceholder, renderPinnedRow]
   );
-
   const renderSectionHeaderContent = useCallback(
     (section: Section) => (
       <View style={[styles.sectionHeaderRow, styles.sectionHeaderRowList]}>
@@ -684,9 +668,8 @@ export function LibraryFolderBrowser({
         ) : null}
       </View>
     ),
-    [openSeeAll],
+    [openSeeAll, styles],
   );
-
   const renderSectionHeader = useCallback(
     ({ section }: { section: Section }) => {
       if (section.hideHeader) return null;
@@ -694,7 +677,6 @@ export function LibraryFolderBrowser({
     },
     [renderSectionHeaderContent],
   );
-
   const pageTitle = useMemo(() => {
     if (!showBack) return 'Library';
     if (stackTitle) return stackTitle;
@@ -702,7 +684,6 @@ export function LibraryFolderBrowser({
     if (folderListFilter === 'all-user') return 'Your folders';
     return 'All folders';
   }, [showBack, stackTitle, folderListFilter]);
-
   return (
     <View style={styles.page}>
       {layout === 'list' ? (
@@ -770,22 +751,21 @@ export function LibraryFolderBrowser({
           ))}
         </ScrollView>
       )}
-
-      <TextInputDialog
-        visible={addModalVisible}
-        title="New Folder"
-        message="Enter a name for the folder"
-        placeholder="Folder name"
-        submitLabel="Create"
-        onSubmit={(text) => {
-          setAddModalVisible(false);
-          addFolder(text).catch((err: unknown) =>
-            Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
-          );
-        }}
-        onCancel={() => setAddModalVisible(false)}
-      />
-
+      {Platform.OS !== 'ios' ? (
+        <TextInputDialog
+          visible={addModalVisible}
+          title="New Folder"
+          placeholder="Folder name"
+          submitLabel="Create"
+          onSubmit={(text) => {
+            setAddModalVisible(false);
+            addFolder(text).catch((err: unknown) =>
+              Alert.alert('Error', err instanceof Error ? err.message : 'Could not create folder')
+            );
+          }}
+          onCancel={() => setAddModalVisible(false)}
+        />
+      ) : null}
       <LibraryHeader
         title={pageTitle}
         showBack={showBack}
@@ -793,27 +773,34 @@ export function LibraryFolderBrowser({
         onAddFolder={handleAddFolder}
         onSearch={() => router.push('/search')}
       />
-
-      <TextInputDialog
-        visible={!!renameFolderTarget}
-        title="Rename Folder"
-        defaultValue={renameFolderTarget?.name ?? ''}
-        placeholder="Folder name"
-        submitLabel="Rename"
-        onSubmit={(text) => {
-          if (renameFolderTarget) {
-            renameFolder(renameFolderTarget.id, text).catch((err: unknown) =>
-              Alert.alert('Error', err instanceof Error ? err.message : 'Could not rename folder')
-            );
-          }
-          setRenameFolderTarget(null);
-        }}
-        onCancel={() => setRenameFolderTarget(null)}
+      <AnchoredMenuModal
+        visible={folderMenu.visible}
+        anchor={folderMenu.anchor}
+        items={folderMenuItems}
+        onClose={closeFolderMenu}
+        align="center"
       />
+      {Platform.OS !== 'ios' ? (
+        <TextInputDialog
+          visible={!!renameFolderTarget}
+          title="Rename Folder"
+          defaultValue={renameFolderTarget?.name ?? ''}
+          placeholder="Folder name"
+          submitLabel="Rename"
+          onSubmit={(text) => {
+            if (renameFolderTarget) {
+              renameFolder(renameFolderTarget.id, text).catch((err: unknown) =>
+                Alert.alert('Error', err instanceof Error ? err.message : 'Could not rename folder')
+              );
+            }
+            setRenameFolderTarget(null);
+          }}
+          onCancel={() => setRenameFolderTarget(null)}
+        />
+      ) : null}
     </View>
   );
 }
-
 function createLibraryFolderBrowserStyles(c: ColorPalette) {
   return StyleSheet.create({
   page: {
@@ -1011,63 +998,5 @@ function createLibraryFolderBrowserStyles(c: ColorPalette) {
   utilityItemGap: {
     height: 4,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContentWrap: {
-    width: '100%',
-    maxWidth: 340,
-  },
-  addFolderModal: {
-    backgroundColor: c.card,
-    borderRadius: BorderRadius.lg,
-    padding: 20,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
-  },
-  addFolderModalTitle: withAppFont({
-    fontSize: 17,
-    fontWeight: '700',
-    color: c.textPrimary,
-    marginBottom: 16,
-  }),
-  addFolderInput: withAppFont({
-    backgroundColor: c.surface,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: c.textPrimary,
-    marginBottom: 20,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
-  }),
-  addFolderModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  addFolderModalBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: Spacing.lg,
-  },
-  addFolderModalBtnCancel: withAppFont({
-    fontSize: 16,
-    color: c.subtext,
-    fontWeight: '600',
-  }),
-  addFolderModalBtnPrimary: {
-    backgroundColor: c.primary,
-    borderRadius: BorderRadius.md,
-  },
-  addFolderModalBtnPrimaryText: withAppFont({
-    fontSize: 16,
-    color: c.textPrimary,
-    fontWeight: '600',
-  }),
   });
 }

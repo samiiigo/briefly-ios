@@ -3,7 +3,7 @@
     "name": "Briefly",
     "slug": "briefly",
     "scheme": "briefly",
-    "version": "4.7.0",
+    "version": "5.2.7",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -82,6 +82,7 @@
         }
       ],
       "expo-asset",
+      "expo-document-picker",
       "expo-live-activity",
       [
         "llama.rn",

@@ -1,11 +1,9 @@
 export type DetectedCloudProvider = 'openai' | 'gemini' | 'anthropic' | 'github' | 'openrouter';
-
 interface ProviderMeta {
   label: string;
   endpoint: string;
   matchesKey: (key: string) => boolean;
 }
-
 const PROVIDER_REGISTRY: Record<DetectedCloudProvider, ProviderMeta> = {
   openrouter: {
     label: 'OpenRouter',
@@ -33,7 +31,6 @@ const PROVIDER_REGISTRY: Record<DetectedCloudProvider, ProviderMeta> = {
     matchesKey: (k) => k.startsWith('github_pat_') || k.startsWith('ghp_'),
   },
 };
-
 const DETECTION_ORDER: DetectedCloudProvider[] = [
   'openrouter',
   'anthropic',
@@ -41,7 +38,6 @@ const DETECTION_ORDER: DetectedCloudProvider[] = [
   'gemini',
   'github',
 ];
-
 export function detectProvider(key: string): DetectedCloudProvider | null {
   const k = key.trim();
   if (!k) return null;
@@ -52,11 +48,9 @@ export function detectProvider(key: string): DetectedCloudProvider | null {
   }
   return null;
 }
-
 export function providerEndpoint(provider: DetectedCloudProvider): string {
   return PROVIDER_REGISTRY[provider].endpoint;
 }
-
 export function providerLabel(provider: DetectedCloudProvider): string {
   return PROVIDER_REGISTRY[provider].label;
 }

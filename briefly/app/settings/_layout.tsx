@@ -1,13 +1,12 @@
 import { View, Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import { useThemedStackShell } from '@/components/navigation/themedStackLayout';
-
+import { useThemedStackShell } from '@/components/navigation/layout/themedStackLayout';
 export default function SettingsLayout() {
   const shell = useThemedStackShell();
-
   return (
     <View style={shell.root}>
       <Stack
+        initialRouteName="index"
         screenOptions={{
           headerShown: false,
           contentStyle: shell.contentStyle,
@@ -23,7 +22,13 @@ export default function SettingsLayout() {
             },
           }),
         }}
-      />
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="transcription-mode" />
+        <Stack.Screen name="processing-mode" />
+        <Stack.Screen name="folder-layout" />
+        <Stack.Screen name="appearance" />
+      </Stack>
     </View>
   );
 }

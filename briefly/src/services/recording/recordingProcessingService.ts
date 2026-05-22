@@ -19,12 +19,9 @@ import {
   validateRecordingAsset,
 } from '@/utils/recording/recordingValidation';
 import { logger } from '@/utils/logging/logger';
-
 export type RecordingProcessingStage = 'transcribing' | 'summarizing';
-
 /** Standard file-based transcription used when the primary path fails or the user retries. */
-export const FALLBACK_TRANSCRIPTION_MODE: TranscriptionMode = 'post-assemblyai';
-
+export const FALLBACK_TRANSCRIPTION_MODE: TranscriptionMode = 'cloud';
 export interface RecordingProcessingResult {
   segments: TranscriptSegment[];
   summary: string;
@@ -33,18 +30,15 @@ export interface RecordingProcessingResult {
   title?: string;
   usedAudioFallback: boolean;
 }
-
 export interface RecordingProcessingCallbacks {
   onStage: (stage: RecordingProcessingStage) => void;
   onTranscriptReady?: (segments: TranscriptSegment[]) => void | Promise<void>;
 }
-
 function assertTranscriptHasContent(segments: TranscriptSegment[]): void {
   if (!hasMeaningfulTranscript(segments)) {
     throw new Error('No speech was detected in this recording.');
   }
 }
-
 /**
  * Transcribes the saved audio file via AssemblyAI (post-recording pipeline).
  */
@@ -61,7 +55,6 @@ export async function transcribeSavedAudioFile(
   } else if (!filePath?.trim()) {
     throw new Error('No audio file was saved for this recording.');
   }
-
   const uploadUri = await ensureUploadableAudioUri(filePath);
   logger.info('RECORDING', 'Fallback: transcribing saved audio file', {
     filePath,
@@ -75,7 +68,6 @@ export async function transcribeSavedAudioFile(
   assertTranscriptHasContent(segments);
   return segments;
 }
-
 /**
  * Re-transcribes a saved recording from its audio file via AssemblyAI.
  * Ignores original capture mode (live, on-device, post) and any existing transcript.
@@ -87,19 +79,16 @@ export async function retranscribeRecordingFromAudio(
   if (!filePath?.trim()) {
     throw new Error('No audio file was saved for this recording.');
   }
-
   const onDisk = getPathInfo(filePath);
   if (!onDisk.exists) {
     throw new Error('Audio file not found.');
   }
-
   const fileSizeBytes = onDisk.size ?? meta?.fileSizeBytes ?? 0;
   validateRecordingAsset({
     filePath,
     durationSec: meta?.durationSec ?? 0,
     fileSizeBytes,
   });
-
   const uploadUri = await ensureUploadableAudioUri(filePath);
   logger.info('RECORDING', 'Re-transcribing saved audio via AssemblyAI', {
     filePath,
@@ -109,12 +98,11 @@ export async function retranscribeRecordingFromAudio(
   const segments = await TranscriptionService.transcribe(
     uploadUri,
     undefined,
-    'post-assemblyai',
+    'cloud',
   );
   assertTranscriptHasContent(segments);
   return segments;
 }
-
 /**
  * Resolves transcript text after save based on global Settings mode.
  */
@@ -126,17 +114,11 @@ export async function obtainTranscriptForSummarization(
 ): Promise<TranscriptSegment[]> {
   const settingsMode = normalizeTranscriptionMode(settingsTranscriptionMode);
   const pipeline = resolvePostRecordingPipeline(settingsMode, existingTranscript);
-
   if (pipeline.skipAsyncTranscription) {
     const segments = existingTranscript ?? [];
     assertTranscriptHasContent(segments);
     return segments;
   }
-
-  if (settingsMode === 'local-on-device') {
-    throw new Error('No on-device transcript was captured during recording.');
-  }
-
   if (meta?.fileSizeBytes != null) {
     validateRecordingAsset({
       filePath,
@@ -144,17 +126,14 @@ export async function obtainTranscriptForSummarization(
       fileSizeBytes: meta.fileSizeBytes,
     });
   }
-
   const segments = await TranscriptionService.transcribe(
     filePath,
     undefined,
     pipeline.asyncTranscriptionMode,
   );
-
   assertTranscriptHasContent(segments);
   return segments;
 }
-
 /**
  * Primary path with automatic fallback: on transcript failure, transcribe saved audio.
  */
@@ -177,13 +156,10 @@ export async function obtainTranscriptWithAutoFallback(
     if (shouldSkipAudioFallback(primaryError)) {
       throw toProcessingFailure(primaryError, 'transcription');
     }
-
     logger.warn('RECORDING', 'Primary transcription failed; using saved audio fallback', {
       error: primaryError instanceof Error ? primaryError.message : String(primaryError),
     });
-
     callbacks.onStage('transcribing');
-
     try {
       const segments = await transcribeSavedAudioFile(filePath, meta);
       await callbacks.onTranscriptReady?.(segments);
@@ -193,7 +169,6 @@ export async function obtainTranscriptWithAutoFallback(
     }
   }
 }
-
 async function summarizeTranscript(
   segments: TranscriptSegment[],
   summarizationModeOverride?: ProcessingMode,
@@ -211,7 +186,6 @@ async function summarizeTranscript(
     );
   }
 }
-
 /**
  * Re-runs summarization only (transcript must already exist).
  */
@@ -223,12 +197,10 @@ export async function retrySummarization(
   callbacks.onStage('summarizing');
   return summarizeTranscript(segments, summarizationMode);
 }
-
 export interface ProcessRecordingOptions {
   durationSec?: number;
   fileSizeBytes?: number;
 }
-
 /**
  * Always transcribes the saved audio file, then summarizes.
  */
@@ -249,7 +221,6 @@ export async function processRecordingFromSavedAudio(
     throw toProcessingFailure(err, 'transcription');
   }
 }
-
 export async function processRecordingToReady(
   settingsTranscriptionMode: TranscriptionMode | string,
   _summarizationMode: ProcessingMode,
@@ -264,14 +235,11 @@ export async function processRecordingToReady(
       'No audio file was saved for this recording.',
     );
   }
-
   const pipeline = resolvePostRecordingPipeline(
     settingsTranscriptionMode,
     existingTranscript,
   );
-
   callbacks.onStage(pipeline.skipAsyncTranscription ? 'summarizing' : 'transcribing');
-
   try {
     const { segments, usedAudioFallback } = await obtainTranscriptWithAutoFallback(
       settingsTranscriptionMode,
@@ -280,14 +248,11 @@ export async function processRecordingToReady(
       callbacks,
       meta,
     );
-
     if (!usedAudioFallback) {
       await callbacks.onTranscriptReady?.(segments);
     }
-
     callbacks.onStage('summarizing');
     const { summary, keyInsights, mainEmoji, title } = await summarizeTranscript(segments);
-
     return { segments, summary, keyInsights, mainEmoji, title, usedAudioFallback };
   } catch (err) {
     if (err instanceof ProcessingFailure) throw err;

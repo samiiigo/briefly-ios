@@ -3,7 +3,6 @@ import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { useResolvedColorScheme } from '@/theme';
 import { Recording } from '@/types';
-
 interface RecordingGridFlashListProps {
   data: Recording[];
   renderItem: (recording: Recording) => React.ReactElement;
@@ -12,7 +11,6 @@ interface RecordingGridFlashListProps {
   onMomentumScrollBegin?: () => void;
   drawDistance?: number;
 }
-
 export function RecordingGridFlashList({
   data,
   renderItem,
@@ -26,7 +24,6 @@ export function RecordingGridFlashList({
     ({ item }) => <View style={styles.gridCell}>{renderItem(item)}</View>,
     [renderItem],
   );
-
   return (
     <FlashList
       style={styles.list}
@@ -43,7 +40,6 @@ export function RecordingGridFlashList({
     />
   );
 }
-
 const styles = StyleSheet.create({
   list: {
     flex: 1,

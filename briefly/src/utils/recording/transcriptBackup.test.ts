@@ -8,7 +8,6 @@ import {
   serializeTranscriptBackupFile,
   TRANSCRIPT_BACKUP_FORMAT,
 } from './transcriptBackup';
-
 const baseRecording: Recording = {
   id: 'rec-1',
   title: 'Standup',
@@ -29,7 +28,6 @@ const baseRecording: Recording = {
   ],
   summary: '## Summary\n\nBeta shipped.',
 };
-
 describe('transcriptBackup', () => {
   it('detects exportable library items', () => {
     assert.equal(hasExportableTranscriptContent(baseRecording), true);
@@ -47,20 +45,17 @@ describe('transcriptBackup', () => {
       false,
     );
   });
-
   it('round-trips backup JSON', () => {
     const file = buildTranscriptBackupFile([baseRecording]);
     assert.equal(file.format, TRANSCRIPT_BACKUP_FORMAT);
     assert.equal(file.recordings.length, 1);
     assert.equal(file.recordings[0]?.title, 'Standup');
-
     const json = serializeTranscriptBackupFile(file);
     const entries = parseTranscriptBackupJson(json);
     assert.equal(entries.length, 1);
     assert.equal(entries[0]?.title, 'Standup');
     assert.equal(entries[0]?.transcript?.[0]?.text, 'Shipped the beta.');
   });
-
   it('accepts a raw recordings array', () => {
     const entries = parseTranscriptBackupJson(
       JSON.stringify([

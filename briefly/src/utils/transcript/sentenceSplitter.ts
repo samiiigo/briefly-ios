@@ -1,13 +1,4 @@
-/**
- * Sentence splitting utilities (SRP)
- *
- * Extracted from RecordingScreen and TranscriptionService where the same
- * regex-based sentence boundary logic was duplicated. Now both consume
- * this single shared module.
- */
-
 const SENTENCE_BOUNDARY_REGEX = /[^.!?]+[.!?]+["')\]]*(?=\s|$)/g;
-
 /**
  * Split text into complete sentences and a trailing remainder.
  */
@@ -16,11 +7,9 @@ export function splitCompleteSentences(text: string): { sentences: string[]; rem
   if (!source) {
     return { sentences: [], remainder: '' };
   }
-
   const sentences: string[] = [];
   let lastBoundary = 0;
   SENTENCE_BOUNDARY_REGEX.lastIndex = 0;
-
   let match = SENTENCE_BOUNDARY_REGEX.exec(source);
   while (match) {
     const sentence = match[0].trim();
@@ -30,13 +19,11 @@ export function splitCompleteSentences(text: string): { sentences: string[]; rem
     lastBoundary = match.index + match[0].length;
     match = SENTENCE_BOUNDARY_REGEX.exec(source);
   }
-
   return {
     sentences,
     remainder: source.slice(lastBoundary).trim(),
   };
 }
-
 /**
  * Split text into sentence-level segments (no remainder — everything included).
  */
@@ -48,7 +35,6 @@ export function splitTextIntoSentences(text: string): string[] {
   const { sentences, remainder } = splitCompleteSentences(normalized);
   return remainder ? [...sentences, remainder] : sentences;
 }
-
 /**
  * Append a chunk to base text with a space separator.
  */

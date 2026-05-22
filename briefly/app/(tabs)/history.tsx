@@ -4,7 +4,6 @@ import { LibraryFolderBrowser } from '@/components/features/library/LibraryFolde
 import { MAX_PINNED_FOLDERS, MAX_YOUR_FOLDERS_PREVIEW } from '@/constants/userFolders';
 import { useCreateStyles } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 export default function HistoryScreen() {
   const styles = useCreateStyles(createHistoryScreenStyles);
   return (
@@ -16,7 +15,6 @@ export default function HistoryScreen() {
     </View>
   );
 }
-
 function createHistoryScreenStyles(c: ColorPalette) {
   return StyleSheet.create({
     container: {

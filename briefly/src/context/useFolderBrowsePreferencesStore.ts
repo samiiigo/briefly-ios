@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-
 export type FolderLayoutMode = 'list' | 'grid';
 export type FolderSortField = 'date' | 'name' | 'type' | 'size';
 export type FolderSortDirection = 'asc' | 'desc';
@@ -9,21 +8,18 @@ export interface FolderBrowsePreferences {
   sortDirection: FolderSortDirection;
   favoritesOnly: boolean;
 }
-
 const defaultBrowse: FolderBrowsePreferences = {
   layout: 'list',
   sortField: 'date',
   sortDirection: 'desc',
   favoritesOnly: false,
 };
-
 interface State {
   /** Merged state per folder key; missing keys use `defaultBrowse`. */
   byFolder: Record<string, FolderBrowsePreferences>;
   setForFolder: (folderKey: string, patch: Partial<FolderBrowsePreferences>) => void;
   resetForFolder: (folderKey: string) => void;
 }
-
 export const useFolderBrowsePreferencesStore = create<State>((set) => ({
   byFolder: {},
   setForFolder: (folderKey, patch) =>
@@ -43,12 +39,10 @@ export const useFolderBrowsePreferencesStore = create<State>((set) => ({
       return { byFolder: next };
     }),
 }));
-
 export function getFolderBrowsePreferences(
   byFolder: Record<string, FolderBrowsePreferences>,
   folderKey: string
 ): FolderBrowsePreferences {
   return { ...defaultBrowse, ...byFolder[folderKey] };
 }
-
 export { defaultBrowse as defaultFolderBrowsePreferences };

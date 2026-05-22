@@ -12,16 +12,13 @@ import type { ColorPalette } from '@/theme/colorPalettes';
 import {
   RECORD_BUTTON_SIZE,
   useFloatingTabBarLayout,
-} from '@/components/navigation/useFloatingTabBarLayout';
-
+} from '@/components/navigation/layout/useFloatingTabBarLayout';
 const SIZE = RECORD_BUTTON_SIZE;
 const RING_SIZE = 24;
-
 interface RecordButtonProps {
   onPress: () => void;
   style?: ViewStyle;
 }
-
 /** Strip layout keys so every screen shares the same FAB anchor from `useFloatingTabBarLayout`. */
 function fabStyleWithoutPosition(style?: ViewStyle): ViewStyle | undefined {
   if (!style) return undefined;
@@ -35,7 +32,6 @@ function fabStyleWithoutPosition(style?: ViewStyle): ViewStyle | undefined {
   } = style;
   return Object.keys(rest).length > 0 ? rest : undefined;
 }
-
 export function RecordButton({ onPress, style }: RecordButtonProps) {
   const styles = useCreateStyles(createRecordButtonStyles);
   const isLight = useResolvedColorScheme() === 'light';
@@ -43,7 +39,6 @@ export function RecordButton({ onPress, style }: RecordButtonProps) {
   const extraStyle = useMemo(() => fabStyleWithoutPosition(style), [style]);
   const pingScale = useSharedValue(1);
   const pingOpacity = useSharedValue(0.5);
-
   useEffect(() => {
     pingScale.value = withRepeat(
       withTiming(1.35, { duration: 1200, easing: Easing.out(Easing.ease) }),
@@ -56,12 +51,10 @@ export function RecordButton({ onPress, style }: RecordButtonProps) {
       true
     );
   }, [pingOpacity, pingScale]);
-
   const pingStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pingScale.value }],
     opacity: pingOpacity.value,
   }));
-
   return (
     <TouchableOpacity
       style={[
@@ -83,7 +76,6 @@ export function RecordButton({ onPress, style }: RecordButtonProps) {
     </TouchableOpacity>
   );
 }
-
 function createRecordButtonStyles(c: ColorPalette) {
   return StyleSheet.create({
     fab: {

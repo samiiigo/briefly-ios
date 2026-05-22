@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { patchWavHeader, wavHeaderNeedsRepair } from './repairWavHeaderCore';
-import { WAV_HEADER_BYTES } from './repairWavHeaderCore';
+import { patchWavHeader, wavHeaderNeedsRepair , WAV_HEADER_BYTES } from './repairWavHeaderCore';
 
 function makeWavHeader(dataSize: number): Uint8Array {
   const fileSize = WAV_HEADER_BYTES + dataSize;
@@ -14,21 +13,18 @@ function makeWavHeader(dataSize: number): Uint8Array {
   view.setUint32(40, dataSize, true);
   return bytes;
 }
-
 describe('repairWavForUpload', () => {
   it('detects when declared data size is smaller than file', () => {
     const header = makeWavHeader(500);
     const fileSize = 1_000_000;
     assert.equal(wavHeaderNeedsRepair(header, fileSize), true);
   });
-
   it('does not repair when header matches file size', () => {
     const dataSize = 320_000;
     const header = makeWavHeader(dataSize);
     const fileSize = WAV_HEADER_BYTES + dataSize;
     assert.equal(wavHeaderNeedsRepair(header, fileSize), false);
   });
-
   it('patches RIFF and data chunk sizes', () => {
     const header = makeWavHeader(500);
     const fileSize = 1_000_000;

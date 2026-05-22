@@ -7,26 +7,24 @@ import {
   TOP_HEADER_BUTTON_ROW_HEIGHT,
   TOP_HEADER_PADDING_BOTTOM,
   TOP_HEADER_PADDING_TOP,
-} from '@/components/navigation/topHeaderMetrics';
-import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
+} from '@/components/navigation/layout/topHeaderMetrics';
+import { TopChromeOverlay } from '@/components/navigation/chrome/TopChromeOverlay';
 import { useCreateStyles, useThemedColors, Spacing, BorderRadius } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface HeaderProps {
   onBack: () => void;
   folderLabel: string;
-  onShare: () => void;
-  shareDisabled?: boolean;
+  shareItems: AnchoredMenuItem[];
+  shareLoading?: boolean;
   menuItems: AnchoredMenuItem[];
   menuLoading?: boolean;
 }
-
 /** Summary screen top bar (Figma mock). */
 export function RecordingDetailHeader({
   onBack,
   folderLabel,
-  onShare,
-  shareDisabled,
+  shareItems,
+  shareLoading = false,
   menuItems,
   menuLoading = false,
 }: HeaderProps) {
@@ -46,14 +44,18 @@ export function RecordingDetailHeader({
           </Text>
         </View>
         <View style={headerStyles.actions}>
-          <CircularIconButton
-            icon={shareDisabled ? 'hourglass-outline' : 'share-outline'}
-            accessibilityLabel="Share"
-            onPress={shareDisabled ? undefined : onShare}
-            style={[
-              headerStyles.secondaryButton,
-              shareDisabled ? headerStyles.shareDisabled : undefined,
-            ]}
+          <AnchoredOverflowMenu
+            items={shareItems}
+            triggerLoading={shareLoading}
+            renderTrigger={(open) => (
+              <CircularIconButton
+                icon="share-outline"
+                accessibilityLabel="Share"
+                onPress={open}
+                loading={shareLoading}
+                style={headerStyles.secondaryButton}
+              />
+            )}
           />
           <AnchoredOverflowMenu
             items={menuItems}
@@ -73,12 +75,10 @@ export function RecordingDetailHeader({
     </TopChromeOverlay>
   );
 }
-
 interface ShareFabProps {
   onPress: () => void;
   disabled?: boolean;
 }
-
 /** Floating share pill (Figma summary screen). */
 export function RecordingShareFab({ onPress, disabled }: ShareFabProps) {
   const fabStyles = useCreateStyles(createRecordingShareFabStyles);
@@ -97,7 +97,6 @@ export function RecordingShareFab({ onPress, disabled }: ShareFabProps) {
     </TouchableOpacity>
   );
 }
-
 function createRecordingShareFabStyles(c: ColorPalette) {
   return StyleSheet.create({
   button: {
@@ -132,7 +131,6 @@ function createRecordingShareFabStyles(c: ColorPalette) {
   },
   });
 }
-
 function createRecordingDetailHeaderStyles(c: ColorPalette) {
   return StyleSheet.create({
   header: {
@@ -170,9 +168,6 @@ function createRecordingDetailHeaderStyles(c: ColorPalette) {
   },
   secondaryButton: {
     backgroundColor: c.headerButtonMuted,
-  },
-  shareDisabled: {
-    opacity: 0.6,
   },
   });
 }

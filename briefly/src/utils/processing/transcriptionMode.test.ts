@@ -1,87 +1,53 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  resolveAsyncTranscriptionMode,
+  normalizeTranscriptionMode,
   resolvePostRecordingPipeline,
-  resolveRecordingTranscriptionPlan,
-  requiresLiveOnDeviceCapture,
+  resolveDecorativePreviewEngine,
+  canRunDecorativeLivePreview,
 } from './transcriptionMode';
-
-describe('resolveAsyncTranscriptionMode', () => {
-  it('maps live AssemblyAI to post-recording for async reruns', () => {
-    assert.equal(resolveAsyncTranscriptionMode('live-assemblyai'), 'post-assemblyai');
+describe('normalizeTranscriptionMode', () => {
+  it('maps legacy live and post modes to cloud', () => {
+    assert.equal(normalizeTranscriptionMode('live-assemblyai'), 'cloud');
+    assert.equal(normalizeTranscriptionMode('post-assemblyai'), 'cloud');
   });
-
-  it('keeps post-recording AssemblyAI unchanged', () => {
-    assert.equal(resolveAsyncTranscriptionMode('post-assemblyai'), 'post-assemblyai');
-  });
-
-  it('keeps local on-device unchanged', () => {
-    assert.equal(resolveAsyncTranscriptionMode('local-on-device'), 'local-on-device');
+  it('maps legacy local modes to local', () => {
+    assert.equal(normalizeTranscriptionMode('local-on-device'), 'local');
+    assert.equal(normalizeTranscriptionMode('on-device-first'), 'local');
   });
 });
-
-describe('resolveRecordingTranscriptionPlan', () => {
-  const caps = { canCloudLive: true, canOnDeviceLive: true };
-
-  it('always uses live on-device capture for local mode', () => {
-    const plan = resolveRecordingTranscriptionPlan('local-on-device', caps);
-    assert.equal(plan.settingsMode, 'local-on-device');
-    assert.equal(plan.useLiveCapture, true);
-    assert.equal(plan.liveEngine, 'on-device');
-    assert.equal(requiresLiveOnDeviceCapture(plan), true);
-  });
-
-  it('uses cloud live for live AssemblyAI when supported', () => {
-    const plan = resolveRecordingTranscriptionPlan('live-assemblyai', caps);
-    assert.equal(plan.useLiveCapture, true);
-    assert.equal(plan.liveEngine, 'cloud');
-  });
-
-  it('does not use live capture for post-recording mode', () => {
-    const plan = resolveRecordingTranscriptionPlan('post-assemblyai', caps);
-    assert.equal(plan.useLiveCapture, false);
-    assert.equal(plan.liveEngine, 'none');
-  });
-
-  it('reports no on-device engine when native speech is unavailable', () => {
-    const plan = resolveRecordingTranscriptionPlan('local-on-device', {
-      canCloudLive: true,
-      canOnDeviceLive: false,
-    });
-    assert.equal(plan.useLiveCapture, false);
-    assert.equal(plan.liveEngine, 'none');
-  });
-});
-
 describe('resolvePostRecordingPipeline', () => {
   const liveSegments = [{ id: '1', text: 'hello', startTime: 0, endTime: 1, isFinal: true }];
-
-  it('always transcribes audio for post-recording mode even if a transcript exists', () => {
-    const pipeline = resolvePostRecordingPipeline('post-assemblyai', liveSegments);
+  it('always transcribes from saved audio for cloud mode', () => {
+    const pipeline = resolvePostRecordingPipeline('cloud', liveSegments);
     assert.equal(pipeline.skipAsyncTranscription, false);
-    assert.equal(pipeline.asyncTranscriptionMode, 'post-assemblyai');
+    assert.equal(pipeline.asyncTranscriptionMode, 'cloud');
   });
-
-  it('skips async transcription for live mode when live transcript exists', () => {
-    const pipeline = resolvePostRecordingPipeline('live-assemblyai', liveSegments);
-    assert.equal(pipeline.skipAsyncTranscription, true);
-    assert.equal(pipeline.asyncTranscriptionMode, 'post-assemblyai');
-  });
-
-  it('falls back to file transcription for live mode without a transcript', () => {
-    const pipeline = resolvePostRecordingPipeline('live-assemblyai', []);
+  it('ignores decorative live transcript for local mode', () => {
+    const pipeline = resolvePostRecordingPipeline('local', liveSegments);
     assert.equal(pipeline.skipAsyncTranscription, false);
-    assert.equal(pipeline.asyncTranscriptionMode, 'post-assemblyai');
+    assert.equal(pipeline.asyncTranscriptionMode, 'local');
   });
-
-  it('skips async transcription for local mode when on-device transcript exists', () => {
-    const pipeline = resolvePostRecordingPipeline('local-on-device', liveSegments);
-    assert.equal(pipeline.skipAsyncTranscription, true);
+});
+describe('resolveDecorativePreviewEngine', () => {
+  const caps = { canCloudLive: true, canOnDeviceLive: true };
+  it('prefers on-device preview for local mode when supported', () => {
+    assert.equal(resolveDecorativePreviewEngine('local', caps), 'on-device');
   });
-
-  it('requires transcription step for local mode without a transcript', () => {
-    const pipeline = resolvePostRecordingPipeline('local-on-device', undefined);
-    assert.equal(pipeline.skipAsyncTranscription, false);
+  it('uses cloud preview for cloud mode', () => {
+    assert.equal(resolveDecorativePreviewEngine('cloud', caps), 'cloud');
+  });
+  it('returns none when no live engines are available', () => {
+    assert.equal(
+      resolveDecorativePreviewEngine('cloud', { canCloudLive: false, canOnDeviceLive: false }),
+      'none',
+    );
+  });
+});
+describe('canRunDecorativeLivePreview', () => {
+  it('requires setting and a supported engine', () => {
+    assert.equal(canRunDecorativeLivePreview(true, 'cloud'), true);
+    assert.equal(canRunDecorativeLivePreview(false, 'cloud'), false);
+    assert.equal(canRunDecorativeLivePreview(true, 'none'), false);
   });
 });

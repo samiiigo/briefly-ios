@@ -5,7 +5,8 @@ import type { FolderRepository } from '@/services/storage';
 import { generateId } from '@/utils';
 import { MAX_PINNED_FOLDERS } from '@/constants/userFolders';
 import { sortUserFolders } from '@/utils/folders/userFolderSort';
-
+import { validateFolderName, validateUserFolderId } from '@/security/inputSchemas';
+import { ValidationError } from '@/security/schema';
 export interface UserFolderStore {
   folders: UserFolder[];
   hasLoaded: boolean;
@@ -15,11 +16,16 @@ export interface UserFolderStore {
   deleteFolder: (id: string) => Promise<void>;
   toggleFolderPinned: (id: string) => Promise<void>;
 }
-
 function normalizeFolderName(name: string): string {
-  return name.trim();
+  try {
+    return validateFolderName(name);
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw new Error(error.message);
+    }
+    throw error;
+  }
 }
-
 function hasDuplicateFolderName(folders: UserFolder[], name: string, excludeId?: string): boolean {
   const normalized = name.toLowerCase();
   return folders.some((folder) => {
@@ -29,27 +35,21 @@ function hasDuplicateFolderName(folders: UserFolder[], name: string, excludeId?:
     return folder.name.toLowerCase() === normalized;
   });
 }
-
 let folderRepository: FolderRepository = FolderStorageService;
-
 export function configureFolderRepository(repository: FolderRepository): void {
   folderRepository = repository;
 }
-
 export function resetFolderRepository(): void {
   folderRepository = FolderStorageService;
 }
-
 export const useUserFolderStore = create<UserFolderStore>((set, get) => ({
   folders: [],
   hasLoaded: false,
-
   loadFolders: async () => {
     const raw = await folderRepository.loadAll();
     const folders = sortUserFolders(raw);
     set({ folders, hasLoaded: true });
   },
-
   addFolder: async (name: string) => {
     const trimmed = normalizeFolderName(name);
     if (!trimmed) throw new Error('Folder name cannot be empty');
@@ -61,8 +61,8 @@ export const useUserFolderStore = create<UserFolderStore>((set, get) => ({
     set((state) => ({ folders: sortUserFolders([...state.folders, folder]) }));
     return folder;
   },
-
   renameFolder: async (id: string, name: string) => {
+    validateUserFolderId(id);
     const trimmed = normalizeFolderName(name);
     if (!trimmed) throw new Error('Folder name cannot be empty');
     const existing = get().folders;
@@ -78,8 +78,8 @@ export const useUserFolderStore = create<UserFolderStore>((set, get) => ({
       ),
     }));
   },
-
   toggleFolderPinned: async (id: string) => {
+    validateUserFolderId(id);
     const existing = get().folders.find((f) => f.id === id);
     if (!existing) return;
     const nextPinned = !existing.pinned;
@@ -101,8 +101,8 @@ export const useUserFolderStore = create<UserFolderStore>((set, get) => ({
       ),
     }));
   },
-
   deleteFolder: async (id: string) => {
+    validateUserFolderId(id);
     await folderRepository.remove(id);
     set((state) => ({ folders: state.folders.filter((folderItem) => folderItem.id !== id) }));
   },

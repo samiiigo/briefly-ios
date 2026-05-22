@@ -1,10 +1,9 @@
 /**
- * OnDeviceProvider — on-device summarization (SRP)
+ * OnDeviceProvider — on-device summarization
  *
  * Prefers Gemma via llama.rn when the GGUF is on disk; otherwise uses extractive
  * summarization (JS on Android; native then JS on iOS).
  */
-
 import { Platform } from 'react-native';
 import { TranscriptSegment } from '@/types';
 import { SummarizationProvider, SummarizationResult } from './summarizationProvider';
@@ -14,7 +13,6 @@ import { summarizeWithLocalLlama } from './local/localLlamaSummarizationService'
 import { summarizeExtractiveOnDevice } from './local/nativeExtractiveSummarization';
 import { supportsLocalLlamaSummarization } from '@/utils/platformCapabilities';
 import { logger } from '@/utils/logging/logger';
-
 function canUseGemmaSummarization(): boolean {
   return (
     supportsLocalLlamaSummarization() &&
@@ -22,10 +20,8 @@ function canUseGemmaSummarization(): boolean {
     !isLocalLlmDownloadInProgress()
   );
 }
-
 export class OnDeviceProvider implements SummarizationProvider {
   readonly name = 'on-device';
-
   async summarize(segments: TranscriptSegment[]): Promise<SummarizationResult> {
     const text = segmentsToText(segments);
     logger.info('SUMMARY', 'On-device summarization requested', {
@@ -34,7 +30,6 @@ export class OnDeviceProvider implements SummarizationProvider {
       platform: Platform.OS,
       gemma: canUseGemmaSummarization(),
     });
-
     if (canUseGemmaSummarization()) {
       try {
         const result = await summarizeWithLocalLlama(segments);
@@ -50,7 +45,6 @@ export class OnDeviceProvider implements SummarizationProvider {
         return summarizeExtractiveOnDevice(text);
       }
     }
-
     logger.info('SUMMARY', 'Using extractive on-device summarization');
     return summarizeExtractiveOnDevice(text);
   }

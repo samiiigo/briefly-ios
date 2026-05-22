@@ -9,24 +9,20 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   RECORD_BUTTON_SIZE,
   useFloatingTabBarLayout,
-} from '@/components/navigation/useFloatingTabBarLayout';
+} from '@/components/navigation/layout/useFloatingTabBarLayout';
 import { useCreateStyles, useResolvedColorScheme, useThemedColors } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 const SIZE = RECORD_BUTTON_SIZE;
-
 interface ImportFabButtonProps {
   onPress: () => void;
   disabled?: boolean;
   style?: ViewStyle;
 }
-
 export function ImportFabButton({ onPress, disabled, style }: ImportFabButtonProps) {
   const styles = useCreateStyles(createImportFabButtonStyles);
   const colors = useThemedColors();
   const isLight = useResolvedColorScheme() === 'light';
   const { recordButtonBottom, horizontalInset } = useFloatingTabBarLayout();
-
   return (
     <TouchableOpacity
       style={[
@@ -52,7 +48,6 @@ export function ImportFabButton({ onPress, disabled, style }: ImportFabButtonPro
     </TouchableOpacity>
   );
 }
-
 function createImportFabButtonStyles(c: ColorPalette) {
   return StyleSheet.create({
     fab: {

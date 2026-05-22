@@ -5,11 +5,10 @@ import {
   TOP_HEADER_BUTTON_ROW_HEIGHT,
   TOP_HEADER_PADDING_BOTTOM,
   TOP_HEADER_PADDING_TOP,
-} from '@/components/navigation/topHeaderMetrics';
-import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
+} from '@/components/navigation/layout/topHeaderMetrics';
+import { TopChromeOverlay } from '@/components/navigation/chrome/TopChromeOverlay';
 import { useCreateStyles, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   title?: string;
   showBack?: boolean;
@@ -17,7 +16,6 @@ interface Props {
   onAddFolder: () => void;
   onSearch?: () => void;
 }
-
 export function LibraryHeader({
   title = 'Library',
   showBack = false,
@@ -26,7 +24,6 @@ export function LibraryHeader({
   onSearch,
 }: Props) {
   const styles = useCreateStyles(createLibraryHeaderStyles);
-
   return (
     <TopChromeOverlay>
       <View style={styles.header}>
@@ -59,7 +56,6 @@ export function LibraryHeader({
     </TopChromeOverlay>
   );
 }
-
 function createLibraryHeaderStyles(c: ColorPalette) {
   return StyleSheet.create({
     header: {

@@ -2,17 +2,14 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useCreateStyles, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   text: string;
 }
-
 /** Short prose overview when the summary is a single block. */
 export function SummaryOverview({ text }: Props) {
   const styles = useCreateStyles(createSummaryOverviewStyles);
   const trimmed = text.trim();
   if (!trimmed) return null;
-
   return (
     <View style={styles.section}>
       <Text style={styles.heading}>Overview</Text>
@@ -20,7 +17,6 @@ export function SummaryOverview({ text }: Props) {
     </View>
   );
 }
-
 function createSummaryOverviewStyles(c: ColorPalette) {
   return StyleSheet.create({
     section: {

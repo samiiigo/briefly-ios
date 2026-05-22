@@ -9,20 +9,17 @@ import {
 } from '@/utils/folders/folderIconTheme';
 import { useCreateStyles, useThemedColors, BorderRadius, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   folder: SearchFolderResult;
   query: string;
   width: number;
   onPress: () => void;
 }
-
 function SearchFolderCardComponent({ folder, query, width, onPress }: Props) {
   const styles = useCreateStyles(createSearchFolderCardStyles);
   const colors = useThemedColors();
   const isUser = folder.folderType === 'user';
   const iconColor = folderIconColor(folder.folderType, folder.accent, colors);
-
   return (
     <Pressable
       style={[styles.card, { width }]}
@@ -50,9 +47,7 @@ function SearchFolderCardComponent({ folder, query, width, onPress }: Props) {
     </Pressable>
   );
 }
-
 export const SearchFolderCard = memo(SearchFolderCardComponent);
-
 function createSearchFolderCardStyles(c: ColorPalette) {
   return StyleSheet.create({
     card: {

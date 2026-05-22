@@ -6,23 +6,20 @@ import {
   LibraryScopeRefinement,
   useLibraryFolderPreferencesStore,
 } from '@/context/useLibraryFolderPreferencesStore';
-import { useSheetLayoutStyles } from '@/components/navigation/sheetLayout';
+import { useSheetLayoutStyles } from '@/components/navigation/layout/sheetLayout';
 import { useThemedColors } from '@/theme';
-
 const DATE_OPTIONS: { id: LibraryDatePreset; label: string }[] = [
   { id: 'all', label: 'All time' },
   { id: 'today', label: 'Today' },
   { id: 'last7', label: 'Last 7 days' },
   { id: 'last30', label: 'Last 30 days' },
 ];
-
 const SCOPE_OPTIONS: { id: LibraryScopeRefinement; label: string }[] = [
   { id: 'none', label: 'All items' },
   { id: 'favorites', label: 'Favorites only' },
   { id: 'archived', label: 'Archives only' },
   { id: 'unlisted', label: 'Unlisted only' },
 ];
-
 function SheetOptionGroup<T extends string>({
   options,
   selectedId,
@@ -62,13 +59,11 @@ function SheetOptionGroup<T extends string>({
     </View>
   );
 }
-
 /** Date filter for a folder’s recording list. */
 export function FolderDateFilterSection({ spaced }: { spaced?: boolean }) {
   const sh = useSheetLayoutStyles();
   const datePreset = useLibraryFolderPreferencesStore((s) => s.datePreset);
   const setDatePreset = useLibraryFolderPreferencesStore((s) => s.setDatePreset);
-
   return (
     <>
       <Text style={[sh.groupLabel, spaced && sh.groupLabelSpaced]}>Date</Text>
@@ -80,13 +75,11 @@ export function FolderDateFilterSection({ spaced }: { spaced?: boolean }) {
     </>
   );
 }
-
 /** Date + library scope filters (library hub sheet). */
 export function LibraryDateScopeFilterSections() {
   const sh = useSheetLayoutStyles();
   const scopeRefinement = useLibraryFolderPreferencesStore((s) => s.scopeRefinement);
   const setScopeRefinement = useLibraryFolderPreferencesStore((s) => s.setScopeRefinement);
-
   return (
     <>
       <FolderDateFilterSection />

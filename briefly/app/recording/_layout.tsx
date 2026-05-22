@@ -1,11 +1,9 @@
 import { View, Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
-import { useThemedStackShell } from '@/components/navigation/themedStackLayout';
-
+import { NavigatorBottomBlur } from '@/components/navigation/chrome/NavigatorBottomBlur';
+import { useThemedStackShell } from '@/components/navigation/layout/themedStackLayout';
 export default function RecordingLayout() {
   const shell = useThemedStackShell();
-
   return (
     <View style={shell.root}>
       <Stack

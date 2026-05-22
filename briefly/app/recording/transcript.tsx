@@ -1,61 +1,33 @@
-import React, { useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useRecordingStore } from '@/context/useRecordingStore';
-import { useSettingsStore } from '@/context/useSettingsStore';
-import {
-  cancelRecordingBackgroundProcessing,
-  startRecordingBackgroundProcessing,
-} from '@/services/recording/recordingBackgroundProcessing';
-import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
-import { usePlayback } from '@/hooks/usePlayback';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
+import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
 import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
 import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
-import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
+import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
-import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
-import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
-import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
-import { hasRecordingAudio } from '@/utils/recording/recordingValidation';
+import { usePlaybackBarLayout } from '@/components/navigation/layout/usePlaybackBarLayout';
+import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
+import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
+import { RecordingProcessingFlashIcon } from '@/components/features/recording/RecordingProcessingFlashIcon';
+import { useTranscriptScreen } from '@/hooks/recording/useTranscriptScreen';
 import { Colors, Spacing } from '@/theme';
 
 export default function RecordingTranscriptScreen() {
   const sl = useScreenLayoutStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
   const { paddingBottom: playbackBottom } = usePlaybackBarLayout();
-  const router = useRouter();
   const { recordingId: recordingIdParam } = useLocalSearchParams<{ recordingId: string }>();
-  const recordingId = useMemo(
-    () => (Array.isArray(recordingIdParam) ? recordingIdParam[0] : recordingIdParam),
-    [recordingIdParam],
-  );
-  const recording = useRecordingStore((s) =>
-    recordingId ? s.recordings.find((r) => r.id === recordingId) : undefined,
-  );
-
-  const playback = usePlayback({
-    filePath: recording?.filePath ?? '',
-    transcript: recording?.transcript,
-  });
-
-  const handleRerunTranscript = useCallback(() => {
-    if (!recording) return;
-    if (recording.status === 'transcribing' || recording.status === 'summarizing') {
-      return;
-    }
-    if (!recording.filePath?.trim()) {
-      Alert.alert('No audio', 'No audio file is available for this recording.');
-      return;
-    }
-    const mode = useSettingsStore.getState().summarizationMode;
-    if (!alertIfLocalLlmNotReady(mode)) return;
-
-    cancelRecordingBackgroundProcessing(recording.id);
-    startRecordingBackgroundProcessing(recording.id, {
-      audioFallbackOnly: true,
-      preservePreviousResults: true,
-    });
-  }, [recording]);
+  const {
+    router,
+    recording,
+    playback,
+    rerun,
+    rerunDisabled,
+    handleRerun,
+    rerunAccessibilityLabel,
+  } = useTranscriptScreen(recordingIdParam);
 
   if (!recording) {
     return (
@@ -65,10 +37,10 @@ export default function RecordingTranscriptScreen() {
     );
   }
 
-  const hasAudio = hasRecordingAudio(recording.filePath, recording.fileSize);
+  const isProcessing = isRecordingProcessing(recording);
+  const hasTranscript = hasMeaningfulTranscript(recording.transcript);
+  const hasAudio = rerun.hasAudio;
   const segments = recording.transcript ?? [];
-  const isProcessing =
-    recording.status === 'transcribing' || recording.status === 'summarizing';
 
   return (
     <View style={sl.container}>
@@ -83,7 +55,7 @@ export default function RecordingTranscriptScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {segments.length > 0 ? (
+        {hasTranscript ? (
           <View style={styles.transcriptContainer} key={segments.map((s) => s.id).join('|')}>
             {segments.map((seg) => (
               <TranscriptSegmentView
@@ -99,7 +71,6 @@ export default function RecordingTranscriptScreen() {
           </View>
         ) : null}
       </ScrollView>
-
       {hasAudio ? (
         <RecordingPlaybackBar
           recording={recording}
@@ -107,20 +78,26 @@ export default function RecordingTranscriptScreen() {
           paddingBottom={playbackBottom}
         />
       ) : null}
-
       <StackScreenHeader
         title="Transcript"
         showBack
         onBack={() => router.back()}
         trailing={
-          hasAudio ? (
-            <CircularIconButton
-              icon="refresh-outline"
-              accessibilityLabel="Re-run transcription and summarization"
-              loading={isProcessing}
-              onPress={isProcessing ? undefined : handleRerunTranscript}
-            />
-          ) : undefined
+          <View>
+            {rerun.flashActive ? (
+              <View style={styles.rerunFlashWrap}>
+                <RecordingProcessingFlashIcon size={22} />
+              </View>
+            ) : (
+              <CircularIconButton
+                icon="refresh-outline"
+                accessibilityLabel={rerunAccessibilityLabel}
+                loading={isProcessing}
+                disabled={rerunDisabled}
+                onPress={rerunDisabled ? undefined : handleRerun}
+              />
+            )}
+          </View>
         }
       />
     </View>
@@ -148,5 +125,11 @@ const styles = StyleSheet.create({
   emptyText: {
     color: Colors.subtext,
     fontSize: 15,
+  },
+  rerunFlashWrap: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

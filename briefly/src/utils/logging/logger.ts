@@ -1,10 +1,7 @@
 type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
-
 type LogContext = Record<string, unknown>;
-
 /** Key on `globalThis` for idempotent fetch patching. */
 const FETCH_PATCH_FLAG = '__briefly_fetch_patch_installed__';
-
 function ts(): string {
   const now = new Date();
   const hh = String(now.getHours()).padStart(2, '0');
@@ -13,11 +10,9 @@ function ts(): string {
   const ms = String(now.getMilliseconds()).padStart(3, '0');
   return `${hh}:${mm}:${ss}.${ms}`;
 }
-
 function isSensitiveKey(key: string): boolean {
   return /key|token|secret|password|authorization/i.test(key);
 }
-
 function maskValue(value: unknown): unknown {
   if (typeof value === 'string') {
     // Fully redact sensitive string values. For Authorization-style headers,
@@ -30,12 +25,10 @@ function maskValue(value: unknown): unknown {
   }
   return '***';
 }
-
 function sanitizeObject(value: unknown): unknown {
   if (value === null || value === undefined) return value;
   if (typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map(sanitizeObject);
-
   const input = value as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(input)) {
@@ -47,7 +40,6 @@ function sanitizeObject(value: unknown): unknown {
   }
   return out;
 }
-
 function sanitizeUrl(rawUrl: string): string {
   try {
     const url = new URL(rawUrl);
@@ -65,7 +57,6 @@ function sanitizeUrl(rawUrl: string): string {
     );
   }
 }
-
 function shortUrl(url: string): string {
   try {
     const parsed = new URL(url);
@@ -74,7 +65,6 @@ function shortUrl(url: string): string {
     return url;
   }
 }
-
 function ctxToString(ctx?: LogContext): string {
   if (!ctx || Object.keys(ctx).length === 0) return '';
   try {
@@ -83,7 +73,6 @@ function ctxToString(ctx?: LogContext): string {
     return ' | {"context":"unserializable"}';
   }
 }
-
 function write(level: LogLevel, scope: string, message: string, ctx?: LogContext): void {
   const line = `[${ts()}][${level}][${scope}] ${message}${ctxToString(ctx)}`;
   if (level === 'ERROR') {
@@ -96,7 +85,6 @@ function write(level: LogLevel, scope: string, message: string, ctx?: LogContext
   }
   console.log(line);
 }
-
 export const logger = {
   info(scope: string, message: string, ctx?: LogContext): void {
     write('INFO', scope, message, ctx);
@@ -111,14 +99,12 @@ export const logger = {
     write('DEBUG', scope, message, ctx);
   },
 };
-
 function getUrlFromFetchInput(input: RequestInfo | URL): string {
   if (typeof input === 'string') return input;
   if (input instanceof URL) return input.toString();
   const request = input as Request;
   return request.url;
 }
-
 function getMethodFromFetchInput(input: RequestInfo | URL, init?: RequestInit): string {
   if (init?.method) return init.method.toUpperCase();
   if (typeof input === 'object' && 'method' in input) {
@@ -127,10 +113,8 @@ function getMethodFromFetchInput(input: RequestInfo | URL, init?: RequestInit): 
   }
   return 'GET';
 }
-
 function sanitizeHeaders(init?: RequestInit): Record<string, unknown> | undefined {
   if (!init?.headers) return undefined;
-
   const out: Record<string, unknown> = {};
   if (init.headers instanceof Headers) {
     init.headers.forEach((value, key) => {
@@ -138,37 +122,30 @@ function sanitizeHeaders(init?: RequestInit): Record<string, unknown> | undefine
     });
     return out;
   }
-
   if (Array.isArray(init.headers)) {
     for (const [key, value] of init.headers) {
       out[key] = isSensitiveKey(key) ? maskValue(value) : value;
     }
     return out;
   }
-
   const plain = init.headers as Record<string, unknown>;
   for (const [key, value] of Object.entries(plain)) {
     out[key] = isSensitiveKey(key) ? maskValue(value) : value;
   }
   return out;
 }
-
 export function installRealtimeTerminalLogs(): void {
   if ((globalThis as any)[FETCH_PATCH_FLAG]) {
     return;
   }
-
   const originalFetch = globalThis.fetch?.bind(globalThis);
   if (!originalFetch) {
     logger.warn('SYSTEM', 'Global fetch is unavailable; API interception disabled');
     return;
   }
-
   // Mark fetch logging as installed before patching to ensure strict idempotence.
   (globalThis as any)[FETCH_PATCH_FLAG] = true;
-
   let requestId = 0;
-
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     requestId += 1;
     const id = requestId;
@@ -176,13 +153,11 @@ export function installRealtimeTerminalLogs(): void {
     const rawUrl = getUrlFromFetchInput(input);
     const safeUrl = sanitizeUrl(rawUrl);
     const startedAt = Date.now();
-
     logger.info('API', `#${id} ${method} ${shortUrl(safeUrl)} -> request`, {
       method,
       url: safeUrl,
       headers: sanitizeHeaders(init),
     });
-
     try {
       const response = await originalFetch(input, init);
       const elapsedMs = Date.now() - startedAt;
@@ -206,6 +181,5 @@ export function installRealtimeTerminalLogs(): void {
       throw error;
     }
   }) as typeof fetch;
-
   logger.info('SYSTEM', 'Realtime terminal logging enabled');
 }

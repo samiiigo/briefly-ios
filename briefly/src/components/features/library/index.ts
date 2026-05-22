@@ -1,4 +1,3 @@
-export * from './FolderUserSwipeableRow';
 export * from './FolderViewOptionsSheet';
 export * from './LibraryHeader';
 export * from './LibraryFolderBrowser';

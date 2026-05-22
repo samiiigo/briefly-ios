@@ -1,4 +1,3 @@
-/** Decodes base64 audio chunks for streaming (native Buffer when available). */
 export function base64ToArrayBuffer(b64: string): ArrayBuffer {
   const BufferCtor = (globalThis as { Buffer?: { from(data: string, encoding: string): Uint8Array } })
     .Buffer;
@@ -8,7 +7,6 @@ export function base64ToArrayBuffer(b64: string): ArrayBuffer {
     out.set(bytes);
     return out.buffer;
   }
-
   const binaryString = atob(b64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {

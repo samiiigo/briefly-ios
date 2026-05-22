@@ -5,16 +5,13 @@ import { KeyInsight } from '@/types';
 import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
 import { useCreateStyles, useThemedColors, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 interface Props {
   insights: KeyInsight[];
 }
-
 export function KeyInsights({ insights }: Props) {
   const styles = useCreateStyles(createKeyInsightsStyles);
   const colors = useThemedColors();
   if (!insights.length) return null;
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -32,7 +29,6 @@ export function KeyInsights({ insights }: Props) {
     </View>
   );
 }
-
 function createKeyInsightsStyles(c: ColorPalette) {
   return StyleSheet.create({
   container: {

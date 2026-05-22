@@ -1,28 +1,23 @@
 import { Alert, Platform } from 'react-native';
-
+import type { AnchoredMenuItem } from '@/components/ui/AnchoredOverflowMenu';
 export interface UserFolderActionHandlers {
   onRename: (newName: string) => void | Promise<void>;
   onDelete: () => void;
   onTogglePin: () => void | Promise<void>;
 }
-
 /**
- * Shows a folder action menu. On iOS, rename uses Alert.prompt inline.
+ * Folder long-press / options menu items. On iOS, rename uses Alert.prompt inline.
  * On Android, calls `onPromptRename` so the caller can render a TextInputDialog.
  */
-export function showUserFolderActions(
+export function buildUserFolderMenuItems(
   folderName: string,
   pinned: boolean,
   handlers: UserFolderActionHandlers,
   onPromptRename?: () => void,
-): void {
-  const buttons: {
-    text: string;
-    style?: 'destructive' | 'cancel';
-    onPress?: () => void;
-  }[] = [
+): AnchoredMenuItem[] {
+  return [
     {
-      text: 'Rename',
+      label: 'Rename',
       onPress: () => {
         if (Platform.OS === 'ios') {
           Alert.prompt(
@@ -33,7 +28,7 @@ export function showUserFolderActions(
               if (trimmed) void handlers.onRename(trimmed);
             },
             'plain-text',
-            folderName
+            folderName,
           );
         } else if (onPromptRename) {
           onPromptRename();
@@ -41,16 +36,12 @@ export function showUserFolderActions(
       },
     },
     {
-      text: pinned ? 'Unpin' : 'Pin',
+      label: pinned ? 'Unpin' : 'Pin',
       onPress: () => void handlers.onTogglePin(),
     },
     {
-      text: 'Delete',
-      style: 'destructive',
+      label: 'Delete',
       onPress: handlers.onDelete,
     },
-    { text: 'Cancel', style: 'cancel' },
   ];
-
-  Alert.alert(folderName, undefined, buttons);
 }

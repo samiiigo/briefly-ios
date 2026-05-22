@@ -1,28 +1,21 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import {
-  FolderListLayoutMode,
-  folderListLayoutDescription,
-  folderListLayoutTitle,
-  useFolderListLayoutStore,
-} from '@/context/useFolderListLayoutStore';
-import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
+import { View, Text, ScrollView } from 'react-native';
+import { useStackBack } from '@/components/navigation/layout/useStackBack';
+import { ModePickerOption } from '@/components/navigation/header/ModePickerOption';
+import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
+import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
 import {
   useModePickerStyles,
   useScreenLayoutStyles,
-} from '@/components/navigation/screenLayout';
-
-const LAYOUT_OPTIONS: FolderListLayoutMode[] = ['list', 'grid'];
+} from '@/components/navigation/layout/screenLayout';
+import { useFolderLayoutSettings } from '@/hooks/library/useFolderLayoutSettings';
 
 export default function FolderLayoutPickerScreen() {
-  const router = useRouter();
+  const goBack = useStackBack('/settings');
   const { scrollPaddingTop } = useTopChromeLayout();
   const sl = useScreenLayoutStyles();
   const mp = useModePickerStyles();
-  const layout = useFolderListLayoutStore((s) => s.layout);
-  const setLayout = useFolderListLayoutStore((s) => s.setLayout);
+  const { options, selectLayout } = useFolderLayoutSettings();
 
   return (
     <View style={sl.container}>
@@ -34,38 +27,20 @@ export default function FolderLayoutPickerScreen() {
           Choose how folders appear in your library. This applies everywhere folders are shown.
         </Text>
         <View style={sl.card}>
-          {LAYOUT_OPTIONS.map((mode, index) => {
-            const selected = layout === mode;
-            return (
-              <React.Fragment key={mode}>
-                <TouchableOpacity
-                  style={mp.optionRow}
-                  onPress={() => setLayout(mode)}
-                >
-                  <View style={[mp.radio, selected && mp.radioSelected]}>
-                    {selected ? <View style={mp.radioDot} /> : null}
-                  </View>
-                  <View style={mp.optionText}>
-                    <Text style={mp.optionTitle}>{folderListLayoutTitle(mode)}</Text>
-                    <Text style={mp.optionSubtitle}>
-                      {folderListLayoutDescription(mode)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                {index !== LAYOUT_OPTIONS.length - 1 ? (
-                  <View style={mp.optionDivider} />
-                ) : null}
-              </React.Fragment>
-            );
-          })}
+          {options.map((option, index) => (
+            <React.Fragment key={option.mode}>
+              <ModePickerOption
+                selected={option.selected}
+                title={option.title}
+                subtitle={option.subtitle}
+                onPress={() => selectLayout(option.mode)}
+              />
+              {index !== options.length - 1 ? <View style={mp.optionDivider} /> : null}
+            </React.Fragment>
+          ))}
         </View>
       </ScrollView>
-
-      <StackScreenHeader
-        title="Folder layout"
-        showBack
-        onBack={() => router.back()}
-      />
+      <StackScreenHeader title="Folder layout" showBack onBack={goBack} />
     </View>
   );
 }

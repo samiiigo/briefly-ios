@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { Recording } from '@/types';
 import { buildRecordingExportPdfHtml, buildRecordingExportPlainText } from './recordingExport';
-
 const baseRecording: Recording = {
   id: 'rec-1',
   title: 'Team Sync: Q2 Planning',
@@ -18,14 +17,12 @@ const baseRecording: Recording = {
     { id: '2', text: 'Hire two contractors' },
   ],
 };
-
 describe('buildRecordingExportPlainText', () => {
   it('renders key insights in their own section before summary', () => {
     const text = buildRecordingExportPlainText(baseRecording);
     const insightsIndex = text.indexOf('Key insights');
     const summaryIndex = text.indexOf('Summary');
     const titleIndex = text.indexOf('Team Sync');
-
     assert.ok(titleIndex < insightsIndex);
     assert.ok(insightsIndex < summaryIndex);
     assert.match(text, /\*\*Alex\*\*: Send timeline doc/);
@@ -35,7 +32,6 @@ describe('buildRecordingExportPlainText', () => {
     assert.doesNotMatch(text, /\nTranscript\n/);
   });
 });
-
 describe('buildRecordingExportPdfHtml', () => {
   it('renders key insights in a card and summary without a card', () => {
     const html = buildRecordingExportPdfHtml(baseRecording);
@@ -44,7 +40,6 @@ describe('buildRecordingExportPdfHtml', () => {
     const titleIndex = html.indexOf('doc-title');
     const insightsCardStart = html.indexOf('class="summary-card">', insightsIndex);
     const summaryCardAfterSummary = html.indexOf('class="summary-card">', summaryIndex);
-
     assert.ok(titleIndex < insightsIndex);
     assert.ok(insightsIndex < summaryIndex);
     assert.ok(insightsCardStart > insightsIndex && insightsCardStart < summaryIndex);
@@ -53,5 +48,6 @@ describe('buildRecordingExportPdfHtml', () => {
     assert.match(html, /Ship beta by June/);
     assert.doesNotMatch(html, />Transcript</);
     assert.doesNotMatch(html, /class="segment"/);
+    assert.match(html, /@page\s*\{\s*margin:\s*48px/);
   });
 });

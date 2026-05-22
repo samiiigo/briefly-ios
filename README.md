@@ -112,25 +112,27 @@ On **Windows**, run `npm install` from the `briefly` folder (CMD, PowerShell, or
 
 ### API keys (cloud modes)
 
-If you want to use cloud transcription (AssemblyAI) or shared cloud summarization (OpenRouter), you need to provide API keys locally or via EAS secrets for builds.
-
-Copy the example environment file and add your keys:
+If you want to use cloud transcription (AssemblyAI) or shared cloud summarization (OpenRouter), provide keys at **build time** via EAS secrets or a local `.env` (never commit `.env`).
 
 ```bash
 cp .env.example .env
 ```
 
 ```env
-EXPO_PUBLIC_ASSEMBLYAI_API_KEY=your_assemblyai_key
-EXPO_PUBLIC_OPENROUTER_API_KEY=your_openrouter_key
+ASSEMBLYAI_API_KEY=your_assemblyai_key
+OPENROUTER_SHARED_API_KEY=your_openrouter_key
 ```
 
 - AssemblyAI: https://www.assemblyai.com/
 - OpenRouter: https://openrouter.ai/
 
-`app.config.js` also reads non-`EXPO_PUBLIC_` fallbacks (`ASSEMBLYAI_API_KEY`, `OPENROUTER_SHARED_API_KEY`). For production builds, it is highly recommended to use [EAS secrets](https://docs.expo.dev/build-reference/variables/) instead of committing your keys. You can also configure `expo.extra.assemblyAiApiKey` and `expo.extra.openRouterSharedApiKey` directly in `app.json`.
+`app.config.js` injects these into `expo.extra` during prebuild. Prefer [EAS secrets](https://docs.expo.dev/build-reference/variables/) for production. Avoid `EXPO_PUBLIC_*` for shared keys in release builds — those values are embedded in the client bundle.
 
-**On-device** transcription and **Local** summarization completely bypass these requirements. **Your API key** summarization just uses the provider you select in Settings—it doesn't use the shared Briefly key.
+**Your API key** (BYOK) keys are stored in the OS secure enclave (Keychain / Keystore), not AsyncStorage. **On-device** transcription and **Local** summarization do not require cloud keys.
+
+### Security (client)
+
+Outbound calls to AssemblyAI, OpenRouter, and other configured LLM hosts go through `secureFetch` with per-device and per-user rate limits (graceful 429-style errors). User-facing text (titles, folder names, search queries) is validated in `briefly/src/security/`. See `briefly/src/security/` for OWASP-oriented helpers.
 
 ### Run in development
 

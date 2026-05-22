@@ -1,30 +1,23 @@
 /**
- * Segment builder (SRP)
+ * Segment builder
  *
- * Single responsibility: transform raw AssemblyAI word data into
  * sentence-level TranscriptSegment objects.
  */
-
 import { TranscriptSegment } from '@/types';
 import { splitCompleteSentences } from '@/utils/transcript/sentenceSplitter';
-
 function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
-
 type AssemblyAIWord = { text: string; start?: number; end?: number };
-
 /**
  * Build sentence-level transcript segments from word-level timing data.
  */
 export function buildSentenceSegments(words: AssemblyAIWord[]): TranscriptSegment[] {
   const segments: TranscriptSegment[] = [];
-
   let buffer = '';
   let sentenceStart = 0;
   let sentenceEnd = 0;
   let hasTime = false;
-
   const flush = () => {
     const text = buffer.trim();
     if (!text) return;
@@ -39,11 +32,9 @@ export function buildSentenceSegments(words: AssemblyAIWord[]): TranscriptSegmen
     sentenceStart = sentenceEnd;
     hasTime = false;
   };
-
   words.forEach((word) => {
     const text = (word.text ?? '').trim();
     if (!text) return;
-
     const start = typeof word.start === 'number' ? word.start / 1000 : undefined;
     const end = typeof word.end === 'number' ? word.end / 1000 : undefined;
     if (!hasTime && typeof start === 'number') {
@@ -53,18 +44,14 @@ export function buildSentenceSegments(words: AssemblyAIWord[]): TranscriptSegmen
     if (typeof end === 'number') {
       sentenceEnd = end;
     }
-
     buffer = buffer ? `${buffer} ${text}` : text;
-
     if (/[.!?]["')\]]*$/.test(text)) {
       flush();
     }
   });
-
   flush();
   return segments;
 }
-
 /**
  * Build segments from plain text (no word-level timing).
  */

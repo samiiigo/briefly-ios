@@ -14,10 +14,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { usePlayback } from '@/hooks/usePlayback';
+import { usePlayback } from '@/hooks/recording/usePlayback';
 import { Recording } from '@/types';
 import { formatDuration } from '@/utils';
-import { BottomChromeOverlay } from '@/components/navigation/BottomChromeOverlay';
+import { BottomChromeOverlay } from '@/components/navigation/chrome/BottomChromeOverlay';
 import {
   useCreateStyles,
   useResolvedColorScheme,
@@ -27,17 +27,14 @@ import {
   withAppFont,
 } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
 interface Props {
   recording: Recording;
   playback: ReturnType<typeof usePlayback>;
   paddingBottom: number;
 }
-
 export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Props) {
   const styles = useCreateStyles(createRecordingPlaybackBarStyles);
   const colors = useThemedColors();
@@ -52,7 +49,6 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
     togglePlayPause,
     seekToRatio,
   } = playback;
-
   const progressFillWidth = animatedProgress.interpolate({
     inputRange: [0, 1],
     outputRange: ['0%', '100%'],
@@ -61,7 +57,6 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
     inputRange: [0, 1],
     outputRange: ['0%', '100%'],
   });
-
   const handleProgressTap = useCallback(
     async (e: GestureResponderEvent) => {
       if (!playbackDur || trackWidth.current === 0) return;
@@ -69,18 +64,15 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
     },
     [playbackDur, seekToRatio, trackWidth],
   );
-
   const minimize = useCallback(() => {
     if (!expandedRef.current) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     expandedRef.current = false;
     setExpanded(false);
   }, []);
-
   useEffect(() => {
     expandedRef.current = expanded;
   }, [expanded]);
-
   const handlePlayPause = useCallback(async () => {
     if (isPlaying) {
       await togglePlayPause();
@@ -94,9 +86,7 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
     }
     await togglePlayPause();
   }, [expanded, isPlaying, togglePlayPause, minimize]);
-
   const durationLabel = formatDuration(playbackDur || recording.duration);
-
   const playButton = (
     <TouchableOpacity
       style={styles.playButton}
@@ -111,11 +101,9 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
       />
     </TouchableOpacity>
   );
-
   const durationLabelView = (
     <Text style={styles.durationText}>{durationLabel}</Text>
   );
-
   return (
     <BottomChromeOverlay variant="playback">
       {expanded ? (
@@ -149,7 +137,6 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
             ]}
             pointerEvents="none"
           />
-
           {expanded ? (
             <View style={styles.expandedRow} pointerEvents="box-none">
               {playButton}
@@ -177,7 +164,6 @@ export function RecordingPlaybackBar({ recording, playback, paddingBottom }: Pro
     </BottomChromeOverlay>
   );
 }
-
 function pillOverlayRgba(hex: string, alpha: number): string {
   const raw = hex.replace('#', '');
   const n =
@@ -189,7 +175,6 @@ function pillOverlayRgba(hex: string, alpha: number): string {
       : raw;
   return `rgba(${parseInt(n.slice(0, 2), 16)},${parseInt(n.slice(2, 4), 16)},${parseInt(n.slice(4, 6), 16)},${alpha})`;
 }
-
 function createRecordingPlaybackBarStyles(c: ColorPalette) {
   return StyleSheet.create({
     dismissBackdrop: {

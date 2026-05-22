@@ -1,13 +1,10 @@
 import { KeyInsight, Recording, TranscriptSegment } from '@/types';
 import { transcriptTextContent } from './recordingValidation';
 import type { TranscriptBackupEntry } from './transcriptBackup';
-
 const AUDIO_DURATION_TOLERANCE_SEC = 2;
-
 function normalizeSummary(summary?: string): string {
   return (summary ?? '').trim().replace(/\s+/g, ' ');
 }
-
 function keyInsightsFingerprint(insights?: KeyInsight[]): string {
   return (insights ?? [])
     .map((i) => i.text.trim())
@@ -15,7 +12,6 @@ function keyInsightsFingerprint(insights?: KeyInsight[]): string {
     .sort()
     .join('\n');
 }
-
 /** Stable fingerprint for transcript backup rows and existing recordings. */
 export function importContentFingerprint(parts: {
   title?: string;
@@ -27,19 +23,15 @@ export function importContentFingerprint(parts: {
   const transcript = transcriptTextContent(parts.transcript);
   const summary = normalizeSummary(parts.summary);
   const insights = keyInsightsFingerprint(parts.keyInsights);
-
   if (transcript || summary || insights) {
     return `content:${transcript}|${summary}|${insights}`;
   }
-
   const title = (parts.title ?? '').trim().toLowerCase();
   return `meta:${title}|${parts.createdAt ?? 0}`;
 }
-
 export function backupEntryFingerprint(entry: TranscriptBackupEntry): string {
   return importContentFingerprint(entry);
 }
-
 export function recordingImportFingerprint(recording: Recording): string {
   return importContentFingerprint({
     title: recording.title,
@@ -49,7 +41,6 @@ export function recordingImportFingerprint(recording: Recording): string {
     keyInsights: recording.keyInsights,
   });
 }
-
 export function filterNewBackupEntries(
   entries: TranscriptBackupEntry[],
   existingRecordings: Recording[],
@@ -58,10 +49,8 @@ export function filterNewBackupEntries(
   for (const recording of existingRecordings) {
     seen.add(recordingImportFingerprint(recording));
   }
-
   const fresh: TranscriptBackupEntry[] = [];
   let skipped = 0;
-
   for (const entry of entries) {
     const fingerprint = backupEntryFingerprint(entry);
     if (seen.has(fingerprint)) {
@@ -71,18 +60,14 @@ export function filterNewBackupEntries(
     seen.add(fingerprint);
     fresh.push(entry);
   }
-
   return { entries: fresh, skipped };
 }
-
 export function findDuplicateAudioRecording(
   recordings: Recording[],
   candidate: { fileSize: number; durationSec: number },
 ): Recording | undefined {
   if (candidate.fileSize <= 0) return undefined;
-
   const targetDuration = Math.round(candidate.durationSec);
-
   return recordings.find((recording) => {
     if (!recording.filePath?.trim() || recording.fileSize <= 0) {
       return false;

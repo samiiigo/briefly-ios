@@ -5,7 +5,6 @@ import {
   FolderSortField,
 } from '@/context/useFolderBrowsePreferencesStore';
 import { formatGroupLabel } from '../formatting/formatting';
-
 function compareByField(
   a: Recording,
   b: Recording,
@@ -26,7 +25,6 @@ function compareByField(
       return 0;
   }
 }
-
 function typeSortKey(r: Recording): number {
   if (r.status === 'error') return 0;
   const mode = r.processingMode;
@@ -34,7 +32,6 @@ function typeSortKey(r: Recording): number {
   if (mode === 'cloud' || mode.startsWith('cloud')) return 2;
   return 3;
 }
-
 export function sortRecordingsForBrowse(
   recordings: Recording[],
   field: FolderSortField,
@@ -42,7 +39,6 @@ export function sortRecordingsForBrowse(
 ): Recording[] {
   return [...recordings].sort((a, b) => compareByField(a, b, field, direction));
 }
-
 /**
  * Groups recordings under calendar-aware labels (Today, Yesterday, weekday names, This week,
  * Last week, Past two weeks, This month, Last month, then month + year). Preserves the order
@@ -53,10 +49,8 @@ export function groupRecordingsIntoTimeSections(
   browse: Pick<FolderBrowsePreferences, 'sortField' | 'sortDirection'>
 ): { title: string; data: Recording[] }[] {
   if (!sorted.length) return [];
-
   const map = new Map<string, Recording[]>();
   const sectionOrder: string[] = [];
-
   for (const r of sorted) {
     const label = formatGroupLabel(r.createdAt);
     let bucket = map.get(label);
@@ -67,17 +61,14 @@ export function groupRecordingsIntoTimeSections(
     }
     bucket.push(r);
   }
-
   // Date sort: section order follows the sorted walk (asc → Yesterday…Today, desc → Today…Yesterday).
   // Other sort fields: Order still flips section headers by newest/oldest bucket.
   const labels =
     browse.sortField === 'date'
       ? sectionOrder
       : orderSectionLabelsByNewest(sectionOrder, map, browse.sortDirection === 'desc');
-
   return labels.map((title) => ({ title, data: map.get(title)! }));
 }
-
 function orderSectionLabelsByNewest(
   labels: string[],
   map: Map<string, Recording[]>,
@@ -89,7 +80,6 @@ function orderSectionLabelsByNewest(
     return newestFirst ? bmax - amax : amax - bmax;
   });
 }
-
 /** Sorts then groups recordings into calendar-aware time sections. */
 export function buildFolderSections(
   recordings: Recording[],

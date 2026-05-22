@@ -1,25 +1,57 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Recording } from '@/types';
-import { getRecordingContentEmoji } from '@/utils/recording/recordingContentEmoji';
+import { getRecordingContentEmoji , isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { formatDate, formatDuration } from '@/utils';
 import { RecordingEmojiCircle } from '@/components/features/recording/RecordingEmojiCircle';
+import { RecordingProcessingRetryCircle } from '@/components/features/recording/RecordingProcessingRetryCircle';
+import { RecordingProcessingFlashCircle } from '@/components/features/recording/RecordingProcessingFlashCircle';
 import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
-import { useCreateStyles, withAppFont } from '@/theme';
-import type { ColorPalette } from '@/theme/colorPalettes';
+import { useRecordingProcessingRetry } from '@/hooks/recording/useRecordingProcessingRetry';
+import { useRecordingRetryFlashActive } from '@/hooks/recording/useRecordingRetryFlashActive';
+import { Ionicons } from '@expo/vector-icons';
 
+import { isInitialProcessingFailure } from '@/utils/recording/recordingEntryAccess';
+import { useCreateStyles, useThemedColors, withAppFont } from '@/theme';
+import type { ColorPalette } from '@/theme/colorPalettes';
 interface Props {
   recording: Recording;
 }
-
+const HERO_CIRCLE = 56;
 export function RecordingTitleHero({ recording }: Props) {
   const styles = useCreateStyles(createRecordingTitleHeroStyles);
+  const colors = useThemedColors();
   const emoji = getRecordingContentEmoji(recording);
   const meta = `${formatDate(recording.createdAt)} · ${formatDuration(recording.duration)}`;
-
+  const processing = isRecordingProcessing(recording);
+  const { action: retryAction, runRetry, showOpenableContent } =
+    useRecordingProcessingRetry(recording);
+  const flashActive = useRecordingRetryFlashActive(recording.id);
+  const initialFailure = isInitialProcessingFailure(recording);
+  const showRetry =
+    recording.status === 'error' &&
+    retryAction != null &&
+    !showOpenableContent &&
+    !flashActive &&
+    !initialFailure;
+  const leading = flashActive ? (
+    <RecordingProcessingFlashCircle size="lg" />
+  ) : processing ? (
+    <View style={styles.processingCircle}>
+      <ActivityIndicator size="small" color={colors.textPrimary} />
+    </View>
+  ) : initialFailure ? (
+    <View style={styles.processingCircle}>
+      <Ionicons name="alert" size={28} color={colors.orange} />
+    </View>
+  ) : showRetry ? (
+    <RecordingProcessingRetryCircle action={retryAction} onPress={runRetry} size="lg" />
+  ) : (
+    <RecordingEmojiCircle emoji={emoji} size="lg" />
+  );
   return (
     <View style={styles.wrap}>
-      <RecordingEmojiCircle emoji={emoji} size="lg" />
+      {leading}
       <View style={styles.textBlock}>
         <EmojiAwareText text={recording.title} style={styles.title} numberOfLines={1} />
         <Text style={styles.meta}>{meta}</Text>
@@ -27,9 +59,18 @@ export function RecordingTitleHero({ recording }: Props) {
     </View>
   );
 }
-
 function createRecordingTitleHeroStyles(c: ColorPalette) {
   return StyleSheet.create({
+    processingCircle: {
+      width: HERO_CIRCLE,
+      height: HERO_CIRCLE,
+      borderRadius: HERO_CIRCLE / 2,
+      backgroundColor: c.emojiCircleBackground,
+      borderWidth: 1,
+      borderColor: c.emojiCircleBorder,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     wrap: {
       flexDirection: 'row',
       alignItems: 'center',

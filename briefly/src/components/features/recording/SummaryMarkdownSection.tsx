@@ -4,19 +4,16 @@ import { useCreateStyles, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 import { SummaryMarkdownContent } from './SummaryMarkdownContent';
 import { prepareSummaryMarkdownBlocks } from '@/utils/summary/parseSummaryMarkdown';
-
 interface Props {
   markdown: string;
   hasKeyInsights?: boolean;
 }
-
 /** Renders the AI summary as formatted Markdown (headings, bullets, bold). */
 export function SummaryMarkdownSection({ markdown, hasKeyInsights = false }: Props) {
   const styles = useCreateStyles(createSummaryMarkdownSectionStyles);
   const trimmed = markdown.trim();
   const blocks = prepareSummaryMarkdownBlocks(trimmed, { hasKeyInsights });
   if (!trimmed || blocks.length === 0) return null;
-
   return (
     <View style={styles.section}>
       <Text style={styles.heading}>Summary</Text>
@@ -24,7 +21,6 @@ export function SummaryMarkdownSection({ markdown, hasKeyInsights = false }: Pro
     </View>
   );
 }
-
 function createSummaryMarkdownSectionStyles(c: ColorPalette) {
   return StyleSheet.create({
     section: {

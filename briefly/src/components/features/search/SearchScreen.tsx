@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   Keyboard,
   PanResponder,
@@ -12,8 +11,8 @@ import {
 } from 'react-native';
 import { FlashList, type FlashListRef, type ListRenderItem } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSearchScreen } from '@/hooks/useSearchScreen';
-import { SCREEN_LIST_BOTTOM_PADDING } from '@/components/navigation/screenLayout';
+import { useSearchScreen } from '@/hooks/search/useSearchScreen';
+import { SCREEN_LIST_BOTTOM_PADDING } from '@/components/navigation/layout/screenLayout';
 import { Recording } from '@/types';
 import { RECORDING_LIST_ITEM_GAP } from '@/utils/list/flattenRecordingSections';
 import { SearchTopChrome } from './SearchTopChrome';
@@ -32,21 +31,16 @@ import {
   Spacing,
   withAppFont,
 } from '@/theme';
-
 const FOLDER_CARD_WIDTH_RATIO = 0.42;
-
 /** Dismiss keyboard when the finger moves more than this (px) outside the search field. */
 const KEYBOARD_DISMISS_MOVE_THRESHOLD = 4;
-
 const LIST_KEYBOARD_DISMISS_MODE = Platform.select({
   ios: 'interactive' as const,
   default: 'on-drag' as const,
 });
-
 function formatRecordingResultCount(count: number): string {
   return count === 1 ? '1 result' : `${count} results`;
 }
-
 export function SearchScreen() {
   const colors = useThemedColors();
   const themeExtra = useResolvedColorScheme();
@@ -88,7 +82,6 @@ export function SearchScreen() {
     (windowWidth - 2 * SEARCH_LIST_HORIZONTAL_PADDING) * FOLDER_CARD_WIDTH_RATIO;
   const listRef = useRef<FlashListRef<Recording>>(null);
   const pristineScrollRef = useRef<ScrollView>(null);
-
   const {
     query,
     deferredQuery,
@@ -107,7 +100,6 @@ export function SearchScreen() {
     removeRecentQuery,
     clearRecentQueries,
   } = useSearchScreen();
-
   useEffect(() => {
     if (isActiveSearch) {
       listRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -115,12 +107,10 @@ export function SearchScreen() {
       pristineScrollRef.current?.scrollTo({ y: 0, animated: false });
     }
   }, [deferredQuery, isActiveSearch]);
-
   const dismissKeyboard = useCallback(() => {
     handleSearchSubmit();
     Keyboard.dismiss();
   }, [handleSearchSubmit]);
-
   const dismissKeyboardOnMoveCapture = useMemo(
     () =>
       PanResponder.create({
@@ -136,21 +126,16 @@ export function SearchScreen() {
       }).panHandlers,
     [dismissKeyboard]
   );
-
   const handleSubmit = useCallback(() => {
     handleSearchSubmit();
     dismissKeyboard();
   }, [handleSearchSubmit, dismissKeyboard]);
-
   const listHeader = useMemo(() => {
     if (!isActiveSearch) return null;
-
     const recordingCount = results.recordings.length;
     const hasFolders = results.folders.length > 0;
     const hasRecordings = recordingCount > 0;
-
     if (!hasFolders && !hasRecordings) return null;
-
     return (
       <View style={styles.listHeader}>
         {hasFolders ? (
@@ -195,8 +180,11 @@ export function SearchScreen() {
     folderCardWidth,
     openFolder,
     dismissKeyboard,
+    sectionHeaderStyle,
+    styles.folderBlock,
+    styles.listHeader,
+    styles.recordingsSectionHeader,
   ]);
-
   const renderRecording: ListRenderItem<Recording> = useCallback(
     ({ item }) => (
       <SearchResultItem
@@ -207,9 +195,7 @@ export function SearchScreen() {
     ),
     [deferredQuery, openRecording]
   );
-
   const keyExtractor = useCallback((item: Recording) => item.id, []);
-
   const listEmpty = useMemo(() => {
     if (hasResults) return null;
     if (!isStaleResults) {
@@ -217,12 +203,10 @@ export function SearchScreen() {
     }
     return null;
   }, [hasResults, isStaleResults, deferredQuery]);
-
   const listContentStyle = useMemo(
     () => [styles.listContent, { paddingTop: scrollPaddingTop }],
-    [scrollPaddingTop]
+    [scrollPaddingTop, styles.listContent]
   );
-
   const pristineContent = (
     <RecentSearchesSection
       queries={scopedRecentQueries}
@@ -231,7 +215,6 @@ export function SearchScreen() {
       onClearAll={clearRecentQueries}
     />
   );
-
   return (
     <View style={styles.container}>
       <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
@@ -269,7 +252,6 @@ export function SearchScreen() {
           )}
         </View>
       </TouchableWithoutFeedback>
-
       <SearchTopChrome
         query={query}
         onChangeText={handleQueryChange}
@@ -281,4 +263,3 @@ export function SearchScreen() {
     </View>
   );
 }
-

@@ -6,18 +6,14 @@ import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-import { useRecordingStore } from '@/context/useRecordingStore';
-import { useSettingsStore } from '@/context/useSettingsStore';
-import { installRealtimeTerminalLogs, logger } from '@/utils/logging/logger';
-import { checkEnvironment } from '@/utils/environment/environmentCheck';
-import { refreshLocalLlmModelStateFromDisk } from '@/services/summarization';
-import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
-import { LibraryFabChromeOverlay } from '@/components/navigation/LibraryFabChromeOverlay';
+import { useAppBootstrap } from '@/hooks/app/useAppBootstrap';
+import { NavigatorBottomBlur } from '@/components/navigation/chrome/NavigatorBottomBlur';
+import { LibraryFabChromeOverlay } from '@/components/navigation/overlays/LibraryFabChromeOverlay';
 import { ThemeProvider, useResolvedColorScheme, useThemedColors } from '@/theme';
 import { iconFonts } from '@/theme/iconFonts';
+import { logger } from '@/utils/logging/logger';
 
 function RootLayoutContent() {
-  const loadRecordings = useRecordingStore((s) => s.loadRecordings);
   const colors = useThemedColors();
   const resolvedScheme = useResolvedColorScheme();
   const [iconFontsLoaded, iconFontError] = useFonts(iconFonts);
@@ -42,36 +38,7 @@ function RootLayoutContent() {
     }
   }, [iconFontError]);
 
-  useEffect(() => {
-    if (!iconFontsLoaded) return;
-
-    installRealtimeTerminalLogs();
-    logger.info('SYSTEM', 'App startup: loading recordings from storage');
-    loadRecordings();
-
-    const runEnvCheck = () => {
-      refreshLocalLlmModelStateFromDisk();
-      const env = checkEnvironment();
-      logger.info('SYSTEM', 'Environment check', {
-        hasNative: env.hasNativeModule,
-        hasOnDeviceSpeech: env.hasOnDeviceSpeech,
-        hasKey: env.hasAssemblyAIKey,
-        canLive: env.canLiveTranscribe,
-        canRecord: env.canRecord,
-        recommended: env.recommendedTranscriptionMode,
-      });
-      useSettingsStore.getState().applyEnvironmentDefaults(
-        env.recommendedTranscriptionMode,
-      );
-    };
-
-    if (useSettingsStore.persist.hasHydrated()) {
-      runEnvCheck();
-    } else {
-      const unsub = useSettingsStore.persist.onFinishHydration(runEnvCheck);
-      return unsub;
-    }
-  }, [iconFontsLoaded, loadRecordings]);
+  useAppBootstrap(iconFontsLoaded);
 
   const rootStyle = useRootBackgroundStyle();
 
@@ -87,6 +54,7 @@ function RootLayoutContent() {
           <Stack screenOptions={stackScreenOptions}>
             <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
             <Stack.Screen name="search" options={{ animation: 'fade' }} />
+            <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
           </Stack>
           <NavigatorBottomBlur scope="root" />
           <LibraryFabChromeOverlay />

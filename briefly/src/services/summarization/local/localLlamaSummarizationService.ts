@@ -18,11 +18,8 @@ import {
   LOCAL_GEMMA_STOP_WORDS,
 } from './localModelConfig';
 import { LocalLlamaError, mapLlamaNativeError } from './localLlamaErrors';
-
 const ON_DEVICE_SUMMARIZATION_TIMEOUT_MS = Math.max(SUMMARIZATION_TIMEOUT_MS, 120_000);
-
 let inferenceLock: Promise<void> = Promise.resolve();
-
 function withInferenceLock<T>(fn: () => Promise<T>): Promise<T> {
   const run = inferenceLock.then(fn, fn);
   inferenceLock = run.then(
@@ -31,14 +28,12 @@ function withInferenceLock<T>(fn: () => Promise<T>): Promise<T> {
   );
   return run;
 }
-
 function trimTranscriptForContext(text: string): string {
   if (text.length <= LOCAL_GEMMA_MAX_TRANSCRIPT_CHARS) return text;
   const head = text.slice(0, Math.floor(LOCAL_GEMMA_MAX_TRANSCRIPT_CHARS * 0.7));
   const tail = text.slice(-Math.floor(LOCAL_GEMMA_MAX_TRANSCRIPT_CHARS * 0.25));
   return `${head}\n\n[... transcript truncated for on-device memory ...]\n\n${tail}`;
 }
-
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(
@@ -56,7 +51,6 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
       });
   });
 }
-
 async function createContext(modelPath: string): Promise<LlamaContext> {
   // Android emulators/devices often lack OpenCL; 99 "GPU" layers on CPU is very slow.
   const nGpuLayers = Platform.OS === 'android' ? 0 : LOCAL_GEMMA_N_GPU_LAYERS;
@@ -68,24 +62,19 @@ async function createContext(modelPath: string): Promise<LlamaContext> {
     use_mmap: true,
     n_threads: Math.max(2, Platform.OS === 'ios' ? 4 : 6),
   };
-
   logger.info('SUMMARY', 'Initializing llama context', {
     platform: Platform.OS,
     n_ctx: params.n_ctx,
     n_gpu_layers: params.n_gpu_layers,
   });
-
   const context = await initLlama(params);
-
   logger.info('SUMMARY', 'Llama context ready', {
     gpu: context.gpu,
     reasonNoGPU: context.reasonNoGPU,
     devices: context.devices,
   });
-
   return context;
 }
-
 async function runCompletion(
   context: LlamaContext,
   transcript: string,
@@ -100,7 +89,6 @@ async function runCompletion(
     jinja: true,
     add_generation_prompt: true,
   });
-
   const raw = result.text?.trim() ?? '';
   if (!raw) {
     throw new LocalLlamaError(
@@ -108,10 +96,8 @@ async function runCompletion(
       'The on-device model returned an empty response. Try a shorter recording or cloud summarization.',
     );
   }
-
   return parseJsonSummary(raw, fallbackText);
 }
-
 /**
  * Runs Gemma summarization in a fresh llama context that is released when done.
  */
@@ -123,21 +109,16 @@ export async function summarizeWithLocalLlama(
     if (!fallbackText.trim()) {
       throw new LocalLlamaError('unknown', 'No transcript text to summarize.');
     }
-
     const transcript = trimTranscriptForContext(fallbackText);
-
     assertLocalLlmReadyForSummarization();
-
     const modelPath = getLocalGemmaModelPath();
     let context: LlamaContext | null = null;
-
     try {
       context = await withTimeout(
         createContext(modelPath),
         ON_DEVICE_SUMMARIZATION_TIMEOUT_MS,
         'Model load',
       );
-
       return await withTimeout(
         runCompletion(context, transcript, fallbackText),
         ON_DEVICE_SUMMARIZATION_TIMEOUT_MS,

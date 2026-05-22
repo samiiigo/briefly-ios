@@ -1,5 +1,4 @@
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 /** Icon badge fill behind built-in / user folder glyphs. */
 export function folderIconBadgeBackground(
   accent: string,
@@ -16,7 +15,6 @@ export function folderIconBadgeBackground(
   const b = parseInt(h.slice(4, 6), 16);
   return `rgba(${r},${g},${b},${isUser ? 0.1 : 0.14})`;
 }
-
 /** List-row circular background for folder icons. */
 export function folderListIconBackground(
   accent: string,
@@ -28,7 +26,6 @@ export function folderListIconBackground(
   }
   return `${accent}33`;
 }
-
 /** Foreground color for a folder tile icon. */
 export function folderIconColor(
   folderType: 'built-in' | 'user',

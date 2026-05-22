@@ -1,20 +1,10 @@
-/**
- * RecordingStorageService (SRP)
- *
- * Single responsibility: persist and retrieve Recording entities.
- * Separated from folder persistence so each has one reason to change.
- */
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Recording } from '@/types';
 import { logger } from '@/utils/logging/logger';
 import { RecordingRepository } from './contracts';
-
 const RECORDINGS_KEY = '@briefly/recordings';
-
 /** Serializes read-modify-write so concurrent saves cannot drop fields. */
 let persistChain: Promise<void> = Promise.resolve();
-
 function enqueuePersist<T>(task: () => Promise<T>): Promise<T> {
   const next = persistChain.then(task);
   persistChain = next.then(
@@ -23,7 +13,6 @@ function enqueuePersist<T>(task: () => Promise<T>): Promise<T> {
   );
   return next;
 }
-
 export const RecordingStorageService: RecordingRepository = {
   async loadAll(): Promise<Recording[]> {
     try {
@@ -41,7 +30,6 @@ export const RecordingStorageService: RecordingRepository = {
       return [];
     }
   },
-
   async save(recording: Recording): Promise<void> {
     return enqueuePersist(async () => {
       const existing = await this.loadAll();
@@ -53,7 +41,6 @@ export const RecordingStorageService: RecordingRepository = {
       });
     });
   },
-
   async update(id: string, updates: Partial<Recording>): Promise<void> {
     return enqueuePersist(async () => {
       const existing = await this.loadAll();
@@ -62,7 +49,6 @@ export const RecordingStorageService: RecordingRepository = {
       logger.info('StorageService', 'Recording updated', { id, fields: Object.keys(updates) });
     });
   },
-
   async remove(id: string): Promise<void> {
     return enqueuePersist(async () => {
       const existing = await this.loadAll();
@@ -71,7 +57,6 @@ export const RecordingStorageService: RecordingRepository = {
       logger.info('StorageService', 'Recording deleted from storage', { id });
     });
   },
-
   async saveAll(recordings: Recording[]): Promise<void> {
     return enqueuePersist(async () => {
       await AsyncStorage.setItem(RECORDINGS_KEY, JSON.stringify(recordings));

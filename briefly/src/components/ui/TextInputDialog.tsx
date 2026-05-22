@@ -6,7 +6,6 @@
  * with the same callback shape. Callers should use this component
  * everywhere a rename / new-folder prompt is needed.
  */
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Modal,
@@ -19,7 +18,6 @@ import {
   Pressable,
 } from 'react-native';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
-
 interface TextInputDialogProps {
   visible: boolean;
   title: string;
@@ -31,7 +29,6 @@ interface TextInputDialogProps {
   onSubmit: (text: string) => void;
   onCancel: () => void;
 }
-
 /**
  * A simple dialog with a `TextInput`.
  * Designed to replace all `Alert.prompt` + fallback patterns.
@@ -49,7 +46,6 @@ export function TextInputDialog({
 }: TextInputDialogProps) {
   const [value, setValue] = useState(defaultValue);
   const inputRef = useRef<TextInput>(null);
-
   // Reset value when dialog opens
   useEffect(() => {
     if (visible) {
@@ -59,14 +55,12 @@ export function TextInputDialog({
       return () => clearTimeout(id);
     }
   }, [visible, defaultValue]);
-
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
     if (trimmed) {
       onSubmit(trimmed);
     }
   }, [value, onSubmit]);
-
   return (
     <Modal
       visible={visible}
@@ -129,7 +123,6 @@ export function TextInputDialog({
     </Modal>
   );
 }
-
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,

@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
-import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
-import { TabBarPropsReporter } from '@/components/navigation/TabBarPropsReporter';
-import { TabChromeOverlay } from '@/components/navigation/TabChromeOverlay';
+import { NavigatorBottomBlur } from '@/components/navigation/chrome/NavigatorBottomBlur';
+import { TabBarPropsReporter } from '@/components/navigation/tabBar/TabBarPropsReporter';
+import { TabChromeOverlay } from '@/components/navigation/tabBar/TabChromeOverlay';
 import { useCreateStyles, useThemedColors } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 export default function TabsLayout() {
   const styles = useCreateStyles(createTabsLayoutStyles);
   const colors = useThemedColors();
@@ -19,7 +18,6 @@ export default function TabsLayout() {
     }),
     [colors.background],
   );
-
   return (
     <View style={styles.root}>
       <Tabs
@@ -34,7 +32,6 @@ export default function TabsLayout() {
     </View>
   );
 }
-
 function createTabsLayoutStyles(c: ColorPalette) {
   return StyleSheet.create({
     root: {

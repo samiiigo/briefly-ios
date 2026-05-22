@@ -1,7 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
-
 export default function NotFoundScreen() {
   const router = useRouter();
   return (
@@ -15,7 +14,6 @@ export default function NotFoundScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

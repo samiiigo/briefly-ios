@@ -1,6 +1,6 @@
 {
   "name": "briefly",
-  "version": "4.7.0",
+  "version": "5.2.7",
   "main": "expo-router/entry",
   "scripts": {
     "start": "cross-env NODE_OPTIONS=--max-old-space-size=8192 expo start --dev-client",
@@ -55,6 +55,7 @@
     "expo-navigation-bar": "~5.0.10",
     "expo-print": "~15.0.8",
     "expo-router": "~6.0.23",
+    "expo-secure-store": "~15.0.8",
     "expo-sharing": "~14.0.8",
     "expo-status-bar": "~3.0.9",
     "expo-system-ui": "~6.0.9",
@@ -74,7 +75,8 @@
     "@xmldom/xmldom": "0.8.13",
     "postcss": "8.5.14",
     "glob": "^13.0.6",
-    "rimraf": "^6.0.1"
+    "rimraf": "^6.0.1",
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "@types/node": "^25.3.5",

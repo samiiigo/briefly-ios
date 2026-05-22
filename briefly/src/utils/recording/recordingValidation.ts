@@ -1,23 +1,17 @@
 import { TranscriptSegment } from '@/types';
-
 /** Minimum captured duration (seconds) before save / cloud transcription. */
 export const MIN_RECORDING_DURATION_SEC = 10;
-
 /** Below this duration, Stop asks for confirmation and will not be saved. */
 export const STOP_EARLY_CONFIRM_THRESHOLD_SEC = 5;
-
 /** WAV header size (44 bytes) — keep in sync with recordingOptions.WAV_HEADER_BYTES. */
 const WAV_HEADER_BYTES = 44;
-
 /** ~0.25 s of 16 kHz mono PCM — matches TranscriptionService threshold. */
 export const MIN_RECORDING_FILE_BYTES = WAV_HEADER_BYTES + 8000;
-
 export interface RecordingAssetCheck {
   durationSec: number;
   filePath: string;
   fileSizeBytes: number;
 }
-
 export function transcriptTextContent(transcript?: TranscriptSegment[] | null): string {
   if (!transcript?.length) return '';
   return transcript
@@ -26,22 +20,18 @@ export function transcriptTextContent(transcript?: TranscriptSegment[] | null): 
     .join(' ')
     .trim();
 }
-
 export function hasMeaningfulTranscript(transcript?: TranscriptSegment[] | null): boolean {
   return transcriptTextContent(transcript).length > 0;
 }
-
 export function isRecordingTooShort(check: RecordingAssetCheck): boolean {
   return (
     check.durationSec < MIN_RECORDING_DURATION_SEC ||
     check.fileSizeBytes < MIN_RECORDING_FILE_BYTES
   );
 }
-
 export function isRecordingFileMissing(check: RecordingAssetCheck): boolean {
   return !check.filePath?.trim();
 }
-
 /** True when the recording has a saved audio file (not transcript-only imports). */
 export function hasRecordingAudio(
   filePath?: string | null,
@@ -51,7 +41,6 @@ export function hasRecordingAudio(
   if (fileSizeBytes != null && fileSizeBytes <= 0) return false;
   return true;
 }
-
 export function validateRecordingAsset(check: RecordingAssetCheck): void {
   if (isRecordingFileMissing(check)) {
     throw new Error('No audio file was saved for this recording. Please record again.');
@@ -62,7 +51,6 @@ export function validateRecordingAsset(check: RecordingAssetCheck): void {
     );
   }
 }
-
 export function minRecordingDurationHint(action: 'save' | 'stop' = 'save'): string {
   const verb = action === 'stop' ? 'stopping' : 'saving';
   return `Record for at least ${MIN_RECORDING_DURATION_SEC} seconds before ${verb}.`;

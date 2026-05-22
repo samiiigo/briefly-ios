@@ -1,33 +1,22 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSettingsStore } from '@/context/useSettingsStore';
-import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
+import { View, Text, ScrollView } from 'react-native';
+import { useStackBack } from '@/components/navigation/layout/useStackBack';
+import { ModePickerOption } from '@/components/navigation/header/ModePickerOption';
+import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
+import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
 import {
   useModePickerStyles,
   useScreenLayoutStyles,
-} from '@/components/navigation/screenLayout';
-import { TranscriptionMode } from '@/types';
-import {
-  normalizeTranscriptionMode,
-  transcriptionModeDescription,
-  transcriptionModeTitle,
-} from '@/utils/processing/transcriptionMode';
-
-const TRANSCRIPTION_MODES: TranscriptionMode[] = [
-  'live-assemblyai',
-  'post-assemblyai',
-  'local-on-device',
-];
+} from '@/components/navigation/layout/screenLayout';
+import { NATIVE_BUILD_REQUIRED_HINT } from '@/utils/platformCapabilities';
+import { useTranscriptionModeSettings } from '@/hooks/settings/useTranscriptionModeSettings';
 
 export default function TranscriptionModePickerScreen() {
-  const router = useRouter();
+  const goBack = useStackBack('/settings');
   const { scrollPaddingTop } = useTopChromeLayout();
   const sl = useScreenLayoutStyles();
   const mp = useModePickerStyles();
-  const { transcriptionMode, setTranscriptionMode } = useSettingsStore();
-  const selectedMode = normalizeTranscriptionMode(transcriptionMode);
+  const { options, selectMode } = useTranscriptionModeSettings();
 
   return (
     <View style={sl.container}>
@@ -36,41 +25,26 @@ export default function TranscriptionModePickerScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={sl.sectionDescription}>
-          Choose how Briefly transcribes recordings. This applies to every recording.
+          Choose where Briefly transcribes and summarizes after you stop recording. Live preview
+          while recording is optional and does not change this.
         </Text>
         <View style={sl.card}>
-          {TRANSCRIPTION_MODES.map((mode, index) => {
-            const selected = selectedMode === mode;
-            return (
-              <React.Fragment key={mode}>
-                <TouchableOpacity
-                  style={mp.optionRow}
-                  onPress={() => setTranscriptionMode(mode)}
-                >
-                  <View style={[mp.radio, selected && mp.radioSelected]}>
-                    {selected ? <View style={mp.radioDot} /> : null}
-                  </View>
-                  <View style={mp.optionText}>
-                    <Text style={mp.optionTitle}>{transcriptionModeTitle(mode)}</Text>
-                    <Text style={mp.optionSubtitle}>
-                      {transcriptionModeDescription(mode)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                {index !== TRANSCRIPTION_MODES.length - 1 ? (
-                  <View style={mp.optionDivider} />
-                ) : null}
-              </React.Fragment>
-            );
-          })}
+          {options.map((option, index) => (
+            <React.Fragment key={option.mode}>
+              <ModePickerOption
+                selected={option.selected}
+                disabled={option.disabled}
+                title={option.title}
+                subtitle={option.subtitle}
+                unavailableHint={NATIVE_BUILD_REQUIRED_HINT}
+                onPress={() => selectMode(option.mode)}
+              />
+              {index !== options.length - 1 ? <View style={mp.optionDivider} /> : null}
+            </React.Fragment>
+          ))}
         </View>
       </ScrollView>
-
-      <StackScreenHeader
-        title="Transcription"
-        showBack
-        onBack={() => router.back()}
-      />
+      <StackScreenHeader title="Transcription" showBack onBack={goBack} />
     </View>
   );
 }

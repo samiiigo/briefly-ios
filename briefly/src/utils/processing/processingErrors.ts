@@ -1,11 +1,8 @@
 import { ProcessingMode } from '@/types';
-
 export type ProcessingFailurePhase = 'transcription' | 'summarization';
-
 export class ProcessingFailure extends Error {
   readonly phase: ProcessingFailurePhase;
   readonly summarizationMode?: ProcessingMode;
-
   constructor(
     phase: ProcessingFailurePhase,
     message: string,
@@ -17,7 +14,6 @@ export class ProcessingFailure extends Error {
     this.summarizationMode = summarizationMode;
   }
 }
-
 const SHORT_RECORDING_PATTERNS = [
   'too short',
   'too small',
@@ -28,7 +24,6 @@ const SHORT_RECORDING_PATTERNS = [
   'no live transcript',
   'no on-device transcript',
 ];
-
 const NETWORK_PATTERNS = [
   'network',
   'timeout',
@@ -43,17 +38,22 @@ const NETWORK_PATTERNS = [
   'upload failed',
   'poll failed',
 ];
-
 export function isShortOrEmptyRecordingError(error: unknown): boolean {
   const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
   return SHORT_RECORDING_PATTERNS.some((p) => message.includes(p));
 }
-
+/** Missing on-disk audio (stale cache path, deleted file, etc.). */
+export function isAudioFileMissingError(error: unknown): boolean {
+  const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return (
+    message.includes('audio file not found') ||
+    message.includes('no audio file was saved')
+  );
+}
 export function isNetworkRelatedError(error: unknown): boolean {
   const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
   return NETWORK_PATTERNS.some((p) => message.includes(p));
 }
-
 /**
  * Maps internal errors to stable, user-facing copy for processing UI.
  */
@@ -78,7 +78,6 @@ export function toUserFacingProcessingError(
     }
     return new Error(raw);
   }
-
   const message = error instanceof Error ? error.message : String(error);
   if (isShortOrEmptyRecordingError(error)) {
     return new Error(
@@ -94,14 +93,12 @@ export function toUserFacingProcessingError(
         : 'Network connection was lost or timed out. Check your internet and try again.',
     );
   }
-
   return new Error(
     context?.afterFallback
       ? 'Transcription from your saved recording failed. Try again when you have a stable connection.'
       : 'Something went wrong while processing your recording. Try again or transcribe from the saved audio.',
   );
 }
-
 /** Primary path failed in a way where re-uploading the same short file will not help. */
 export function shouldSkipAudioFallback(error: unknown): boolean {
   if (error instanceof ProcessingFailure && error.phase === 'summarization') {
@@ -109,7 +106,6 @@ export function shouldSkipAudioFallback(error: unknown): boolean {
   }
   return isShortOrEmptyRecordingError(error);
 }
-
 export function toProcessingFailure(
   err: unknown,
   fallbackPhase: ProcessingFailurePhase,

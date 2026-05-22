@@ -7,5 +7,4 @@ export {
   FileSystemUploadType,
   FileSystemSessionType,
 } from 'expo-file-system/legacy';
-
 export type { FileSystemUploadResult } from 'expo-file-system/legacy';

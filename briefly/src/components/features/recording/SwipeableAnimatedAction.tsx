@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import React, { forwardRef } from 'react';
+import { Pressable, StyleSheet, Text, type View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   Extrapolation,
@@ -9,12 +9,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useCreateStyles, useThemedColors, BorderRadius, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
-
 export const SWIPE_ACTION_SIZE = 76;
 export const SWIPE_ACTION_GAP = Spacing.sm;
 export const SWIPE_ACTION_INSET = 2;
 export const SWIPE_ACTION_RADIUS = BorderRadius.cardXL - SWIPE_ACTION_INSET;
-
 interface SwipeableAnimatedActionProps {
   progress: SharedValue<number>;
   index: number;
@@ -29,20 +27,23 @@ interface SwipeableAnimatedActionProps {
   numberOfLines?: number;
   disabled?: boolean;
 }
-
-export function SwipeableAnimatedAction({
-  progress,
-  index,
-  count,
-  side,
-  backgroundColor,
-  icon,
-  label,
-  onPress,
-  marginRight,
-  numberOfLines = 1,
-  disabled = false,
-}: SwipeableAnimatedActionProps) {
+export const SwipeableAnimatedAction = forwardRef<View, SwipeableAnimatedActionProps>(
+  function SwipeableAnimatedAction(
+    {
+      progress,
+      index,
+      count,
+      side,
+      backgroundColor,
+      icon,
+      label,
+      onPress,
+      marginRight,
+      numberOfLines = 1,
+      disabled = false,
+    },
+    ref,
+  ) {
   const styles = useCreateStyles(createSwipeableAnimatedActionStyles);
   const colors = useThemedColors();
   const animatedStyle = useAnimatedStyle(() => {
@@ -52,7 +53,6 @@ export function SwipeableAnimatedAction({
     const start = revealIndex * stride * 0.35;
     const end = Math.min(start + stride * 1.25, 1);
     const translateStart = side === 'trailing' && revealIndex === 0 ? 14 : -12;
-
     return {
       opacity: interpolate(progress.value, [start, end], [0, 1], Extrapolation.CLAMP),
       transform: [
@@ -70,9 +70,10 @@ export function SwipeableAnimatedAction({
       ],
     };
   });
-
   return (
     <Animated.View
+      ref={ref}
+      collapsable={false}
       style={[
         styles.actionButton,
         { backgroundColor, marginRight },
@@ -94,8 +95,8 @@ export function SwipeableAnimatedAction({
       </Pressable>
     </Animated.View>
   );
-}
-
+  },
+);
 function createSwipeableAnimatedActionStyles(c: ColorPalette) {
   return StyleSheet.create({
   actionButton: {

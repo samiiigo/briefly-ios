@@ -10,6 +10,7 @@ briefly/.env
 google-service-account.json
 briefly/play-store-service-account.json
 play-store-service-account.json
+briefly/.npmrc
 
 # Expo
 .expo/
