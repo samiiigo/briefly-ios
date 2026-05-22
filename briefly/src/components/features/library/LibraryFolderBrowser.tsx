@@ -41,8 +41,6 @@ import {
   MAX_YOUR_FOLDERS_PREVIEW,
   type UserFolderListFilter,
 } from '@/constants/userFolders';
-import { FolderUserSwipeableRow } from './FolderUserSwipeableRow';
-
 const LIST_BOTTOM_PADDING = 140;
 /** Matches {@link styles.folderCard} width in the two-column grid. */
 const FOLDER_GRID_CARD_WIDTH_RATIO = 0.485;
@@ -458,16 +456,16 @@ export function LibraryFolderBrowser({
       if (f.folderType === 'user') {
         return (
           <View key={f.id} style={styles.folderCard}>
-            <FolderUserSwipeableRow
-              pinned={!!f.pinned}
+            <Pressable
               onPress={() => openFolder(f.id, f.name, f.folderType)}
-              onTogglePin={() => handleToggleUserFolderPin(f.id)}
               onLongPress={(e) => handleUserFolderLongPress(f, e)}
-              pinInteractionEnabled
-              layout="grid"
+              delayLongPress={450}
+              accessibilityRole="button"
+              accessibilityLabel={f.name}
+              accessibilityHint="Long press for folder options"
             >
               {cardInner}
-            </FolderUserSwipeableRow>
+            </Pressable>
           </View>
         );
       }
@@ -483,7 +481,7 @@ export function LibraryFolderBrowser({
         </TouchableOpacity>
       );
     },
-    [colors, openFolder, handleToggleUserFolderPin, handleUserFolderLongPress]
+    [colors, openFolder, handleUserFolderLongPress]
   );
 
   const renderPinnedFolderCard = useCallback(
@@ -615,16 +613,16 @@ export function LibraryFolderBrowser({
 
       if (f.folderType === 'user') {
         return (
-          <FolderUserSwipeableRow
-            pinned={!!f.pinned}
+          <Pressable
             onPress={() => openFolder(f.id, f.name, f.folderType)}
-            onTogglePin={() => handleToggleUserFolderPin(f.id)}
             onLongPress={(e) => handleUserFolderLongPress(f, e)}
-            pinInteractionEnabled
-            layout="list"
+            delayLongPress={450}
+            accessibilityRole="button"
+            accessibilityLabel={f.name}
+            accessibilityHint="Long press for folder options"
           >
             {rowContent}
-          </FolderUserSwipeableRow>
+          </Pressable>
         );
       }
 
@@ -637,7 +635,7 @@ export function LibraryFolderBrowser({
         </TouchableOpacity>
       );
     },
-    [colors, openFolder, listIconBackground, handleToggleUserFolderPin, handleUserFolderLongPress]
+    [colors, openFolder, listIconBackground, handleUserFolderLongPress]
   );
 
   const listKeyExtractor = useCallback((item: FolderTile) => item.id, []);
