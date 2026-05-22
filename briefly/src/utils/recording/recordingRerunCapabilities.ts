@@ -1,8 +1,5 @@
 import type { Recording } from '@/types';
-import {
-  executeManualRecordingRerun,
-  executeSummarizationOnlyRerun,
-} from '@/utils/recording/manualRecordingRerun';
+import { executeManualRecordingRerun } from '@/utils/recording/manualRecordingRerun';
 import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
 import {
   getRecordingAudioAvailability,
@@ -23,28 +20,25 @@ export function canRerunSummaryFromTranscript(
   return hasMeaningfulTranscript(recording.transcript);
 }
 
-export type TranscriptScreenRerunResult = 'audio' | 'transcript' | 'none';
+/** VoiceOver / accessibility label for the transcript preview re-run control. */
+export const TRANSCRIPT_SCREEN_RERUN_FROM_AUDIO_LABEL =
+  'Re-run transcription and summarization from the audio';
+
+export type TranscriptScreenRerunFromAudioResult = 'audio' | 'none';
 
 /**
- * Transcript preview rerun: audio re-transcription when on-disk audio exists,
- * otherwise summarization from the saved transcript.
+ * Transcript preview re-run: always re-transcribe and summarize from on-disk audio.
+ * Returns `none` when no audio file is available (button should stay disabled).
  */
-export function runTranscriptScreenRerun(
+export function runTranscriptScreenRerunFromAudio(
   recording: Recording,
   audio: RecordingAudioAvailability = getRecordingAudioAvailability(recording),
-): TranscriptScreenRerunResult {
-  if (audio.hasAudio) {
-    executeManualRecordingRerun(recording.id, {
-      preservePreviousResults: true,
-      audio,
-    });
-    return 'audio';
-  }
+): TranscriptScreenRerunFromAudioResult {
+  if (!audio.hasAudio) return 'none';
 
-  if (canRerunSummaryFromTranscript(recording)) {
-    executeSummarizationOnlyRerun(recording.id);
-    return 'transcript';
-  }
-
-  return 'none';
+  executeManualRecordingRerun(recording.id, {
+    preservePreviousResults: true,
+    audio,
+  });
+  return 'audio';
 }

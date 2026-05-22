@@ -10,6 +10,7 @@ import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { installRealtimeTerminalLogs, logger } from '@/utils/logging/logger';
 import { checkEnvironment } from '@/utils/environment/environmentCheck';
+import { resumeInterruptedRecordingProcessing } from '@/services/recording/recordingBackgroundProcessing';
 import { refreshLocalLlmModelStateFromDisk } from '@/services/summarization';
 import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
 import { LibraryFabChromeOverlay } from '@/components/navigation/LibraryFabChromeOverlay';
@@ -46,10 +47,8 @@ function RootLayoutContent() {
     if (!iconFontsLoaded) return;
 
     installRealtimeTerminalLogs();
-    logger.info('SYSTEM', 'App startup: loading recordings from storage');
-    loadRecordings();
 
-    const runEnvCheck = () => {
+    const runAfterSettingsHydrated = () => {
       refreshLocalLlmModelStateFromDisk();
       const env = checkEnvironment();
       logger.info('SYSTEM', 'Environment check', {
@@ -63,14 +62,24 @@ function RootLayoutContent() {
       useSettingsStore.getState().applyEnvironmentDefaults(
         env.recommendedTranscriptionMode,
       );
+      resumeInterruptedRecordingProcessing();
     };
 
-    if (useSettingsStore.persist.hasHydrated()) {
-      runEnvCheck();
-    } else {
-      const unsub = useSettingsStore.persist.onFinishHydration(runEnvCheck);
-      return unsub;
-    }
+    let hydrationUnsub: (() => void) | undefined;
+
+    void (async () => {
+      logger.info('SYSTEM', 'App startup: loading recordings from storage');
+      await loadRecordings();
+      if (useSettingsStore.persist.hasHydrated()) {
+        runAfterSettingsHydrated();
+      } else {
+        hydrationUnsub = useSettingsStore.persist.onFinishHydration(
+          runAfterSettingsHydrated,
+        );
+      }
+    })();
+
+    return () => hydrationUnsub?.();
   }, [iconFontsLoaded, loadRecordings]);
 
   const rootStyle = useRootBackgroundStyle();

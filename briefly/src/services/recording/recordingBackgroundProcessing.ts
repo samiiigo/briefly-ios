@@ -21,6 +21,7 @@ import { logger } from '@/utils/logging/logger';
 import { buildRecordingReadyFromSummarization } from '@/utils/recording/recordingSummarization';
 import { applyResolvedAudioToRecording } from '@/utils/recording/recordingPlayableAudio';
 import { getLocalLlmSummarizationBlocker } from '@/services/summarization';
+import { resolveInterruptedProcessingResume } from '@/utils/recording/recordingProcessingResume';
 
 const PROCESSING_TIMEOUT_MS = 12 * 60 * 1000;
 
@@ -363,4 +364,31 @@ export function initialStatusAfterSave(settingsTranscriptionMode: string): 'tran
     normalizeTranscriptionMode(settingsTranscriptionMode),
   );
   return pipeline.skipAsyncTranscription ? 'summarizing' : 'transcribing';
+}
+
+/**
+ * Restarts background jobs for recordings left in a processing status when the app
+ * was killed or backgrounded. Safe to call on every cold start after recordings load.
+ */
+export function resumeInterruptedRecordingProcessing(): void {
+  const { recordings } = useRecordingStore.getState();
+  const toResume = recordings.filter(
+    (rec) => resolveInterruptedProcessingResume(rec) !== 'skip',
+  );
+
+  if (toResume.length === 0) return;
+
+  logger.info('RECORDING', 'Resuming interrupted background processing', {
+    count: toResume.length,
+    ids: toResume.map((r) => r.id),
+  });
+
+  for (const rec of toResume) {
+    const action = resolveInterruptedProcessingResume(rec);
+    if (action === 'summarize-only') {
+      startRecordingSummarizationRetry(rec.id, rec.processingMode);
+    } else if (action === 'full') {
+      startRecordingBackgroundProcessing(rec.id);
+    }
+  }
 }

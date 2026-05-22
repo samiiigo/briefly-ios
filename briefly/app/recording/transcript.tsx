@@ -4,9 +4,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import {
-  canRerunSummaryFromTranscript,
   canRerunTranscriptFromAudio,
-  runTranscriptScreenRerun,
+  runTranscriptScreenRerunFromAudio,
+  TRANSCRIPT_SCREEN_RERUN_FROM_AUDIO_LABEL,
 } from '@/utils/recording/recordingRerunCapabilities';
 import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
 import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
@@ -18,7 +18,6 @@ import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { usePlaybackBarLayout } from '@/components/navigation/usePlaybackBarLayout';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
 import { useScreenLayoutStyles } from '@/components/navigation/screenLayout';
-import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
 import { useRecordingAudioAvailability } from '@/hooks/useRecordingAudioAvailability';
 import { RecordingProcessingFlashIcon } from '@/components/features/recording/RecordingProcessingFlashIcon';
 import { Colors, Spacing } from '@/theme';
@@ -49,7 +48,7 @@ export default function RecordingTranscriptScreen() {
   });
 
   const handleRerun = useCallback(() => {
-    if (!recording) return;
+    if (!recording || !audioAvailability.hasAudio) return;
     if (recording.status === 'transcribing' || recording.status === 'summarizing') {
       return;
     }
@@ -58,11 +57,10 @@ export default function RecordingTranscriptScreen() {
 
     useRecordingRetryFlashStore.getState().markRetryPending(recording.id);
 
-    const result = runTranscriptScreenRerun(recording, audioAvailability);
-    if (result === 'none') {
+    if (runTranscriptScreenRerunFromAudio(recording, audioAvailability) === 'none') {
       Alert.alert(
-        'Nothing to process',
-        'No audio file or saved transcript is available for this recording.',
+        'No audio',
+        'No recording file is available on this device to transcribe.',
       );
     }
   }, [audioAvailability, recording]);
@@ -76,17 +74,11 @@ export default function RecordingTranscriptScreen() {
   }
 
   const hasAudio = audioAvailability.hasAudio;
-  const hasTranscript = hasMeaningfulTranscript(recording.transcript);
   const segments = recording.transcript ?? [];
   const isProcessing =
     recording.status === 'transcribing' || recording.status === 'summarizing';
-  const canRerunTranscript = canRerunTranscriptFromAudio(recording);
-  const canRerunSummary = canRerunSummaryFromTranscript(recording);
-  const rerunDisabled =
-    isProcessing || flashActive || (!canRerunTranscript && !canRerunSummary);
-  const rerunLabel = canRerunTranscript
-    ? 'Re-run transcription and summarization'
-    : 'Re-run summarization from transcript';
+  const canRerunFromAudio = canRerunTranscriptFromAudio(recording);
+  const rerunDisabled = isProcessing || flashActive || !canRerunFromAudio;
 
   return (
     <View style={sl.container}>
@@ -139,7 +131,7 @@ export default function RecordingTranscriptScreen() {
             ) : (
               <CircularIconButton
                 icon="refresh-outline"
-                accessibilityLabel={rerunLabel}
+                accessibilityLabel={TRANSCRIPT_SCREEN_RERUN_FROM_AUDIO_LABEL}
                 loading={isProcessing}
                 disabled={rerunDisabled}
                 onPress={rerunDisabled ? undefined : handleRerun}
