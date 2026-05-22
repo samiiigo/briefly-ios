@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import {
   themePreferenceDescription,
@@ -13,11 +12,12 @@ import {
   useModePickerStyles,
   useScreenLayoutStyles,
 } from '@/components/navigation/screenLayout';
+import { useStackBack } from '@/components/navigation/useStackBack';
 
 const THEME_OPTIONS: ThemePreference[] = ['system', 'light', 'dark'];
 
 export default function ThemePickerScreen() {
-  const router = useRouter();
+  const goBack = useStackBack('/settings');
   const { scrollPaddingTop } = useTopChromeLayout();
   const sl = useScreenLayoutStyles();
   const mp = useModePickerStyles();
@@ -61,11 +61,7 @@ export default function ThemePickerScreen() {
         </View>
       </ScrollView>
 
-      <StackScreenHeader
-        title="Theme"
-        showBack
-        onBack={() => router.back()}
-      />
+      <StackScreenHeader title="Theme" showBack onBack={goBack} />
     </View>
   );
 }

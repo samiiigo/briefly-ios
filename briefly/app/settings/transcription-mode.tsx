@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useStackBack } from '@/components/navigation/useStackBack';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
@@ -22,7 +22,7 @@ const TRANSCRIPTION_MODES: TranscriptionMode[] = [
 ];
 
 export default function TranscriptionModePickerScreen() {
-  const router = useRouter();
+  const goBack = useStackBack('/settings');
   const { scrollPaddingTop } = useTopChromeLayout();
   const sl = useScreenLayoutStyles();
   const mp = useModePickerStyles();
@@ -69,7 +69,7 @@ export default function TranscriptionModePickerScreen() {
       <StackScreenHeader
         title="Transcription"
         showBack
-        onBack={() => router.back()}
+        onBack={goBack}
       />
     </View>
   );

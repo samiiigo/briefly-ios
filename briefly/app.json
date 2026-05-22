@@ -82,6 +82,7 @@
         }
       ],
       "expo-asset",
+      "expo-document-picker",
       "expo-live-activity",
       [
         "llama.rn",

@@ -1,6 +1,6 @@
 import { Alert } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
+import { pickImportDocument } from '@/services/recording/pickImportDocument';
 import { AudioFileService } from '@/services/audio';
 import { probeAudioDurationSec } from '@/services/audio/probeAudioDuration';
 import { saveCapturedRecording } from '@/services/recording/saveCapturedRecording';
@@ -23,7 +23,6 @@ import {
   filterNewBackupEntries,
   findDuplicateAudioRecording,
 } from '@/utils/recording/importDeduplication';
-import { exportAllTranscripts } from '@/services/recording/transcriptBackupService';
 import {
   MIN_RECORDING_DURATION_SEC,
   MIN_RECORDING_FILE_BYTES,
@@ -156,10 +155,7 @@ async function importAudioAsset(params: {
 }
 
 export async function importFromPicker(): Promise<ImportRecordingResult | null> {
-  const result = await DocumentPicker.getDocumentAsync({
-    copyToCacheDirectory: true,
-    type: ['application/json', 'audio/*'],
-  });
+  const result = await pickImportDocument();
 
   if (result.canceled || !result.assets?.[0]) {
     return null;
@@ -205,5 +201,3 @@ export async function importFromPicker(): Promise<ImportRecordingResult | null> 
   );
   return audioResult;
 }
-
-export { exportAllTranscripts };

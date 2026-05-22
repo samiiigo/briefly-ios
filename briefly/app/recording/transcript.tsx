@@ -7,6 +7,7 @@ import {
   cancelRecordingBackgroundProcessing,
   startRecordingBackgroundProcessing,
 } from '@/services/recording/recordingBackgroundProcessing';
+import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
 import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
 import { usePlayback } from '@/hooks/usePlayback';
 import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
@@ -50,6 +51,7 @@ export default function RecordingTranscriptScreen() {
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
 
+    useRecordingRetryFlashStore.getState().markRetryPending(recording.id);
     cancelRecordingBackgroundProcessing(recording.id);
     startRecordingBackgroundProcessing(recording.id, {
       audioFallbackOnly: true,

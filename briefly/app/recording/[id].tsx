@@ -27,7 +27,6 @@ import { TextInputDialog } from '@/components/ui/TextInputDialog';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { builtInFolderName } from '@/constants/builtInFolders';
 import { ensureUniqueTitle } from '@/utils';
-import { getNextSummarizationFallback } from '@/utils/processing/summarizationFallback';
 import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
 import {
   hasMeaningfulTranscript,
@@ -40,6 +39,7 @@ import {
   startRecordingBackgroundProcessing,
   startRecordingSummarizationRetry,
 } from '@/services/recording/recordingBackgroundProcessing';
+import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
 import {
   Spacing,
   BorderRadius,
@@ -61,7 +61,6 @@ export default function TranscriptScreen() {
   const { updateRecording, recordings, restoreRecording } = useRecordingStore();
   const folders = useUserFolderStore((s) => s.folders);
   const loadFolders = useUserFolderStore((s) => s.loadFolders);
-  const { summarizationMode } = useSettingsStore();
 
   const [renameDialogVisible, setRenameDialogVisible] = useState(false);
 
@@ -88,26 +87,11 @@ export default function TranscriptScreen() {
     else { setRenameDialogVisible(true); }
   }, [recording, recordings, updateRecording]);
 
-  const handleTranscriptionFallback = useCallback(() => {
-    if (!recording || !recordingId) return;
-    startRecordingBackgroundProcessing(recording.id, { audioFallbackOnly: true });
-  }, [recording, recordingId]);
-
-  const handleSummarizationFallback = useCallback(
-    (mode: typeof summarizationMode) => {
-      if (!recording || !recordingId) return;
-      if (recording.status === 'transcribing' || recording.status === 'summarizing') return;
-      if (!alertIfLocalLlmNotReady(mode)) return;
-      cancelRecordingBackgroundProcessing(recording.id);
-      startRecordingSummarizationRetry(recording.id, mode);
-    },
-    [recording, recordingId],
-  );
-
   const handleStartProcessing = useCallback(() => {
     if (!recording) return;
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
+    useRecordingRetryFlashStore.getState().markRetryPending(recording.id);
     startRecordingBackgroundProcessing(recording.id);
   }, [recording]);
 
@@ -123,6 +107,7 @@ export default function TranscriptScreen() {
     }
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
+    useRecordingRetryFlashStore.getState().markRetryPending(recording.id);
     cancelRecordingBackgroundProcessing(recording.id);
     startRecordingSummarizationRetry(recording.id, mode);
   }, [recording, recordingId]);
@@ -189,17 +174,8 @@ export default function TranscriptScreen() {
     );
   }
 
-  const lastSummarizationMode = recording.processingMode ?? summarizationMode;
-  const summarizationFallback =
-    recording.status === 'error' && hasMeaningfulTranscript(recording.transcript)
-      ? getNextSummarizationFallback(lastSummarizationMode, [lastSummarizationMode])
-      : null;
   const hasAudio = hasRecordingAudio(recording.filePath, recording.fileSize);
   const hasTranscript = hasMeaningfulTranscript(recording.transcript);
-  const showTranscriptionFallbackOnError =
-    hasAudio &&
-    recording.status === 'error' &&
-    (!hasTranscript || !summarizationFallback);
   const isTranscribing = recording.status === 'transcribing';
   const isSummarizing = recording.status === 'summarizing';
   const showProcessingBanner =
@@ -233,7 +209,7 @@ export default function TranscriptScreen() {
         <RecordingTitleHero recording={recording} />
         {showProcessingBanner ? (
           <View style={st.processingBanner}>
-            <View style={st.errorBannerTop}>
+            <View style={st.processingBannerTop}>
               <Ionicons name="sparkles" size={16} color={colors.primary} />
               <Text style={st.processingBannerTitle}>
                 {recording.status === 'saved' && hasTranscript
@@ -253,32 +229,11 @@ export default function TranscriptScreen() {
             </TouchableOpacity>
           </View>
         ) : null}
-        {recording.status === 'error' && (
+        {recording.status === 'error' && !!recording.errorMessage && (
           <View style={st.errorBanner}>
-            <View style={st.errorBannerTop}>
-              <Ionicons name="warning" size={16} color={colors.orange} />
-              <Text style={st.errorBannerTitle}>Processing failed</Text>
-            </View>
-            {!!recording.errorMessage && (
-              <Text style={st.errorBannerMessage} numberOfLines={4}>
-                {recording.errorMessage}
-              </Text>
-            )}
-            {summarizationFallback ? (
-              <TouchableOpacity
-                style={st.retryButton}
-                onPress={() => handleSummarizationFallback(summarizationFallback.mode)}
-              >
-                <Ionicons name="sparkles" size={15} color={colors.textPrimary} />
-                <Text style={st.retryButtonText}>{summarizationFallback.buttonLabel}</Text>
-              </TouchableOpacity>
-            ) : null}
-            {showTranscriptionFallbackOnError ? (
-              <TouchableOpacity style={st.retryButton} onPress={handleTranscriptionFallback}>
-                <Ionicons name="mic-outline" size={15} color={colors.textPrimary} />
-                <Text style={st.retryButtonText}>Transcribe from recording</Text>
-              </TouchableOpacity>
-            ) : null}
+            <Text style={st.errorBannerMessage} numberOfLines={4}>
+              {recording.errorMessage}
+            </Text>
           </View>
         )}
         {recording.keyInsights && recording.keyInsights.length > 0 && (
@@ -383,6 +338,7 @@ function createRecordingDetailStyles(c: ColorPalette) {
     marginBottom: Spacing.md,
     gap: 8,
   },
+  processingBannerTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   processingBannerTitle: withAppFont({
     fontSize: 14,
     fontWeight: '600',
@@ -397,12 +353,6 @@ function createRecordingDetailStyles(c: ColorPalette) {
     marginBottom: Spacing.md,
     gap: 8,
   },
-  errorBannerTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  errorBannerTitle: withAppFont({
-    fontSize: 14,
-    fontWeight: '600',
-    color: c.orange,
-  }),
   errorBannerMessage: withAppFont({
     fontSize: 13,
     color: c.subtext,

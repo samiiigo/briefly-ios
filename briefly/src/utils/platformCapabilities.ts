@@ -3,6 +3,7 @@
  * Used by environment checks and transcription routing.
  */
 
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import { TurboModuleRegistry } from 'react-native';
 import { getBrieflyTranscriberModule } from '../../modules/briefly-transcriber';
 import { NativeAudioCapture } from '@/services/audio/nativeAudioCapture';
@@ -38,6 +39,17 @@ export function supportsExpoAudioStreamingCapture(): boolean {
 /** Standard local recording via expo-audio (always on iOS/Android). */
 export function supportsLocalRecording(): boolean {
   return isIOS || isAndroid;
+}
+
+function hasExpoDocumentPickerModule(): boolean {
+  return requireOptionalNativeModule('ExpoDocumentPicker') != null;
+}
+
+/** JSON/audio import via expo-document-picker (iOS Expo Go + dev builds; Android dev/production only). */
+export function supportsDocumentPicker(): boolean {
+  if (isIOS) return true;
+  if (isAndroid) return hasExpoDocumentPickerModule();
+  return false;
 }
 
 /** Background recording is configured via expo-audio plugin on both platforms. */

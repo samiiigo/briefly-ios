@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useStackBack } from '@/components/navigation/useStackBack';
 import {
   FolderListLayoutMode,
   folderListLayoutDescription,
@@ -17,7 +17,7 @@ import {
 const LAYOUT_OPTIONS: FolderListLayoutMode[] = ['list', 'grid'];
 
 export default function FolderLayoutPickerScreen() {
-  const router = useRouter();
+  const goBack = useStackBack('/settings');
   const { scrollPaddingTop } = useTopChromeLayout();
   const sl = useScreenLayoutStyles();
   const mp = useModePickerStyles();
@@ -64,7 +64,7 @@ export default function FolderLayoutPickerScreen() {
       <StackScreenHeader
         title="Folder layout"
         showBack
-        onBack={() => router.back()}
+        onBack={goBack}
       />
     </View>
   );

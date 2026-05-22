@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useStackBack } from '@/components/navigation/useStackBack';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import { StackScreenHeader } from '@/components/navigation/StackScreenHeader';
 import { useTopChromeLayout } from '@/components/navigation/useTopChromeLayout';
@@ -46,7 +46,7 @@ const PROCESSING_MODES: ProcessingMode[] = [
 ];
 
 export default function ProcessingModePickerScreen() {
-  const router = useRouter();
+  const goBack = useStackBack('/settings');
   const sl = useScreenLayoutStyles();
   const mp = useModePickerStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
@@ -287,7 +287,7 @@ export default function ProcessingModePickerScreen() {
       <StackScreenHeader
         title="Summarization"
         showBack
-        onBack={() => router.back()}
+        onBack={goBack}
       />
     </View>
   );

@@ -9,6 +9,7 @@ import {
   TOP_HEADER_PADDING_TOP,
 } from '@/components/navigation/topHeaderMetrics';
 import { TopChromeOverlay } from '@/components/navigation/TopChromeOverlay';
+import { openSettingsRoot } from '@/components/navigation/useStackBack';
 import { useCreateStyles, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 
@@ -26,7 +27,7 @@ export function RecentsHeader() {
             accessibilityLabel="Settings"
             onPress={() => {
               useActiveSwipeableStore.getState().closeActive();
-              router.push('/settings');
+              openSettingsRoot();
             }}
           />
           <CircularIconButton

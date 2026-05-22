@@ -18,7 +18,6 @@ interface Props {
 export function RecordingCard({ recording, compact }: Props) {
   const styles = useCreateStyles(createRecordingCardStyles);
   const colors = useThemedColors();
-  const isFailed = recording.status === 'error';
   const isProcessing = isRecordingProcessing(recording);
   const isFavorite = !!recording.isFavorite;
   const folder = resolveRecordingFolder(recording);
@@ -31,11 +30,6 @@ export function RecordingCard({ recording, compact }: Props) {
 
   const topRightIcons = (
     <View style={styles.topRightIcons}>
-      {isFailed && (
-        <View style={[styles.statusIcon, styles.statusIconWarning]}>
-          <Ionicons name="warning" size={compact ? 12 : 14} color={colors.orange} />
-        </View>
-      )}
       {isFavorite && !isRecentlyDeleted && (
         <View style={[styles.statusIcon, styles.favoriteIcon]}>
           <Ionicons name="star" size={compact ? 12 : 14} color="#FFD60A" />
@@ -54,7 +48,7 @@ export function RecordingCard({ recording, compact }: Props) {
               <Text style={styles.titleCompact} numberOfLines={2}>
                 {recording.title}
               </Text>
-              {(isFailed || isProcessing || (isFavorite && !isRecentlyDeleted)) && (
+              {(isProcessing || (isFavorite && !isRecentlyDeleted)) && (
                 <View style={styles.compactTitleIcons}>{topRightIcons}</View>
               )}
             </View>
@@ -76,7 +70,7 @@ export function RecordingCard({ recording, compact }: Props) {
             <Text style={styles.title} numberOfLines={2}>
               {recording.title}
             </Text>
-            {(isFailed || isProcessing || (isFavorite && !isRecentlyDeleted)) && topRightIcons}
+            {(isProcessing || (isFavorite && !isRecentlyDeleted)) && topRightIcons}
           </View>
           <Text style={styles.date}>{dateText}</Text>
           <View style={styles.durationRow}>
@@ -123,9 +117,6 @@ function createRecordingCardStyles(c: ColorPalette) {
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  statusIconWarning: {
-    backgroundColor: 'rgba(255, 159, 10, 0.2)',
   },
   favoriteIcon: {
     backgroundColor: 'rgba(255,159,10,0.16)',

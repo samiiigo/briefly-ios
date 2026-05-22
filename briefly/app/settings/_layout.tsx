@@ -8,6 +8,7 @@ export default function SettingsLayout() {
   return (
     <View style={shell.root}>
       <Stack
+        initialRouteName="index"
         screenOptions={{
           headerShown: false,
           contentStyle: shell.contentStyle,
@@ -23,7 +24,13 @@ export default function SettingsLayout() {
             },
           }),
         }}
-      />
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="transcription-mode" />
+        <Stack.Screen name="processing-mode" />
+        <Stack.Screen name="folder-layout" />
+        <Stack.Screen name="appearance" />
+      </Stack>
     </View>
   );
 }

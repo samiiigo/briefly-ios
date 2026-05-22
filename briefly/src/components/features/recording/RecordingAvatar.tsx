@@ -7,6 +7,10 @@ import {
   isRecordingProcessing,
 } from '@/utils/recording/recordingContentEmoji';
 import { RecordingEmojiCircle } from '@/components/features/recording/RecordingEmojiCircle';
+import { RecordingProcessingRetryCircle } from '@/components/features/recording/RecordingProcessingRetryCircle';
+import { RecordingProcessingFlashCircle } from '@/components/features/recording/RecordingProcessingFlashCircle';
+import { useRecordingProcessingRetry } from '@/hooks/useRecordingProcessingRetry';
+import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
 import { Spacing, useCreateStyles, useThemedColors } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 
@@ -27,6 +31,13 @@ export function RecordingAvatar({
   const compact = size === 'compact';
   const processing = isRecordingProcessing(recording);
   const failed = recording.status === 'error';
+  const { action: retryAction, runRetry, showOpenableContent } =
+    useRecordingProcessingRetry(recording, { forListAvatar: true });
+  const showFlash = useRecordingRetryFlashStore((s) => {
+    const until = s.flashUntilById[recording.id];
+    return until != null && Date.now() < until;
+  });
+  const showRetry = failed && retryAction != null && !showFlash;
 
   return (
     <View
@@ -35,11 +46,19 @@ export function RecordingAvatar({
         compact ? styles.shellCompact : trailingSpacing && styles.shellList,
       ]}
     >
-      {processing ? (
+      {showFlash ? (
+        <RecordingProcessingFlashCircle size={compact ? 'compact' : 'md'} />
+      ) : processing ? (
         <View style={[styles.stateCircle, compact && styles.stateCircleCompact]}>
           <ActivityIndicator size="small" color={colors.textPrimary} />
         </View>
-      ) : failed ? (
+      ) : showRetry ? (
+        <RecordingProcessingRetryCircle
+          action={retryAction}
+          onPress={runRetry}
+          size={compact ? 'compact' : 'md'}
+        />
+      ) : failed && !showOpenableContent ? (
         <View style={[styles.stateCircle, compact && styles.stateCircleCompact]}>
           <Ionicons
             name="close-circle"

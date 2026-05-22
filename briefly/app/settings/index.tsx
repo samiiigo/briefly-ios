@@ -4,10 +4,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useStackBack } from '@/components/navigation/useStackBack';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import {
   folderListLayoutTitle,
@@ -25,6 +27,7 @@ import { useClearCache } from '@/hooks/useClearCache';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const goBack = useStackBack('/(tabs)');
   const { scrollPaddingTop } = useTopChromeLayout();
   const colors = useThemedColors();
   const sl = useScreenLayoutStyles();
@@ -37,7 +40,10 @@ export default function SettingsScreen() {
 
   return (
     <View style={sl.container}>
-      <View style={[sl.scrollContent, styles.content, { paddingTop: scrollPaddingTop }]}>
+      <ScrollView
+        contentContainerStyle={[sl.scrollContent, styles.content, { paddingTop: scrollPaddingTop }]}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={[sl.sectionLabel, styles.firstSectionLabel]}>Transcription</Text>
         <View style={sl.card}>
           <TouchableOpacity
@@ -146,7 +152,7 @@ export default function SettingsScreen() {
         <View style={sl.card}>
           <TouchableOpacity
             style={sl.settingsRow}
-            onPress={() => router.push('/settings/theme')}
+            onPress={() => router.push('/settings/appearance')}
           >
             <Text style={sl.settingsRowTitle}>Theme</Text>
             <Text style={sl.settingsRowValue}>{themePreferenceTitle(themePreference)}</Text>
@@ -158,13 +164,9 @@ export default function SettingsScreen() {
           {Constants.expoConfig?.name ?? 'Briefly'}{' '}
           {Constants.expoConfig?.version ?? '4.7.0'}
         </Text>
-      </View>
+      </ScrollView>
 
-      <StackScreenHeader
-        title="Settings"
-        showBack
-        onBack={() => router.back()}
-      />
+      <StackScreenHeader title="Settings" showBack onBack={goBack} />
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { View, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { NavigatorBottomBlur } from '@/components/navigation/NavigatorBottomBlur';
+import { FolderChromeOverlay } from '@/components/navigation/FolderChromeOverlay';
 import { useThemedStackShell } from '@/components/navigation/themedStackLayout';
 
 export default function FolderLayout() {
@@ -26,6 +27,7 @@ export default function FolderLayout() {
         }}
       />
       <NavigatorBottomBlur scope="folder" />
+      <FolderChromeOverlay />
     </View>
   );
 }

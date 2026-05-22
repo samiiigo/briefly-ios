@@ -87,6 +87,7 @@ function RootLayoutContent() {
           <Stack screenOptions={stackScreenOptions}>
             <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
             <Stack.Screen name="search" options={{ animation: 'fade' }} />
+            <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
           </Stack>
           <NavigatorBottomBlur scope="root" />
           <LibraryFabChromeOverlay />
