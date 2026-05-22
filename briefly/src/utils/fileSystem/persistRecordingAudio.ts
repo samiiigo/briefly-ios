@@ -1,8 +1,11 @@
 import { File, Paths } from 'expo-file-system';
 import { AudioFileService } from '@/services/audio';
 import type { Recording } from '@/types';
+import { extensionFromFilename } from '@/utils/recording/importKind';
 import { recordingAudioDestName } from '@/utils/recording/recordingAudioFilename';
 import { deletePath, getPathInfo, normalizeFileUri } from './pathInfo';
+
+const RECORDING_AUDIO_EXTENSIONS = ['.m4a', '.wav', '.caf', '.mp3', '.mp4', '.aac'] as const;
 import {
   resolveRecordingAudioOnDiskCore,
   type ResolvedRecordingAudio,
@@ -14,13 +17,37 @@ export function destFileForRecording(recordingId: string, sourcePath: string): F
   return new File(Paths.document, recordingAudioDestName(recordingId, sourcePath));
 }
 
+function destFileCandidates(recordingId: string, sourcePath: string): File[] {
+  if (!recordingId) {
+    return [new File(Paths.document, sourcePath)];
+  }
+
+  const hinted = extensionFromFilename(sourcePath);
+  const extensions = [
+    hinted,
+    ...RECORDING_AUDIO_EXTENSIONS.filter((ext) => ext !== hinted),
+  ].filter(Boolean) as string[];
+
+  return extensions.map(
+    (ext) => new File(Paths.document, `rec-${recordingId}${ext}`),
+  );
+}
+
 const recordingAudioProbe = {
   getPathInfo,
   destFile: (recordingId: string, sourcePath: string) => {
-    const file = recordingId
-      ? destFileForRecording(recordingId, sourcePath)
-      : new File(Paths.document, sourcePath);
-    return { exists: file.exists, uri: file.uri, size: file.size ?? 0 };
+    const candidates = destFileCandidates(recordingId, sourcePath);
+    for (const file of candidates) {
+      if (file.exists) {
+        return { exists: true, uri: file.uri, size: file.size ?? 0 };
+      }
+    }
+    const first = candidates[0];
+    return {
+      exists: false,
+      uri: first?.uri ?? '',
+      size: 0,
+    };
   },
 };
 

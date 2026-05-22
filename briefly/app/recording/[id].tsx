@@ -39,10 +39,7 @@ import {
   executeSummarizationOnlyRerun,
   resolveManualRerunSource,
 } from '@/utils/recording/manualRecordingRerun';
-import {
-  canRerunSummaryFromTranscript,
-  canRerunTranscriptFromAudio,
-} from '@/utils/recording/recordingRerunCapabilities';
+import { canRerunSummaryFromTranscript } from '@/utils/recording/recordingRerunCapabilities';
 import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
 import { isAudioFileMissingError } from '@/utils/processing/processingErrors';
 import {
@@ -62,7 +59,9 @@ export default function TranscriptScreen() {
   const { paddingBottom: playbackBottom } = usePlaybackBarLayout();
   const router = useRouter();
   const { id: recordingId } = useLocalSearchParams<{ id: string }>();
-  const recording = useRecordingStore((s) => s.getRecordingById(recordingId!));
+  const recording = useRecordingStore((s) =>
+    recordingId ? s.recordings.find((r) => r.id === recordingId) : undefined,
+  );
   const { updateRecording, recordings, restoreRecording } = useRecordingStore();
   const folders = useUserFolderStore((s) => s.folders);
   const loadFolders = useUserFolderStore((s) => s.loadFolders);
@@ -96,16 +95,6 @@ export default function TranscriptScreen() {
   const markRerunPending = useCallback((recordingId: string) => {
     useRecordingRetryFlashStore.getState().markRetryPending(recordingId);
   }, []);
-
-  const handleRerunFromAudio = useCallback(() => {
-    if (!recording) return;
-    if (isRecordingProcessing(recording)) return;
-    const mode = useSettingsStore.getState().summarizationMode;
-    if (!alertIfLocalLlmNotReady(mode)) return;
-    if (!canRerunTranscriptFromAudio(recording)) return;
-    markRerunPending(recording.id);
-    executeManualRecordingRerun(recording.id);
-  }, [markRerunPending, recording]);
 
   const handleRerunSummary = useCallback(() => {
     if (!recording) return;
@@ -208,7 +197,6 @@ export default function TranscriptScreen() {
 
   const hasAudio = audioAvailability.hasAudio;
   const hasTranscript = hasMeaningfulTranscript(recording.transcript);
-  const canRerunTranscript = canRerunTranscriptFromAudio(recording);
   const canRerunSummary = canRerunSummaryFromTranscript(recording);
   const canManualRerun = resolveManualRerunSource(recording) !== 'none';
   const isTranscribing = recording.status === 'transcribing';
@@ -231,12 +219,6 @@ export default function TranscriptScreen() {
       onPress: handleToggleFavorite,
     },
     { label: 'View transcript', onPress: handleViewTranscript },
-    {
-      label: isTranscribing ? 'Transcribing…' : 'Re-run transcript',
-      onPress: handleRerunFromAudio,
-      loading: isTranscribing,
-      disabled: isProcessing || !canRerunTranscript,
-    },
     {
       label: isSummarizing ? 'Summarizing…' : 'Re-run summary',
       onPress: handleRerunSummary,

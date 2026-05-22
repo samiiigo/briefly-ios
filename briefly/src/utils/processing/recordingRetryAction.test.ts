@@ -22,12 +22,14 @@ function baseRecording(overrides: Partial<Recording> = {}): Recording {
 
 const audioPresentProbe = {
   getPathInfo: (uri: string) =>
-    uri === '/audio.m4a' ? { exists: true, size: 1000 } : { exists: false, size: 0 },
+    uri === '/audio.m4a'
+      ? { exists: true, size: 1000, resolvedUri: '/audio.m4a' }
+      : { exists: false, size: 0, resolvedUri: uri },
   destFile: () => ({ exists: false, uri: '', size: 0 }),
 };
 
 const audioMissingProbe = {
-  getPathInfo: () => ({ exists: false, size: 0 }),
+  getPathInfo: (uri: string) => ({ exists: false, size: 0, resolvedUri: uri }),
   destFile: () => ({ exists: false, uri: '', size: 0 }),
 };
 

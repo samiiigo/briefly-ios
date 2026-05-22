@@ -19,6 +19,7 @@ import {
 } from '@/utils/recording/recordingValidation';
 import { logger } from '@/utils/logging/logger';
 import { buildRecordingReadyFromSummarization } from '@/utils/recording/recordingSummarization';
+import { resolveRecordingAudioOnDisk } from '@/utils/fileSystem/persistRecordingAudio';
 import { getLocalLlmSummarizationBlocker } from '@/services/summarization';
 
 const PROCESSING_TIMEOUT_MS = 12 * 60 * 1000;
@@ -102,10 +103,14 @@ async function runJob(
     throw new Error('Recording not found.');
   }
 
+  const onDisk = resolveRecordingAudioOnDisk(rec);
+  const filePath = onDisk?.filePath ?? rec.filePath;
+  const fileSize = onDisk?.fileSize ?? rec.fileSize;
+
   const asset = {
     durationSec: rec.duration,
-    filePath: rec.filePath,
-    fileSizeBytes: rec.fileSize,
+    filePath,
+    fileSizeBytes: fileSize,
   };
   if (isRecordingFileMissing(asset)) {
     throw new Error('No audio file was saved for this recording.');
@@ -119,7 +124,7 @@ async function runJob(
   );
   const pMode = useSettingsStore.getState().summarizationMode;
   const existingTranscript = options.audioFallbackOnly ? undefined : rec.transcript;
-  const meta = { durationSec: rec.duration, fileSizeBytes: rec.fileSize };
+  const meta = { durationSec: rec.duration, fileSizeBytes: fileSize };
 
   const callbacks = {
     onStage: (nextStage: 'transcribing' | 'summarizing') => {
@@ -165,7 +170,7 @@ async function runJob(
             mainEmoji: undefined,
           }),
     });
-    return processRecordingFromSavedAudio(pMode, rec.filePath, callbacks, meta);
+    return processRecordingFromSavedAudio(pMode, filePath, callbacks, meta);
   }
 
   const pipeline = resolvePostRecordingPipeline(settingsMode, existingTranscript);
@@ -191,7 +196,7 @@ async function runJob(
   return processRecordingToReady(
     settingsMode,
     pMode,
-    rec.filePath,
+    filePath,
     existingTranscript,
     callbacks,
     meta,

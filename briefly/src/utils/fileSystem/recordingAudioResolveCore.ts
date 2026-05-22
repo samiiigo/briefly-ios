@@ -6,19 +6,35 @@ export type ResolvedRecordingAudio = {
 };
 
 export type RecordingAudioPathProbe = {
-  getPathInfo: (uri: string) => { exists: boolean; size: number };
+  getPathInfo: (uri: string) => {
+    exists: boolean;
+    size: number;
+    resolvedUri: string;
+  };
   destFile: (
     recordingId: string,
     sourcePath: string,
   ) => { exists: boolean; uri: string; size: number };
 };
 
+function effectiveFileSize(reportedSize: number, fallbackSize: number): number {
+  if (reportedSize > 0) return reportedSize;
+  if (fallbackSize > 0) return fallbackSize;
+  // File.size can be 0/undefined while the file is still playable.
+  return 1;
+}
+
 function resolvedFromProbe(
   filePath: string,
-  size: number,
+  exists: boolean,
+  reportedSize: number,
+  fallbackSize: number,
 ): ResolvedRecordingAudio | null {
-  if (size <= 0) return null;
-  return { filePath, fileSize: size };
+  if (!exists) return null;
+  return {
+    filePath,
+    fileSize: effectiveFileSize(reportedSize, fallbackSize),
+  };
 }
 
 /**
@@ -34,8 +50,10 @@ export function resolveRecordingAudioOnDiskCore(
     const storedInfo = probe.getPathInfo(stored);
     if (storedInfo.exists) {
       const resolved = resolvedFromProbe(
-        stored,
-        storedInfo.size ?? recording.fileSize,
+        storedInfo.resolvedUri || stored,
+        true,
+        storedInfo.size,
+        recording.fileSize,
       );
       if (resolved) return resolved;
     }
@@ -43,14 +61,24 @@ export function resolveRecordingAudioOnDiskCore(
     const basename = stored.split('/').pop()?.split('?')[0] ?? '';
     if (basename) {
       const byName = probe.destFile('', basename);
-      const resolved = resolvedFromProbe(byName.uri, byName.size ?? recording.fileSize);
-      if (byName.exists && resolved) return resolved;
+      const resolved = resolvedFromProbe(
+        byName.uri,
+        byName.exists,
+        byName.size,
+        recording.fileSize,
+      );
+      if (resolved) return resolved;
     }
   }
 
   const byId = probe.destFile(recording.id, stored ?? '');
-  const byIdResolved = resolvedFromProbe(byId.uri, byId.size ?? recording.fileSize);
-  if (byId.exists && byIdResolved) return byIdResolved;
+  const byIdResolved = resolvedFromProbe(
+    byId.uri,
+    byId.exists,
+    byId.size,
+    recording.fileSize,
+  );
+  if (byIdResolved) return byIdResolved;
 
   return null;
 }

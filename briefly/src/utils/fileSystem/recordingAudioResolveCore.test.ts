@@ -8,7 +8,9 @@ describe('resolveRecordingAudioOnDiskCore', () => {
       { id: 'rec-1', filePath: '/docs/rec-1.m4a', fileSize: 900 },
       {
         getPathInfo: (uri) =>
-          uri === '/docs/rec-1.m4a' ? { exists: true, size: 1200 } : { exists: false, size: 0 },
+          uri === '/docs/rec-1.m4a'
+            ? { exists: true, size: 1200, resolvedUri: '/docs/rec-1.m4a' }
+            : { exists: false, size: 0, resolvedUri: uri },
         destFile: () => ({ exists: false, uri: '', size: 0 }),
       },
     );
@@ -19,7 +21,7 @@ describe('resolveRecordingAudioOnDiskCore', () => {
     const resolved = resolveRecordingAudioOnDiskCore(
       { id: 'rec-1', filePath: '/old/cache/rec-1.m4a', fileSize: 900 },
       {
-        getPathInfo: () => ({ exists: false, size: 0 }),
+        getPathInfo: (uri) => ({ exists: false, size: 0, resolvedUri: uri }),
         destFile: (id, source) =>
           id === 'rec-1'
             ? { exists: true, uri: 'file:///docs/rec-rec-1.m4a', size: 900 }
@@ -32,11 +34,25 @@ describe('resolveRecordingAudioOnDiskCore', () => {
     });
   });
 
+  it('treats a zero-byte size report as present when the file exists', () => {
+    const resolved = resolveRecordingAudioOnDiskCore(
+      { id: 'rec-1', filePath: '/docs/rec-1.m4a', fileSize: 0 },
+      {
+        getPathInfo: (uri) =>
+          uri === '/docs/rec-1.m4a'
+            ? { exists: true, size: 0, resolvedUri: '/docs/rec-1.m4a' }
+            : { exists: false, size: 0, resolvedUri: uri },
+        destFile: () => ({ exists: false, uri: '', size: 0 }),
+      },
+    );
+    assert.deepEqual(resolved, { filePath: '/docs/rec-1.m4a', fileSize: 1 });
+  });
+
   it('falls back to basename match under documents', () => {
     const resolved = resolveRecordingAudioOnDiskCore(
       { id: 'rec-1', filePath: '/old/rec-1.m4a', fileSize: 500 },
       {
-        getPathInfo: () => ({ exists: false, size: 0 }),
+        getPathInfo: (uri) => ({ exists: false, size: 0, resolvedUri: uri }),
         destFile: (_id, source) =>
           source === 'rec-1.m4a'
             ? { exists: true, uri: 'file:///docs/rec-1.m4a', size: 500 }
