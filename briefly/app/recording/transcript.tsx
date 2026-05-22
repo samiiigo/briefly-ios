@@ -4,11 +4,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useRecordingStore } from '@/context/useRecordingStore';
 import { useSettingsStore } from '@/context/useSettingsStore';
 import {
-  canRerunTranscriptFromAudio,
   runTranscriptScreenRerunFromAudio,
   TRANSCRIPT_SCREEN_RERUN_FROM_AUDIO_LABEL,
 } from '@/utils/recording/recordingRerunCapabilities';
+import { useRecordingRetryFlashActive } from '@/hooks/useRecordingRetryFlashActive';
 import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
+import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
+import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
 import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
 import { usePlayback } from '@/hooks/usePlayback';
 import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
@@ -35,11 +37,7 @@ export default function RecordingTranscriptScreen() {
   const recording = useRecordingStore((s) =>
     recordingId ? s.recordings.find((r) => r.id === recordingId) : undefined,
   );
-  const flashActive = useRecordingRetryFlashStore((s) => {
-    if (!recordingId) return false;
-    const until = s.flashUntilById[recordingId];
-    return until != null && Date.now() < until;
-  });
+  const flashActive = useRecordingRetryFlashActive(recordingId);
 
   const audioAvailability = useRecordingAudioAvailability(recording);
   const playback = usePlayback({
@@ -47,11 +45,15 @@ export default function RecordingTranscriptScreen() {
     transcript: recording?.transcript,
   });
 
+  const isProcessing = recording != null && isRecordingProcessing(recording);
+  const hasTranscript = hasMeaningfulTranscript(recording?.transcript);
+  const canRerunFromAudio = audioAvailability.hasAudio;
+  const rerunDisabled =
+    !recording || isProcessing || flashActive || !canRerunFromAudio;
+
   const handleRerun = useCallback(() => {
-    if (!recording || !audioAvailability.hasAudio) return;
-    if (recording.status === 'transcribing' || recording.status === 'summarizing') {
-      return;
-    }
+    if (rerunDisabled || !recording) return;
+
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
 
@@ -63,7 +65,7 @@ export default function RecordingTranscriptScreen() {
         'No recording file is available on this device to transcribe.',
       );
     }
-  }, [audioAvailability, recording]);
+  }, [audioAvailability, recording, rerunDisabled]);
 
   if (!recording) {
     return (
@@ -73,12 +75,8 @@ export default function RecordingTranscriptScreen() {
     );
   }
 
-  const hasAudio = audioAvailability.hasAudio;
+  const hasAudio = canRerunFromAudio;
   const segments = recording.transcript ?? [];
-  const isProcessing =
-    recording.status === 'transcribing' || recording.status === 'summarizing';
-  const canRerunFromAudio = canRerunTranscriptFromAudio(recording);
-  const rerunDisabled = isProcessing || flashActive || !canRerunFromAudio;
 
   return (
     <View style={sl.container}>
@@ -93,7 +91,7 @@ export default function RecordingTranscriptScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {segments.length > 0 ? (
+        {hasTranscript ? (
           <View style={styles.transcriptContainer} key={segments.map((s) => s.id).join('|')}>
             {segments.map((seg) => (
               <TranscriptSegmentView

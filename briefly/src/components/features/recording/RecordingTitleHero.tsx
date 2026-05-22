@@ -8,7 +8,7 @@ import { RecordingProcessingRetryCircle } from '@/components/features/recording/
 import { RecordingProcessingFlashCircle } from '@/components/features/recording/RecordingProcessingFlashCircle';
 import { EmojiAwareText } from '@/components/features/recording/EmojiAwareText';
 import { useRecordingProcessingRetry } from '@/hooks/useRecordingProcessingRetry';
-import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
+import { useRecordingRetryFlashActive } from '@/hooks/useRecordingRetryFlashActive';
 import { Ionicons } from '@expo/vector-icons';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { isInitialProcessingFailure } from '@/utils/recording/recordingEntryAccess';
@@ -29,10 +29,7 @@ export function RecordingTitleHero({ recording }: Props) {
   const processing = isRecordingProcessing(recording);
   const { action: retryAction, runRetry, showOpenableContent } =
     useRecordingProcessingRetry(recording);
-  const flashActive = useRecordingRetryFlashStore((s) => {
-    const until = s.flashUntilById[recording.id];
-    return until != null && Date.now() < until;
-  });
+  const flashActive = useRecordingRetryFlashActive(recording.id);
   const initialFailure = isInitialProcessingFailure(recording);
   const showRetry =
     recording.status === 'error' &&

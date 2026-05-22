@@ -9,8 +9,9 @@ import {
 /** Re-transcription requires the source audio file on device. */
 export function canRerunTranscriptFromAudio(
   recording: Pick<Recording, 'id' | 'filePath' | 'fileSize'>,
+  audio: RecordingAudioAvailability = getRecordingAudioAvailability(recording),
 ): boolean {
-  return getRecordingAudioAvailability(recording).hasAudio;
+  return audio.hasAudio;
 }
 
 /** Summarization can run from a saved transcript when audio is missing. */

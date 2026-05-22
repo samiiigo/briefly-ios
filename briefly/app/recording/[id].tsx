@@ -31,14 +31,14 @@ import { ensureUniqueTitle } from '@/utils';
 import { alertIfLocalLlmNotReady } from '@/utils/processing/localLlmSummarizationGate';
 import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
 import { useRecordingAudioAvailability } from '@/hooks/useRecordingAudioAvailability';
-import { getRecordingAudioAvailability } from '@/utils/recording/recordingPlayableAudio';
+import { useRecordingRetryFlashActive } from '@/hooks/useRecordingRetryFlashActive';
 import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
 import { getRecordingFolderDisplayName } from '@/utils/folders/recordingFolder';
 import {
   executeManualRecordingRerun,
   executeSummarizationOnlyRerun,
-  resolveManualRerunSource,
 } from '@/utils/recording/manualRecordingRerun';
+import { resolveManualRerunSourceFromFlags } from '@/utils/recording/manualRecordingRerunSource';
 import { canRerunSummaryFromTranscript } from '@/utils/recording/recordingRerunCapabilities';
 import { useRecordingRetryFlashStore } from '@/context/useRecordingRetryFlashStore';
 import { isAudioFileMissingError } from '@/utils/processing/processingErrors';
@@ -78,6 +78,17 @@ export default function TranscriptScreen() {
   );
 
   const audioAvailability = useRecordingAudioAvailability(recording);
+  const hasTranscript = hasMeaningfulTranscript(recording?.transcript);
+  const hasAudio = audioAvailability.hasAudio;
+  const isProcessing = recording != null && isRecordingProcessing(recording);
+  const canRerunSummary = recording != null && canRerunSummaryFromTranscript(recording);
+  const manualRerunSource = resolveManualRerunSourceFromFlags(hasAudio, hasTranscript);
+  const canManualRerun = manualRerunSource !== 'none';
+  const summaryRerunDisabled = !recording || isProcessing || !canRerunSummary;
+  const manualRerunDisabled = !recording || isProcessing || !canManualRerun;
+  const flashActive = useRecordingRetryFlashActive(recording?.id);
+  const manualRerunButtonDisabled = manualRerunDisabled || flashActive;
+
   const playback = usePlayback({
     filePath: audioAvailability.filePath,
     transcript: recording?.transcript,
@@ -97,41 +108,30 @@ export default function TranscriptScreen() {
   }, []);
 
   const handleRerunSummary = useCallback(() => {
-    if (!recording) return;
-    if (isRecordingProcessing(recording)) return;
+    if (summaryRerunDisabled || !recording) return;
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
-    if (!canRerunSummaryFromTranscript(recording)) {
-      Alert.alert(
-        'Nothing to summarize',
-        'No saved transcript is available for this recording.',
-      );
-      return;
-    }
     markRerunPending(recording.id);
     executeSummarizationOnlyRerun(recording.id);
-  }, [markRerunPending, recording]);
+  }, [markRerunPending, recording, summaryRerunDisabled]);
 
   const handleManualRerun = useCallback(() => {
-    if (!recording) return;
-    if (isRecordingProcessing(recording)) return;
+    if (manualRerunButtonDisabled || !recording) return;
     const mode = useSettingsStore.getState().summarizationMode;
     if (!alertIfLocalLlmNotReady(mode)) return;
-    const source = resolveManualRerunSource(recording);
-    if (source === 'none') {
-      Alert.alert(
-        'Nothing to process',
-        'No audio file or saved transcript is available for this recording.',
-      );
-      return;
-    }
     markRerunPending(recording.id);
-    if (source === 'audio') {
-      executeManualRecordingRerun(recording.id);
+    if (manualRerunSource === 'audio') {
+      executeManualRecordingRerun(recording.id, { audio: audioAvailability });
     } else {
       executeSummarizationOnlyRerun(recording.id);
     }
-  }, [markRerunPending, recording]);
+  }, [
+    audioAvailability,
+    manualRerunButtonDisabled,
+    manualRerunSource,
+    markRerunPending,
+    recording,
+  ]);
 
   const handleToggleFavorite = useCallback(() => {
     if (!recording) return;
@@ -140,9 +140,7 @@ export default function TranscriptScreen() {
 
   const handleViewTranscript = useCallback(() => {
     if (!recording) return;
-    const hasTranscript = (recording.transcript?.length ?? 0) > 0;
     const isTranscribing = recording.status === 'transcribing';
-    const hasAudio = getRecordingAudioAvailability(recording).hasAudio;
 
     if (hasTranscript || isTranscribing || hasAudio) {
       router.push({
@@ -157,7 +155,7 @@ export default function TranscriptScreen() {
     } else {
       Alert.alert('No transcript', 'No transcript is available for this recording.');
     }
-  }, [recording, router]);
+  }, [hasAudio, hasTranscript, recording, router]);
 
   if (!recording) {
     return (
@@ -195,20 +193,10 @@ export default function TranscriptScreen() {
     );
   }
 
-  const hasAudio = audioAvailability.hasAudio;
-  const hasTranscript = hasMeaningfulTranscript(recording.transcript);
-  const canRerunSummary = canRerunSummaryFromTranscript(recording);
-  const canManualRerun = resolveManualRerunSource(recording) !== 'none';
-  const isTranscribing = recording.status === 'transcribing';
   const isSummarizing = recording.status === 'summarizing';
-  const isProcessing = isTranscribing || isSummarizing;
   const showProcessingBanner =
     (recording.status === 'saved' || (isSummarizing && !hasTranscript)) &&
     (hasAudio || (recording.status === 'saved' && hasTranscript));
-  const flashActive = useRecordingRetryFlashStore((s) => {
-    const until = s.flashUntilById[recording.id];
-    return until != null && Date.now() < until;
-  });
   const hideAudioMissingBanner =
     recording.status === 'error' &&
     isAudioFileMissingError(recording.errorMessage ?? '');
@@ -223,7 +211,7 @@ export default function TranscriptScreen() {
       label: isSummarizing ? 'Summarizing…' : 'Re-run summary',
       onPress: handleRerunSummary,
       loading: isSummarizing,
-      disabled: isProcessing || !canRerunSummary,
+      disabled: summaryRerunDisabled,
     },
   ];
 
@@ -251,9 +239,9 @@ export default function TranscriptScreen() {
               </Text>
             </View>
             <TouchableOpacity
-              style={[st.retryButton, (!canManualRerun || flashActive) && st.retryButtonDisabled]}
+              style={[st.retryButton, manualRerunButtonDisabled && st.retryButtonDisabled]}
               onPress={handleManualRerun}
-              disabled={!canManualRerun || flashActive}
+              disabled={manualRerunButtonDisabled}
             >
               {flashActive ? (
                 <RecordingProcessingFlashIcon size={18} />
