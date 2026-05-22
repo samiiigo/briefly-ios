@@ -10,6 +10,7 @@ import { useCreateStyles, useThemedColors, BorderRadius, Spacing, withAppFont } 
 import type { ColorPalette } from '@/theme/colorPalettes';
 
 const AVATAR_SIZE = 48;
+const CHEVRON_SIZE = 16;
 
 interface Props {
   recording: Recording;
@@ -51,7 +52,14 @@ export function RecentsEntryCard({ recording, groupPosition = 'only' }: Props) {
 
   return (
       <View style={groupedCardStyle(groupPosition, colors)}>
-        {showDivider ? <View style={styles.rowDivider} /> : null}
+        {showDivider ? (
+          <View
+            style={[
+              styles.rowDivider,
+              processing ? styles.rowDividerProcessing : null,
+            ]}
+          />
+        ) : null}
         <View style={styles.row}>
           <View style={styles.leading}>
             <RecordingAvatar recording={recording} trailingSpacing={false} />
@@ -82,6 +90,10 @@ function createRecentsEntryCardStyles(c: ColorPalette) {
     height: StyleSheet.hairlineWidth,
     backgroundColor: c.border,
     marginLeft: Spacing.md + AVATAR_SIZE + Spacing.md,
+    marginRight: Spacing.md + CHEVRON_SIZE + Spacing.sm,
+  },
+  rowDividerProcessing: {
+    marginRight: Spacing.md,
   },
   leading: {
     flex: 1,
