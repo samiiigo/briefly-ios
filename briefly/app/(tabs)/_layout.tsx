@@ -7,7 +7,8 @@ import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { SymbolView } from 'expo-symbols';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigatorBottomBlur } from '@/components/navigation/chrome/NavigatorBottomBlur';
-import { useCreateStyles, useThemedColors, useResolvedColorScheme } from '@/theme';
+import { FloatingTabBar } from '@/components/navigation/tabBar/FloatingTabBar';
+import { useCreateStyles, useThemedColors, useResolvedColorScheme, Spacing } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 
 function NativeTabLayout() {
@@ -40,15 +41,38 @@ function ClassicTabLayout() {
       tabBarStyle: Platform.select({
         ios: {
           position: 'absolute' as const,
+          left: Spacing.screenHorizontal || 20,
+          right: 'auto' as const,
+          width: 'auto' as const,
           borderTopWidth: 0,
           backgroundColor: 'transparent',
           elevation: 0,
+          borderRadius: 9999,
+          overflow: 'hidden' as const,
+          flexDirection: 'row' as const,
+          justifyContent: 'flex-start' as const,
+          alignSelf: 'flex-start' as const,
         },
         default: {
           backgroundColor: colors.card,
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.border,
           elevation: 8,
+          flexDirection: 'row' as const,
+          justifyContent: 'flex-start' as const,
+        },
+      }),
+      tabBarItemStyle: Platform.select({
+        ios: {
+          flex: 0 as const,
+          width: 'auto' as const,
+          paddingHorizontal: Spacing.md,
+          paddingVertical: Spacing.xs,
+        },
+        default: {
+          flex: 0 as const,
+          width: 'auto' as const,
+          paddingHorizontal: Spacing.lg,
         },
       }),
       tabBarBackground: Platform.OS === 'ios'
@@ -66,7 +90,10 @@ function ClassicTabLayout() {
 
   return (
     <View style={styles.root}>
-      <Tabs screenOptions={screenOptions}>
+      <Tabs
+        tabBar={(props) => <FloatingTabBar {...props} />}
+        screenOptions={screenOptions}
+      >
         <Tabs.Screen
           name="index"
           options={{

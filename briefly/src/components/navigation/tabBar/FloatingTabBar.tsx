@@ -33,48 +33,36 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     <View
       style={[
         styles.wrapper,
-        isAndroid
-          ? {
-              bottom: 0,
-              height: androidTabBarHeight,
-              paddingBottom: insetsBottom,
-              backgroundColor: colors.card,
-              borderTopWidth: StyleSheet.hairlineWidth,
-              borderTopColor: isLight ? colors.border : 'rgba(255,255,255,0.05)',
-              justifyContent: 'space-around',
-              alignItems: 'center',
-            }
-          : {
-              bottom: bottomOffset,
-              paddingLeft: horizontalInset,
-              justifyContent: 'flex-start',
-              alignItems: 'flex-end',
-            },
+        {
+          bottom: bottomOffset,
+          left: horizontalInset,
+          right: 'auto',
+          justifyContent: 'flex-start',
+          alignItems: 'flex-end',
+        },
       ]}
-      pointerEvents={isAndroid ? 'auto' : 'box-none'}
+      pointerEvents="box-none"
     >
       <View
         style={[
-          isAndroid ? styles.androidPill : styles.pill,
-          !isAndroid && (isLight ? styles.pillLight : styles.pillDark),
-          !isAndroid && (isLight ? styles.pillShadowLight : styles.pillShadowDark),
+          styles.pill,
+          isLight ? styles.pillLight : styles.pillDark,
+          isLight ? styles.pillShadowLight : styles.pillShadowDark,
         ]}
       >
-        {!isAndroid && Platform.OS === 'ios' && (
+        {Platform.OS === 'ios' && (
           <BlurView
-            intensity={60}
+            intensity={80}
             tint={isLight ? 'light' : 'dark'}
             style={StyleSheet.absoluteFill}
           />
         )}
-        {!isAndroid && (
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              isLight ? styles.pillOverlayLight : styles.pillOverlay,
-            ]}
-          />
-        )}
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            isLight ? styles.pillOverlayLight : styles.pillOverlay,
+          ]}
+        />
         {visibleRoutes.map((route) => {
           const routeIndex = state.routes.findIndex((r) => r.key === route.key);
           const isFocused = state.index === routeIndex;
@@ -94,10 +82,8 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
             <TouchableOpacity
               key={route.key}
               style={[
-                isAndroid ? styles.androidTab : styles.tab,
-                isFocused &&
-                  !isAndroid &&
-                  (isLight ? styles.tabActiveLight : styles.tabActiveDark)
+                styles.tab,
+                isFocused && (isLight ? styles.tabActiveLight : styles.tabActiveDark),
               ]}
               onPress={onPress}
               activeOpacity={0.8}
@@ -107,10 +93,10 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
             >
               <Ionicons
                 name={isFocused ? config.iconFocused : config.icon}
-                size={isAndroid ? 24 : 24}
+                size={24}
                 color={isFocused ? colors.primary : colors.subtext}
               />
-              <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive, isAndroid && { marginTop: 4, fontSize: 11 }]}>
+              <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
                 {config.label}
               </Text>
             </TouchableOpacity>
@@ -152,9 +138,11 @@ function createFloatingTabBarStyles(c: ColorPalette) {
   },
   wrapper: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: 20,
+    right: 'auto',
     flexDirection: 'row',
+    alignSelf: 'flex-start',
+    justifyContent: 'flex-start',
     zIndex: 10,
     elevation: 10,
   },
