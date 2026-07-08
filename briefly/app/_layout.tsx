@@ -6,17 +6,19 @@ import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { useAppBootstrap } from '@/hooks/app/useAppBootstrap';
 import { NavigatorBottomBlur } from '@/components/navigation/chrome/NavigatorBottomBlur';
 import { LibraryFabChromeOverlay } from '@/components/navigation/overlays/LibraryFabChromeOverlay';
 import { ThemeProvider, useResolvedColorScheme, useThemedColors } from '@/theme';
 import { iconFonts } from '@/theme/iconFonts';
 import { logger } from '@/utils/logging/logger';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-function RootLayoutContent() {
+SplashScreen.preventAutoHideAsync();
+
+function RootLayoutNav() {
   const colors = useThemedColors();
-  const resolvedScheme = useResolvedColorScheme();
-  const [iconFontsLoaded, iconFontError] = useFonts(iconFonts);
   const stackScreenOptions = useMemo(
     () => ({
       headerShown: false,
@@ -30,45 +32,62 @@ function RootLayoutContent() {
     [colors.background],
   );
 
+  return (
+    <Stack screenOptions={stackScreenOptions}>
+      <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+      <Stack.Screen name="armed" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="recording/[id]" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+      <Stack.Screen name="search" options={{ animation: 'fade' }} />
+      <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
+    </Stack>
+  );
+}
+
+function RootLayoutContent() {
+  const resolvedScheme = useResolvedColorScheme();
+  const [iconFontsLoaded, iconFontError] = useFonts(iconFonts);
+  const rootStyle = useRootBackgroundStyle();
+
   useEffect(() => {
     if (iconFontError) {
       logger.error('SYSTEM', 'Failed to load Ionicons font', {
         message: iconFontError.message,
       });
     }
-  }, [iconFontError]);
+    if (iconFontsLoaded || iconFontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [iconFontsLoaded, iconFontError]);
 
   useAppBootstrap(iconFontsLoaded);
 
-  const rootStyle = useRootBackgroundStyle();
-
-  if (!iconFontsLoaded) {
+  if (!iconFontsLoaded && !iconFontError) {
     return <View style={rootStyle} />;
   }
 
   return (
-    <GestureHandlerRootView style={rootStyle}>
-      <SafeAreaProvider>
-        <View style={rootStyle}>
-          <StatusBar style={resolvedScheme === 'light' ? 'dark' : 'light'} />
-          <Stack screenOptions={stackScreenOptions}>
-            <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-            <Stack.Screen name="search" options={{ animation: 'fade' }} />
-            <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
-          </Stack>
-          <NavigatorBottomBlur scope="root" />
-          <LibraryFabChromeOverlay />
-        </View>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <View style={rootStyle}>
+      <StatusBar style={resolvedScheme === 'light' ? 'dark' : 'light'} />
+      <RootLayoutNav />
+      <NavigatorBottomBlur scope="root" />
+      <LibraryFabChromeOverlay />
+    </View>
   );
 }
 
 function RootLayout() {
   return (
-    <ThemeProvider>
-      <RootLayoutContent />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ErrorBoundary>
+          <ThemeProvider>
+            <RootLayoutContent />
+          </ThemeProvider>
+        </ErrorBoundary>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

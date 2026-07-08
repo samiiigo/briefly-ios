@@ -1,17 +1,22 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Stack, Link } from 'expo-router';
 import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+
 export default function NotFoundScreen() {
-  const router = useRouter();
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Page not found</Text>
-      <Text style={styles.subtitle}>This screen doesn&apos;t exist.</Text>
-      <TouchableOpacity style={styles.button} onPress={() => router.replace('/(tabs)')}>
-        <View style={styles.buttonDot} />
-        <Text style={styles.buttonText}>Go home</Text>
-      </TouchableOpacity>
-    </View>
+    <>
+      <Stack.Screen options={{ title: 'Oops!' }} />
+      <View style={styles.container}>
+        <Text style={styles.title}>Page not found</Text>
+        <Text style={styles.subtitle}>This screen doesn&apos;t exist.</Text>
+        <Link href="/" asChild>
+          <TouchableOpacity style={styles.button}>
+            <View style={styles.buttonDot} />
+            <Text style={styles.buttonText}>Go home</Text>
+          </TouchableOpacity>
+        </Link>
+      </View>
+    </>
   );
 }
 const styles = StyleSheet.create({
