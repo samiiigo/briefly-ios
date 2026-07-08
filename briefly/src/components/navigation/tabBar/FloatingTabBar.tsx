@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { useRouter } from 'expo-router';
 import {
   useCreateStyles,
   useResolvedColorScheme,
@@ -12,6 +13,9 @@ import {
 import type { ColorPalette } from '@/theme/colorPalettes';
 import { useFloatingTabBarLayout } from '../layout/useFloatingTabBarLayout';
 import { TAB_CHROME_MAIN_ROUTES } from './tabChromeRoutes';
+import { RecordButton } from '@/components/features/recording/RecordButton';
+import { RecordingService } from '@/services/audio';
+import { ensureRecordingPrerequisites } from '@/services/audio/recordingSession';
 type TabConfig = {
   label: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -21,6 +25,16 @@ const TAB_CONFIG: Record<string, TabConfig> = {
   index: { label: 'Recents', icon: 'home-outline', iconFocused: 'home' },
   history: { label: 'Library', icon: 'folder-outline', iconFocused: 'folder' },
 };
+function IndexRecordFab() {
+  const router = useRouter();
+  const handlePress = useCallback(async () => {
+    const granted = await RecordingService.requestPermissions();
+    if (!granted) return;
+    await ensureRecordingPrerequisites();
+    router.push({ pathname: '/recording/new', params: { targetFolder: 'unlisted' } });
+  }, [router]);
+  return <RecordButton onPress={handlePress} />;
+}
 export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const styles = useCreateStyles(createFloatingTabBarStyles);
   const colors = useThemedColors();
@@ -30,80 +44,79 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const isAndroid = Platform.OS === 'android';
   const visibleRoutes = state.routes.filter((r) => TAB_CHROME_MAIN_ROUTES.has(r.name));
   return (
-    <View
-      style={[
-        styles.wrapper,
-        {
-          bottom: bottomOffset,
-          left: horizontalInset,
-          right: 'auto',
-          justifyContent: 'flex-start',
-          alignItems: 'flex-end',
-        },
-      ]}
-      pointerEvents="box-none"
-    >
+    <React.Fragment>
       <View
         style={[
-          styles.pill,
-          isLight ? styles.pillLight : styles.pillDark,
-          isLight ? styles.pillShadowLight : styles.pillShadowDark,
+          styles.wrapper,
+          {
+            bottom: bottomOffset,
+            left: horizontalInset,
+            right: 'auto',
+            justifyContent: 'flex-start',
+            alignItems: 'flex-end',
+          },
         ]}
+        pointerEvents="box-none"
       >
-        {Platform.OS === 'ios' && (
-          <BlurView
-            intensity={80}
-            tint={isLight ? 'light' : 'dark'}
-            style={StyleSheet.absoluteFill}
-          />
-        )}
         <View
           style={[
-            StyleSheet.absoluteFill,
-            isLight ? styles.pillOverlayLight : styles.pillOverlay,
+            styles.pill,
+            isLight ? styles.pillLight : styles.pillDark,
+            isLight ? styles.pillShadowLight : styles.pillShadowDark,
           ]}
-        />
-        {visibleRoutes.map((route) => {
-          const routeIndex = state.routes.findIndex((r) => r.key === route.key);
-          const isFocused = state.index === routeIndex;
-          const config = TAB_CONFIG[route.name];
-          if (!config) return null;
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
-          return (
-            <TouchableOpacity
-              key={route.key}
-              style={[
-                styles.tab,
-                isFocused && (isLight ? styles.tabActiveLight : styles.tabActiveDark),
-              ]}
-              onPress={onPress}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isFocused }}
-              accessibilityLabel={config.label}
-            >
-              <Ionicons
-                name={isFocused ? config.iconFocused : config.icon}
-                size={24}
-                color={isFocused ? colors.primary : colors.subtext}
-              />
-              <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
-                {config.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        >
+          {Platform.OS === 'ios' && (
+            <BlurView
+              intensity={80}
+              tint={isLight ? 'light' : 'dark'}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              isLight ? styles.pillOverlayLight : styles.pillOverlay,
+            ]}
+          />
+          {visibleRoutes.map((route) => {
+            const config = TAB_CONFIG[route.name];
+            if (!config) return null;
+            const isFocused = state.routes[state.index]?.key === route.key;
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+              if (!isFocused && !event.defaultPrevented) {
+                navigation.navigate(route.name);
+              }
+            };
+            return (
+              <TouchableOpacity
+                key={route.key}
+                onPress={onPress}
+                style={[styles.tab, isFocused && (isLight ? styles.tabActiveLight : styles.tabActiveDark)]}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isFocused }}
+                accessibilityLabel={config.label}
+              >
+                <Ionicons
+                  name={isFocused ? config.iconFocused : config.icon}
+                  size={24}
+                  color={isFocused ? colors.primary : colors.subtext}
+                />
+                <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
+                  {config.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
-    </View>
+      {state.routes[state.index]?.name === 'index' && <IndexRecordFab />}
+    </React.Fragment>
   );
 }
 function backgroundRgba(hex: string, alpha: number): string {

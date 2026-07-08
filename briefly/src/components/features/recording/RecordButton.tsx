@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, type ViewStyle } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, type ViewStyle, Platform } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -7,18 +7,22 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { useCreateStyles, useResolvedColorScheme } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 import {
   RECORD_BUTTON_SIZE,
   useFloatingTabBarLayout,
 } from '@/components/navigation/layout/useFloatingTabBarLayout';
+
 const SIZE = RECORD_BUTTON_SIZE;
 const RING_SIZE = 24;
+
 interface RecordButtonProps {
   onPress: () => void;
   style?: ViewStyle;
 }
+
 /** Strip layout keys so every screen shares the same FAB anchor from `useFloatingTabBarLayout`. */
 function fabStyleWithoutPosition(style?: ViewStyle): ViewStyle | undefined {
   if (!style) return undefined;
@@ -32,13 +36,16 @@ function fabStyleWithoutPosition(style?: ViewStyle): ViewStyle | undefined {
   } = style;
   return Object.keys(rest).length > 0 ? rest : undefined;
 }
+
 export function RecordButton({ onPress, style }: RecordButtonProps) {
   const styles = useCreateStyles(createRecordButtonStyles);
   const isLight = useResolvedColorScheme() === 'light';
   const { recordButtonBottom, horizontalInset } = useFloatingTabBarLayout();
   const extraStyle = useMemo(() => fabStyleWithoutPosition(style), [style]);
+
   const pingScale = useSharedValue(1);
   const pingOpacity = useSharedValue(0.5);
+
   useEffect(() => {
     pingScale.value = withRepeat(
       withTiming(1.35, { duration: 1200, easing: Easing.out(Easing.ease) }),
@@ -51,14 +58,17 @@ export function RecordButton({ onPress, style }: RecordButtonProps) {
       true
     );
   }, [pingOpacity, pingScale]);
+
   const pingStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pingScale.value }],
     opacity: pingOpacity.value,
   }));
+
   return (
     <TouchableOpacity
       style={[
         styles.fab,
+        Platform.OS === 'ios' && { backgroundColor: 'transparent' },
         isLight ? styles.fabBorderLight : styles.fabBorderDark,
         { bottom: recordButtonBottom, right: horizontalInset },
         extraStyle,
@@ -69,6 +79,21 @@ export function RecordButton({ onPress, style }: RecordButtonProps) {
       accessibilityRole="button"
       accessibilityHint="Opens the recording screen"
     >
+      {Platform.OS === 'ios' && (
+        <BlurView
+          intensity={80}
+          tint={isLight ? 'light' : 'dark'}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      {Platform.OS === 'ios' && (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            isLight ? styles.fabOverlayLight : styles.fabOverlayDark,
+          ]}
+        />
+      )}
       <View style={styles.ringOuter}>
         <Animated.View style={[styles.pingRing, pingStyle]} />
         <View style={styles.recordRing} />
@@ -76,6 +101,7 @@ export function RecordButton({ onPress, style }: RecordButtonProps) {
     </TouchableOpacity>
   );
 }
+
 function createRecordButtonStyles(c: ColorPalette) {
   return StyleSheet.create({
     fab: {
@@ -86,6 +112,7 @@ function createRecordButtonStyles(c: ColorPalette) {
       backgroundColor: c.card,
       alignItems: 'center',
       justifyContent: 'center',
+      overflow: 'hidden',
       borderWidth: StyleSheet.hairlineWidth,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
@@ -95,10 +122,16 @@ function createRecordButtonStyles(c: ColorPalette) {
       elevation: 10,
     },
     fabBorderDark: {
-      borderColor: 'rgba(255,255,255,0.05)',
+      borderColor: 'rgba(255,255,255,0.1)',
     },
     fabBorderLight: {
       borderColor: c.border,
+    },
+    fabOverlayDark: {
+      backgroundColor: 'rgba(28,28,30,0.85)',
+    },
+    fabOverlayLight: {
+      backgroundColor: 'rgba(255,255,255,0.85)',
     },
     ringOuter: {
       width: RING_SIZE,

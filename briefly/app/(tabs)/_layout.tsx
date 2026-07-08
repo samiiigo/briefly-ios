@@ -127,9 +127,9 @@ function ClassicTabLayout() {
 }
 
 export default function TabsLayout() {
-  if (Platform.OS === 'ios' && isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
+  // Use ClassicTabLayout to render our custom dual-element floating liquid-glass layout:
+  // 1) Left floating rounded glass capsule containing Recents & Library tabs.
+  // 2) Right floating circular glass button containing the Record button.
   return <ClassicTabLayout />;
 }
 
