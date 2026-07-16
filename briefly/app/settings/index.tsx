@@ -7,13 +7,16 @@ import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeL
 import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
 import { SettingsNavigateRow } from '@/components/settings/SettingsNavigateRow';
 import { SettingsToggleRow } from '@/components/settings/SettingsToggleRow';
+import { SettingsProfileCard } from '@/components/settings/SettingsProfileCard';
 import { Spacing } from '@/theme';
 import { useSettingsHub } from '@/hooks/settings/useSettingsHub';
+import { useSettingsProfile } from '@/hooks/settings/useSettingsProfile';
 
 export default function SettingsScreen() {
   const goBack = useStackBack('/(tabs)');
   const { scrollPaddingTop } = useTopChromeLayout();
   const sl = useScreenLayoutStyles();
+  const { profile } = useSettingsProfile();
   const {
     showLivePreview,
     setShowLivePreview,
@@ -32,7 +35,9 @@ export default function SettingsScreen() {
         contentContainerStyle={[sl.scrollContent, styles.content, { paddingTop: scrollPaddingTop }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[sl.sectionLabel, styles.firstSectionLabel]}>General</Text>
+        <SettingsProfileCard profile={profile} />
+
+        <Text style={sl.sectionLabel}>General</Text>
         <View style={sl.card}>
           <SettingsNavigateRow
             title="Preferences"
@@ -126,9 +131,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
-  },
-  firstSectionLabel: {
-    marginTop: 0,
   },
   versionText: {
     marginTop: 'auto',
