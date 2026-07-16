@@ -4,11 +4,13 @@ import { useCreateStyles } from '@/theme/createStyles';
 import type { ColorPalette } from '@/theme/colorPalettes';
 /** Bottom inset so list content clears the floating tab bar. */
 export const SCREEN_LIST_BOTTOM_PADDING = 140;
-function createScreenLayoutStyles(colors: ColorPalette) {
+function createScreenLayoutStyles(colors: ColorPalette, sheet = false) {
+  const pageBg = sheet ? colors.surface : colors.background;
+  const cardBg = sheet ? colors.surfaceElevated : colors.card;
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: pageBg,
     },
     headerOverlay: {
       position: 'absolute',
@@ -39,7 +41,7 @@ function createScreenLayoutStyles(colors: ColorPalette) {
       marginBottom: Spacing.md,
     }),
     card: {
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: BorderRadius.cardXL,
       overflow: 'hidden',
     },
@@ -74,7 +76,7 @@ function createScreenLayoutStyles(colors: ColorPalette) {
       marginRight: 4,
     }),
     settingsActionCard: {
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: BorderRadius.cardXL,
       overflow: 'hidden',
       marginTop: Spacing.lg,
@@ -182,6 +184,13 @@ function createModePickerStyles(colors: ColorPalette) {
 export function useScreenLayoutStyles() {
   return useCreateStyles(createScreenLayoutStyles);
 }
+/** Grey sheet surface + elevated cards (settings modal). */
+export function useSettingsSheetLayoutStyles() {
+  return useCreateStyles(createSettingsSheetLayoutStyles);
+}
 export function useModePickerStyles() {
   return useCreateStyles(createModePickerStyles);
+}
+function createSettingsSheetLayoutStyles(colors: ColorPalette) {
+  return createScreenLayoutStyles(colors, true);
 }

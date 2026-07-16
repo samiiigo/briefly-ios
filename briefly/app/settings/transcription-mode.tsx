@@ -6,7 +6,7 @@ import { StackScreenHeader } from '@/components/navigation/header/StackScreenHea
 import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
 import {
   useModePickerStyles,
-  useScreenLayoutStyles,
+  useSettingsSheetLayoutStyles,
 } from '@/components/navigation/layout/screenLayout';
 import { NATIVE_BUILD_REQUIRED_HINT } from '@/utils/platformCapabilities';
 import { useTranscriptionModeSettings } from '@/hooks/settings/useTranscriptionModeSettings';
@@ -14,7 +14,7 @@ import { useTranscriptionModeSettings } from '@/hooks/settings/useTranscriptionM
 export default function TranscriptionModePickerScreen() {
   const goBack = useStackBack('/settings');
   const { scrollPaddingTop } = useTopChromeLayout();
-  const sl = useScreenLayoutStyles();
+  const sl = useSettingsSheetLayoutStyles();
   const mp = useModePickerStyles();
   const { options, selectMode } = useTranscriptionModeSettings();
 

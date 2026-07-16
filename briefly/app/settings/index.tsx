@@ -4,18 +4,19 @@ import { useStackBack } from '@/components/navigation/layout/useStackBack';
 import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
-import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
+import { useSettingsSheetLayoutStyles } from '@/components/navigation/layout/screenLayout';
 import { SettingsNavigateRow } from '@/components/settings/SettingsNavigateRow';
 import { SettingsToggleRow } from '@/components/settings/SettingsToggleRow';
 import { SettingsProfileCard } from '@/components/settings/SettingsProfileCard';
-import { Spacing } from '@/theme';
+import { Spacing, useThemedColors } from '@/theme';
 import { useSettingsHub } from '@/hooks/settings/useSettingsHub';
 import { useSettingsProfile } from '@/hooks/settings/useSettingsProfile';
 
 export default function SettingsScreen() {
   const goBack = useStackBack('/(tabs)');
   const { scrollPaddingTop } = useTopChromeLayout();
-  const sl = useScreenLayoutStyles();
+  const colors = useThemedColors();
+  const sl = useSettingsSheetLayoutStyles();
   const { profile } = useSettingsProfile();
   const {
     showLivePreview,
@@ -121,6 +122,7 @@ export default function SettingsScreen() {
             icon="close"
             accessibilityLabel="Close"
             onPress={goBack}
+            style={{ backgroundColor: colors.surfaceElevated }}
           />
         }
       />

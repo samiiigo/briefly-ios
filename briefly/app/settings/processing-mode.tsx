@@ -14,7 +14,7 @@ import { StackScreenHeader } from '@/components/navigation/header/StackScreenHea
 import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
 import {
   useModePickerStyles,
-  useScreenLayoutStyles,
+  useSettingsSheetLayoutStyles,
 } from '@/components/navigation/layout/screenLayout';
 import { processingModeDescription, processingModeTitle } from '@/utils/processing/processingMode';
 import { Colors, withAppFont } from '@/theme';
@@ -31,7 +31,7 @@ import {
 
 export default function ProcessingModePickerScreen() {
   const goBack = useStackBack('/settings');
-  const sl = useScreenLayoutStyles();
+  const sl = useSettingsSheetLayoutStyles();
   const mp = useModePickerStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
   const {

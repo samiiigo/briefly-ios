@@ -6,14 +6,14 @@ import { StackScreenHeader } from '@/components/navigation/header/StackScreenHea
 import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
 import {
   useModePickerStyles,
-  useScreenLayoutStyles,
+  useSettingsSheetLayoutStyles,
 } from '@/components/navigation/layout/screenLayout';
 import { useFolderLayoutSettings } from '@/hooks/library/useFolderLayoutSettings';
 
 export default function FolderLayoutPickerScreen() {
   const goBack = useStackBack('/settings');
   const { scrollPaddingTop } = useTopChromeLayout();
-  const sl = useScreenLayoutStyles();
+  const sl = useSettingsSheetLayoutStyles();
   const mp = useModePickerStyles();
   const { options, selectLayout } = useFolderLayoutSettings();
 
