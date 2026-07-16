@@ -11,6 +11,8 @@ type SettingsNavigateRowProps = {
   onPress: () => void;
   disabled?: boolean;
   danger?: boolean;
+  /** Defaults to true. Set false for Beeper-style icon+label rows. */
+  showChevron?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 export function SettingsNavigateRow({
@@ -21,6 +23,7 @@ export function SettingsNavigateRow({
   onPress,
   disabled,
   danger,
+  showChevron = true,
   style,
 }: SettingsNavigateRowProps) {
   const colors = useThemedColors();
@@ -34,14 +37,16 @@ export function SettingsNavigateRow({
       {icon ? (
         <Ionicons
           name={icon}
-          size={20}
+          size={22}
           color={iconColor ?? colors.textPrimary}
           style={sl.settingsRowIcon}
         />
       ) : null}
       <Text style={[sl.settingsRowTitle, danger && sl.settingsRowTitleDanger]}>{title}</Text>
       {value ? <Text style={sl.settingsRowValue}>{value}</Text> : null}
-      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+      {showChevron ? (
+        <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+      ) : null}
     </TouchableOpacity>
   );
 }

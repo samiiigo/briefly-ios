@@ -17,7 +17,7 @@ export function SettingsToggleRow({ title, value, onValueChange, icon }: Setting
       {icon ? (
         <Ionicons
           name={icon}
-          size={20}
+          size={22}
           color={colors.textPrimary}
           style={sl.settingsRowIcon}
         />

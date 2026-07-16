@@ -18,8 +18,13 @@ interface Props {
   trailing?: React.ReactNode;
   /** Custom leading control (replaces the default back button). */
   leading?: React.ReactNode;
-  /** Center the title when there is no leading or trailing chrome. */
+  /**
+   * Center the title. With trailing/leading chrome, the title is absolutely
+   * centered in the bar (modal-style). Without chrome, the row itself centers.
+   */
   centerTitle?: boolean;
+  /** `large` matches Recents/Library; `nav` is a compact centered modal title. */
+  titleSize?: 'large' | 'nav';
 }
 /** Large-title header row aligned with Recents / Library tabs. */
 export function StackScreenHeader({
@@ -30,15 +35,35 @@ export function StackScreenHeader({
   trailing,
   leading,
   centerTitle,
+  titleSize = 'large',
 }: Props) {
   const styles = useCreateStyles(createStackScreenHeaderStyles);
   const hasLeading = Boolean(leading ?? (showBack && onBack));
   const hasTrailing = Boolean(trailing);
-  const shouldCenterTitle = centerTitle && !hasLeading && !hasTrailing;
+  const absoluteCenter = Boolean(centerTitle && (hasLeading || hasTrailing));
+  const rowCenter = Boolean(centerTitle && !hasLeading && !hasTrailing);
+  const titleStyle = [
+    styles.title,
+    titleSize === 'nav' && styles.titleNav,
+    (absoluteCenter || rowCenter) && styles.titleCentered,
+  ];
   return (
     <TopChromeOverlay>
-      <View style={[styles.header, shouldCenterTitle && styles.headerCentered]}>
-        <View style={[styles.titleRow, shouldCenterTitle && styles.titleRowCentered]}>
+      <View style={[styles.header, rowCenter && styles.headerCentered]}>
+        {absoluteCenter ? (
+          <View pointerEvents="none" style={styles.absoluteTitle}>
+            <Text style={titleStyle} numberOfLines={1}>
+              {title}
+            </Text>
+          </View>
+        ) : null}
+        <View
+          style={[
+            styles.titleRow,
+            rowCenter && styles.titleRowCentered,
+            absoluteCenter && styles.titleRowSpread,
+          ]}
+        >
           {leading ??
             (showBack && onBack ? (
               <CircularIconButton
@@ -47,15 +72,20 @@ export function StackScreenHeader({
                 onPress={onBack}
                 style={styles.backButton}
               />
+            ) : absoluteCenter ? (
+              <View style={styles.sideSpacer} />
             ) : null)}
-          <Text
-            style={[styles.title, shouldCenterTitle && styles.titleCentered]}
-            numberOfLines={1}
-          >
-            {title}
-          </Text>
+          {absoluteCenter ? null : (
+            <Text style={titleStyle} numberOfLines={1}>
+              {title}
+            </Text>
+          )}
         </View>
-        {hasTrailing ? <View style={styles.trailing}>{trailing}</View> : null}
+        {hasTrailing ? (
+          <View style={styles.trailing}>{trailing}</View>
+        ) : absoluteCenter ? (
+          <View style={styles.sideSpacer} />
+        ) : null}
       </View>
     </TopChromeOverlay>
   );
@@ -74,6 +104,11 @@ function createStackScreenHeaderStyles(c: ColorPalette) {
   headerCentered: {
     justifyContent: 'center',
   },
+  absoluteTitle: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   titleRow: {
     flex: 1,
     flexDirection: 'row',
@@ -86,6 +121,13 @@ function createStackScreenHeaderStyles(c: ColorPalette) {
     marginRight: 0,
     justifyContent: 'center',
   },
+  titleRowSpread: {
+    marginRight: 0,
+  },
+  sideSpacer: {
+    width: 44,
+    height: 44,
+  },
   backButton: {
     marginRight: Spacing.sm,
   },
@@ -95,6 +137,13 @@ function createStackScreenHeaderStyles(c: ColorPalette) {
     fontWeight: '700',
     color: c.textPrimary,
     letterSpacing: -0.5,
+  }),
+  titleNav: withAppFont({
+    flexShrink: 1,
+    fontSize: 17,
+    fontWeight: '600',
+    color: c.textPrimary,
+    letterSpacing: -0.2,
   }),
   titleCentered: {
     textAlign: 'center',

@@ -22,9 +22,12 @@ export function useSettingsHub() {
   const clearCache = useClearCache();
   const storageBusy = transcriptBackup.busy || clearCache.busy;
   const appVersionLabel = useMemo(() => {
-    const name = Constants.expoConfig?.name ?? 'Briefly';
     const version = Constants.expoConfig?.version ?? '5.2.7';
-    return `${name} ${version}`;
+    const build =
+      Constants.expoConfig?.ios?.buildNumber ??
+      Constants.nativeBuildVersion ??
+      null;
+    return build ? `${version} (${build})` : version;
   }, []);
   const routes = useMemo(
     () => ({

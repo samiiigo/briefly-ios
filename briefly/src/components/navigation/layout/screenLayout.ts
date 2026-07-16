@@ -23,11 +23,11 @@ function createScreenLayoutStyles(colors: ColorPalette) {
       paddingBottom: SCREEN_LIST_BOTTOM_PADDING,
     },
     sectionLabel: withAppFont({
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '500',
       lineHeight: 16,
       color: colors.subtext,
-      paddingHorizontal: Spacing.sm,
+      paddingHorizontal: Spacing.md,
       marginTop: Spacing.lg,
       marginBottom: Spacing.sm,
     }),
@@ -52,8 +52,9 @@ function createScreenLayoutStyles(colors: ColorPalette) {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: Spacing.md,
-      paddingVertical: 14,
+      paddingVertical: 15,
       gap: Spacing.md,
+      minHeight: 52,
     },
     settingsRowIcon: {
       width: 24,
@@ -72,6 +73,24 @@ function createScreenLayoutStyles(colors: ColorPalette) {
       color: colors.subtext,
       marginRight: 4,
     }),
+    settingsActionCard: {
+      backgroundColor: colors.card,
+      borderRadius: BorderRadius.cardXL,
+      overflow: 'hidden',
+      marginTop: Spacing.lg,
+    },
+    settingsActionButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 16,
+      paddingHorizontal: Spacing.md,
+      minHeight: 52,
+    },
+    settingsActionLabel: withAppFont({
+      fontSize: 17,
+      fontWeight: '500',
+      color: colors.red,
+    }),
     listSectionHeader: withAppFont({
       fontSize: 14,
       fontWeight: '500',
@@ -86,7 +105,7 @@ function createScreenLayoutStyles(colors: ColorPalette) {
       height: 8,
     },
     versionText: withAppFont({
-      fontSize: 12,
+      fontSize: 13,
       color: colors.subtext,
       textAlign: 'center',
       paddingVertical: Spacing.md,
