@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useStackBack } from '@/components/navigation/layout/useStackBack';
 import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
+import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
 import { useSettingsSheetLayoutStyles } from '@/components/navigation/layout/screenLayout';
 import { SettingsNavigateRow } from '@/components/settings/SettingsNavigateRow';
 import { SettingsToggleRow } from '@/components/settings/SettingsToggleRow';
@@ -14,7 +14,7 @@ import { useSettingsProfile } from '@/hooks/settings/useSettingsProfile';
 
 export default function SettingsScreen() {
   const goBack = useStackBack('/(tabs)');
-  const { scrollPaddingTop } = useTopChromeLayout();
+  const { scrollPaddingTop } = useSettingsTopChromeLayout();
   const colors = useThemedColors();
   const sl = useSettingsSheetLayoutStyles();
   const { profile } = useSettingsProfile();

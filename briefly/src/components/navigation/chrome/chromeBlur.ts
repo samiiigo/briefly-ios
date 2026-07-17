@@ -2,10 +2,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFloatingTabBarLayout } from '../layout/useFloatingTabBarLayout';
 import { usePlaybackBarLayout } from '../layout/usePlaybackBarLayout';
 import { useTopChromeLayout } from '../layout/useTopChromeLayout';
-import {
-  TOP_CHROME_FADE_BELOW_TITLE,
-  TOP_HEADER_BODY_HEIGHT,
-} from '../layout/topHeaderMetrics';
+import { getSettingsTopChromeFadeHeight } from '../layout/settingsTopHeaderMetrics';
 import { useChromeFadeColor } from './ChromeFadeColor';
 export type ChromeBlurVariant = 'header' | 'tabBar' | 'playback';
 export function useChromeBlurHeight(variant: ChromeBlurVariant): number {
@@ -18,7 +15,7 @@ export function useChromeBlurHeight(variant: ChromeBlurVariant): number {
     case 'header':
       // Settings sheet uses a compact nav title — keep blur short so it doesn't swallow content.
       if (sheetFadeColor) {
-        return insets.top + TOP_HEADER_BODY_HEIGHT + TOP_CHROME_FADE_BELOW_TITLE;
+        return getSettingsTopChromeFadeHeight(insets.top);
       }
       return headerHeight;
     case 'tabBar':

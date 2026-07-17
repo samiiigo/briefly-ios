@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useStackBack } from '@/components/navigation/layout/useStackBack';
 import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
+import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
 import {
   useModePickerStyles,
   useSettingsSheetLayoutStyles,
@@ -34,7 +34,7 @@ export default function ProcessingModePickerScreen() {
   const colors = useThemedColors();
   const sl = useSettingsSheetLayoutStyles();
   const mp = useModePickerStyles();
-  const { scrollPaddingTop } = useTopChromeLayout();
+  const { scrollPaddingTop } = useSettingsTopChromeLayout();
   const {
     summarizationMode,
     setSummarizationMode,

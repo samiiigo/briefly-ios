@@ -3,7 +3,7 @@ import { View, Text, ScrollView } from 'react-native';
 import { useStackBack } from '@/components/navigation/layout/useStackBack';
 import { ModePickerOption } from '@/components/navigation/header/ModePickerOption';
 import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
+import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
 import {
   useModePickerStyles,
   useSettingsSheetLayoutStyles,
@@ -13,7 +13,7 @@ import { useThemedColors } from '@/theme';
 
 export default function FolderLayoutPickerScreen() {
   const goBack = useStackBack('/settings');
-  const { scrollPaddingTop } = useTopChromeLayout();
+  const { scrollPaddingTop } = useSettingsTopChromeLayout();
   const colors = useThemedColors();
   const sl = useSettingsSheetLayoutStyles();
   const mp = useModePickerStyles();

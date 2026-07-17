@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useStackBack } from '@/components/navigation/layout/useStackBack';
 import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
+import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
 import { useSettingsSheetLayoutStyles } from '@/components/navigation/layout/screenLayout';
 import { useThemePreferenceSettings } from '@/hooks/settings/useThemePreferenceSettings';
 import { BorderRadius, useCreateStyles, useThemedColors, withAppFont } from '@/theme';
@@ -10,7 +10,7 @@ import type { ColorPalette } from '@/theme/colorPalettes';
 
 export default function ThemePickerScreen() {
   const goBack = useStackBack('/settings');
-  const { scrollPaddingTop } = useTopChromeLayout();
+  const { scrollPaddingTop } = useSettingsTopChromeLayout();
   const colors = useThemedColors();
   const sl = useSettingsSheetLayoutStyles();
   const styles = useCreateStyles(createStyles);

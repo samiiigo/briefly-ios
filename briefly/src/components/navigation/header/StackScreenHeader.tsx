@@ -1,11 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import {
   TOP_HEADER_BUTTON_ROW_HEIGHT,
   TOP_HEADER_PADDING_BOTTOM,
   TOP_HEADER_PADDING_TOP,
 } from '@/components/navigation/layout/topHeaderMetrics';
+import {
+  getSettingsHeaderTopInset,
+  SETTINGS_TOP_HEADER_BODY_HEIGHT,
+  SETTINGS_TOP_HEADER_PADDING_BOTTOM,
+  SETTINGS_TOP_HEADER_PADDING_TOP,
+  SETTINGS_TOP_HEADER_TITLE_FONT_SIZE,
+} from '@/components/navigation/layout/settingsTopHeaderMetrics';
 import { TopChromeOverlay } from '@/components/navigation/chrome/TopChromeOverlay';
 import { useCreateStyles, Spacing, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
@@ -40,20 +48,36 @@ export function StackScreenHeader({
   buttonStyle,
 }: Props) {
   const styles = useCreateStyles(createStackScreenHeaderStyles);
+  const insets = useSafeAreaInsets();
   const hasLeading = Boolean(leading ?? (showBack && onBack));
   const hasTrailing = Boolean(trailing);
   const absoluteCenter = Boolean(centerTitle && (hasLeading || hasTrailing));
   const rowCenter = Boolean(centerTitle && !hasLeading && !hasTrailing);
+  const usesSettingsMetrics = titleSize === 'nav';
   const titleStyle = [
     styles.title,
-    titleSize === 'nav' && styles.titleNav,
+    usesSettingsMetrics && styles.titleNav,
     (absoluteCenter || rowCenter) && styles.titleCentered,
   ];
   return (
-    <TopChromeOverlay>
-      <View style={[styles.header, rowCenter && styles.headerCentered]}>
+    <TopChromeOverlay
+      paddingInset={usesSettingsMetrics ? getSettingsHeaderTopInset(insets.top) : undefined}
+    >
+      <View
+        style={[
+          styles.header,
+          usesSettingsMetrics && styles.settingsHeader,
+          rowCenter && styles.headerCentered,
+        ]}
+      >
         {absoluteCenter ? (
-          <View pointerEvents="none" style={styles.absoluteTitle}>
+          <View
+            pointerEvents="none"
+            style={[
+              styles.absoluteTitle,
+              usesSettingsMetrics && styles.settingsAbsoluteTitle,
+            ]}
+          >
             <Text style={titleStyle} numberOfLines={1}>
               {title}
             </Text>
@@ -106,10 +130,23 @@ function createStackScreenHeaderStyles(c: ColorPalette) {
   headerCentered: {
     justifyContent: 'center',
   },
+  settingsHeader: {
+    paddingTop: SETTINGS_TOP_HEADER_PADDING_TOP,
+    paddingBottom: SETTINGS_TOP_HEADER_PADDING_BOTTOM,
+    minHeight: SETTINGS_TOP_HEADER_BODY_HEIGHT,
+  },
   absoluteTitle: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: TOP_HEADER_PADDING_TOP,
+    right: 0,
+    bottom: TOP_HEADER_PADDING_BOTTOM,
+    left: 0,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  settingsAbsoluteTitle: {
+    top: SETTINGS_TOP_HEADER_PADDING_TOP,
+    bottom: SETTINGS_TOP_HEADER_PADDING_BOTTOM,
   },
   titleRow: {
     flex: 1,
@@ -142,10 +179,12 @@ function createStackScreenHeaderStyles(c: ColorPalette) {
   }),
   titleNav: withAppFont({
     flexShrink: 1,
-    fontSize: 17,
+    fontSize: SETTINGS_TOP_HEADER_TITLE_FONT_SIZE,
+    lineHeight: 22,
     fontWeight: '600',
     color: c.textPrimary,
     letterSpacing: -0.2,
+    includeFontPadding: false,
   }),
   titleCentered: {
     textAlign: 'center',
