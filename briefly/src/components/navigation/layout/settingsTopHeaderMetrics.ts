@@ -17,8 +17,15 @@ export function getSettingsHeaderTopInset(safeAreaTop: number): number {
   return Math.max(0, safeAreaTop - SETTINGS_TOP_HEADER_SAFE_AREA_TRIM);
 }
 
+/** Breathing room between the bottom of the settings header and the first scroll content. */
+export const SETTINGS_TOP_HEADER_CONTENT_GAP = 8;
+
 export function getSettingsScrollPaddingTop(safeAreaTop: number): number {
-  return getSettingsHeaderTopInset(safeAreaTop) + SETTINGS_TOP_HEADER_BODY_HEIGHT;
+  return (
+    getSettingsHeaderTopInset(safeAreaTop) +
+    SETTINGS_TOP_HEADER_BODY_HEIGHT +
+    SETTINGS_TOP_HEADER_CONTENT_GAP
+  );
 }
 
 export function getSettingsTopChromeFadeHeight(safeAreaTop: number): number {

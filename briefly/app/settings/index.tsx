@@ -35,7 +35,9 @@ export default function SettingsScreen() {
         contentContainerStyle={[sl.scrollContent, styles.content, { paddingTop: scrollPaddingTop }]}
         showsVerticalScrollIndicator={false}
       >
-        <SettingsProfileCard profile={profile} />
+        <View style={styles.profileCard}>
+          <SettingsProfileCard profile={profile} />
+        </View>
         <View style={sl.settingsProfileGap} />
 
         <Text style={[sl.sectionLabel, styles.firstSectionLabel]}>General</Text>
@@ -129,6 +131,9 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
+  },
+  profileCard: {
+    marginTop: Spacing.md,
   },
   firstSectionLabel: {
     marginTop: 0,
