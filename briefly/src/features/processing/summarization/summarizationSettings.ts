@@ -1,23 +1,10 @@
-import { CloudProvider } from '@/shared/types';
-import { useSettingsStore } from '@/features/settings/state/useSettingsStore';
-export interface SummarizationSettingsSnapshot {
-  cloudProvider: CloudProvider;
-  apiKeys: Record<CloudProvider, string>;
-}
-export interface SummarizationSettingsReader {
-  getSnapshot(): SummarizationSettingsSnapshot;
-}
-export class StoreBackedSummarizationSettingsReader implements SummarizationSettingsReader {
-  getSnapshot(): SummarizationSettingsSnapshot {
-    const { cloudProvider, openrouterApiKey, openaiApiKey, geminiApiKey } =
-      useSettingsStore.getState();
-    return {
-      cloudProvider,
-      apiKeys: {
-        openrouter: openrouterApiKey,
-        openai: openaiApiKey,
-        gemini: geminiApiKey,
-      },
-    };
-  }
-}
+/**
+ * Summarization settings ports for the processing feature.
+ * Store-backed implementations live in settings; this module re-exports them
+ * so summarization code depends on ports rather than Zustand directly.
+ */
+export type {
+  SummarizationSettingsReader,
+  SummarizationSettingsSnapshot,
+} from '@/features/settings/services/settingsPorts';
+export { StoreBackedSummarizationSettingsReader } from '@/features/settings/services/settingsStoreReaders';

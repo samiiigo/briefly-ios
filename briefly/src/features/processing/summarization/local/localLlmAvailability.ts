@@ -1,5 +1,5 @@
 import { ProcessingMode } from '@/shared/types';
-import { useSettingsStore } from '@/features/settings/state/useSettingsStore';
+import { getProcessingSettingsReader } from '@/features/settings/services/processingSettingsReaderRegistry';
 import { LocalModelStorageService } from '@/shared/services/storage/localModelStorageService';
 import {
   supportsLocalLlamaSummarization,
@@ -90,7 +90,7 @@ export function evaluateLocalLlmAvailability(): LocalLlmAvailability {
 }
 export function isOnDeviceSummarizationMode(mode?: ProcessingMode): boolean {
   return isOnDeviceSummarizationModeFor(
-    mode ?? useSettingsStore.getState().summarizationMode,
+    mode ?? getProcessingSettingsReader().getSummarizationMode(),
   );
 }
 /**

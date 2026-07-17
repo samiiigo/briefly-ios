@@ -5,7 +5,7 @@ import { AudioFileService } from '@/features/recording/services/audio';
 import { probeAudioDurationSec } from '@/features/recording/services/audio/probeAudioDuration';
 import { saveCapturedRecording } from '@/features/recording/services/saveCapturedRecording';
 import { useRecordingStore } from '@/features/recording/state/useRecordingStore';
-import { useSettingsStore } from '@/features/settings/state/useSettingsStore';
+import { getProcessingSettingsReader } from '@/features/settings/services/processingSettingsReaderRegistry';
 import { generateId } from '@/shared/utils';
 import { getPathInfo } from '@/shared/utils/fileSystem/pathInfo';
 import { normalizeFileUri } from '@/shared/utils/fileSystem/normalizeFileUri';
@@ -14,7 +14,7 @@ import {
   extensionFromFilename,
   titleFromImportFilename,
 } from '@/features/recording/utils/importKind';
-import { minRecordingDurationHint ,
+import { minRecordingDurationHint,
   MIN_RECORDING_DURATION_SEC,
   MIN_RECORDING_FILE_BYTES,
 } from '@/features/recording/utils/recordingValidation';
@@ -59,7 +59,7 @@ async function importJsonBackup(
     `Import ${entries.length} transcript${entries.length === 1 ? '' : 's'} from this backup?${skippedNote}`,
   );
   if (!confirmed) return { count: 0, skipped };
-  const { summarizationMode } = useSettingsStore.getState();
+  const summarizationMode = getProcessingSettingsReader().getSummarizationMode();
   const incoming = backupEntriesToRecordings(
     entries,
     recordings.map((r) => r.title),
@@ -113,7 +113,7 @@ async function importAudioAsset(params: {
     `Import "${displayName}" and run transcription and summarization?`,
   );
   if (!confirmed) return null;
-  const { summarizationMode } = useSettingsStore.getState();
+  const summarizationMode = getProcessingSettingsReader().getSummarizationMode();
   const { id, summarizationBlocked } = await saveCapturedRecording({
     duration: durationSec,
     filePath,

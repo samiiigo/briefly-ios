@@ -1,6 +1,6 @@
 import { ProcessingMode } from '@/shared/types';
 import { useRecordingStore } from '@/features/recording/state/useRecordingStore';
-import { useSettingsStore } from '@/features/settings/state/useSettingsStore';
+import { getProcessingSettingsReader } from '@/features/settings/services/processingSettingsReaderRegistry';
 import {
   processRecordingFromSavedAudio,
   processRecordingToReady,
@@ -63,7 +63,7 @@ async function completeJob(
   processingModeUsed?: ProcessingMode,
 ) {
   const { updateRecording, recordings } = useRecordingStore.getState();
-  const modeUsed = processingModeUsed ?? useSettingsStore.getState().summarizationMode;
+  const modeUsed = processingModeUsed ?? getProcessingSettingsReader().getSummarizationMode();
   const existingTitles = recordings
     .filter((r) => r.id !== recordingId)
     .map((r) => r.title);
@@ -106,9 +106,9 @@ async function runJob(
     throw new Error('Recording is too short. Record for at least 10 seconds and try again.');
   }
   const settingsMode = normalizeTranscriptionMode(
-    useSettingsStore.getState().transcriptionMode,
+    getProcessingSettingsReader().getTranscriptionMode(),
   );
-  const pMode = useSettingsStore.getState().summarizationMode;
+  const pMode = getProcessingSettingsReader().getSummarizationMode();
   const existingTranscript = options.audioFallbackOnly ? undefined : rec.transcript;
   const meta = { durationSec: rec.duration, fileSizeBytes: fileSize };
   const callbacks = {
@@ -205,7 +205,7 @@ export function startRecordingBackgroundProcessing(
   options?: { audioFallbackOnly?: boolean; preservePreviousResults?: boolean },
 ): void {
   if (activeJobs.has(recordingId)) return;
-  const pMode = useSettingsStore.getState().summarizationMode;
+  const pMode = getProcessingSettingsReader().getSummarizationMode();
   const blocker = getLocalLlmSummarizationBlocker(pMode);
   if (blocker) {
     void abortBlockedOnDeviceProcessing(recordingId, blocker);
@@ -261,7 +261,7 @@ export function startRecordingSummarizationRetry(
   summarizationMode?: ProcessingMode,
 ): void {
   if (activeJobs.has(recordingId)) return;
-  const pMode = summarizationMode ?? useSettingsStore.getState().summarizationMode;
+  const pMode = summarizationMode ?? getProcessingSettingsReader().getSummarizationMode();
   const blocker = getLocalLlmSummarizationBlocker(pMode);
   if (blocker) {
     void abortBlockedOnDeviceProcessing(recordingId, blocker);

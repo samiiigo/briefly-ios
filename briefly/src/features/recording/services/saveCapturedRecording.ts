@@ -1,6 +1,6 @@
 import { RecordingFolder } from '@/shared/types';
 import { useRecordingStore } from '@/features/recording/state/useRecordingStore';
-import { useSettingsStore } from '@/features/settings/state/useSettingsStore';
+import { getProcessingSettingsReader } from '@/features/settings/services/processingSettingsReaderRegistry';
 import { generateId, generateTitle, ensureUniqueTitle } from '@/shared/utils';
 import { normalizeTranscriptionMode } from '@/features/processing/utils/transcriptionMode';
 import { folderFlagsFor } from '@/features/library/utils/recordingFolder';
@@ -28,7 +28,10 @@ export async function saveCapturedRecording(
 ): Promise<SaveCapturedRecordingResult> {
   const { addRecording, recordings } = useRecordingStore.getState();
   const existingTitles = recordings.map((r) => r.title);
-  const { summarizationMode, transcriptionMode } = useSettingsStore.getState();
+  const { summarizationMode, transcriptionMode } = {
+    summarizationMode: getProcessingSettingsReader().getSummarizationMode(),
+    transcriptionMode: getProcessingSettingsReader().getTranscriptionMode(),
+  };
   const id = generateId();
   const targetFolder = params.targetFolder ?? 'unlisted';
   const baseTitle = params.title?.trim() || generateTitle();

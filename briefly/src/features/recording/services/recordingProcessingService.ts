@@ -1,5 +1,5 @@
 import { ProcessingMode, TranscriptSegment, TranscriptionMode } from '@/shared/types';
-import { useSettingsStore } from '@/features/settings/state/useSettingsStore';
+import { getProcessingSettingsReader } from '@/features/settings/services/processingSettingsReaderRegistry';
 import { getPathInfo } from '@/shared/utils/fileSystem/pathInfo';
 import { ensureUploadableAudioUri } from '@/shared/utils/fileSystem/repairWavForUpload';
 import { SummarizationService } from '@/features/processing/summarization';
@@ -175,7 +175,7 @@ async function summarizeTranscript(
 ): Promise<Pick<RecordingProcessingResult, 'summary' | 'keyInsights' | 'mainEmoji' | 'title'>> {
   assertTranscriptHasContent(segments);
   const modeUsed =
-    summarizationModeOverride ?? useSettingsStore.getState().summarizationMode;
+    summarizationModeOverride ?? getProcessingSettingsReader().getSummarizationMode();
   try {
     return await SummarizationService.summarize(segments, summarizationModeOverride);
   } catch (err) {

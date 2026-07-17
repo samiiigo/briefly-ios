@@ -1,6 +1,6 @@
 import type { Recording } from '@/shared/types';
 import { useRecordingStore } from '@/features/recording/state/useRecordingStore';
-import { useSettingsStore } from '@/features/settings/state/useSettingsStore';
+import { getProcessingSettingsReader } from '@/features/settings/services/processingSettingsReaderRegistry';
 import {
   cancelRecordingBackgroundProcessing,
   startRecordingBackgroundProcessing,
@@ -49,7 +49,7 @@ export function executeManualRecordingRerun(
   );
   if (source === 'none') return 'none';
   const mode =
-    options?.summarizationMode ?? useSettingsStore.getState().summarizationMode;
+    options?.summarizationMode ?? getProcessingSettingsReader().getSummarizationMode();
   cancelRecordingBackgroundProcessing(recordingId);
   if (source === 'audio') {
     startRecordingBackgroundProcessing(recordingId, {
@@ -69,7 +69,7 @@ export function executeSummarizationOnlyRerun(
   const rec = useRecordingStore.getState().getRecordingById(recordingId);
   if (!rec || !hasMeaningfulTranscript(rec.transcript)) return false;
   const mode =
-    options?.summarizationMode ?? useSettingsStore.getState().summarizationMode;
+    options?.summarizationMode ?? getProcessingSettingsReader().getSummarizationMode();
   cancelRecordingBackgroundProcessing(recordingId);
   startRecordingSummarizationRetry(recordingId, mode);
   return true;
