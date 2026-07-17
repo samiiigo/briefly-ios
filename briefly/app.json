@@ -38,7 +38,11 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "entitlements": {}
+      "entitlements": {
+        "com.apple.developer.applesignin": [
+          "Default"
+        ]
+      }
     },
     "android": {
       "package": "com.briefly.app",

@@ -1,5 +1,8 @@
+# Linked to: https://supabase.com/dashboard/project/vcuvfstcobxujjrvqpop
+# Apple + Google providers are enabled in the Supabase dashboard (Auth → Providers).
+# Keep redirect URLs in sync with the app deep link briefly://auth/callback.
 [project]
-id = "briefly"
+id = "vcuvfstcobxujjrvqpop"
 name = "briefly"
 
 [api]

@@ -24,6 +24,8 @@
     "test": "node ./scripts/run-tests.mjs",
     "audit:ci": "npm audit --audit-level=high",
     "verify": "npm run typecheck && npm test && npm run audit:ci",
+    "supabase:deploy": "bash ./scripts/supabase-deploy.sh",
+    "eas:env:supabase": "bash ./scripts/eas-set-supabase-env.sh",
     "preinstall": "node ./scripts/prepare-llama-windows-install.js",
     "install:win": "node ./scripts/prepare-llama-windows-install.js && npm install",
     "postinstall": "node ./scripts/postinstall-llama-if-windows.js",

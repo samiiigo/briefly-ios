@@ -38,6 +38,7 @@ module.exports = ({ config }) => {
         extra.supabaseAnonKey ??
         '',
       appVariant: process.env.APP_VARIANT ?? extra.appVariant ?? 'development',
+      sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? extra.sentryDsn ?? '',
     },
   };
 };

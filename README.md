@@ -110,25 +110,31 @@ npm install
 
 On **Windows**, run `npm install` from the `briefly` folder (CMD, PowerShell, or Git Bash). `preinstall` refreshes `briefly/.npmrc` with a Windows path Node can load when npm runs scripts under `cmd.exe` (Git Bash `${PWD}` paths like `/d/...` do not work there). `npm install` skips `llama.rn`'s default postinstall (Git Bash GNU `tar` mishandles `C:\` paths) and runs the repo's Windows-safe downloader afterward via `postinstall`. If Git Bash still fails, run `npm run install:win`. Always `cd briefly` before installing. To re-download native artifacts manually: `npm run postinstall:llama`.
 
-### API keys (cloud modes)
+### API keys / Supabase
 
-If you want to use cloud transcription (AssemblyAI) or shared cloud summarization (OpenRouter), provide keys at **build time** via EAS secrets or a local `.env` (never commit `.env`).
+Cloud transcription and shared summarization run through **Supabase Edge Functions**. Put server keys in Supabase secrets (not in the app bundle).
 
 ```bash
 cp .env.example .env
 ```
 
 ```env
-ASSEMBLYAI_API_KEY=your_assemblyai_key
-OPENROUTER_SHARED_API_KEY=your_openrouter_key
+EXPO_PUBLIC_SUPABASE_URL=https://vcuvfstcobxujjrvqpop.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
 ```
 
-- AssemblyAI: https://www.assemblyai.com/
-- OpenRouter: https://openrouter.ai/
+Deploy backend (after `supabase login` + link):
 
-`app.config.js` injects these into `expo.extra` during prebuild. Prefer [EAS secrets](https://docs.expo.dev/build-reference/variables/) for production. Avoid `EXPO_PUBLIC_*` for shared keys in release builds — those values are embedded in the client bundle.
+```bash
+export ASSEMBLYAI_API_KEY=...
+export OPENROUTER_SHARED_API_KEY=...
+npm run supabase:deploy
+```
+
+Full store release steps: `briefly/docs/RELEASE_CHECKLIST.md`.
 
 **Your API key** (BYOK) keys are stored in the OS secure enclave (Keychain / Keystore), not AsyncStorage. **On-device** transcription and **Local** summarization do not require cloud keys.
+
 
 ### Security (client)
 

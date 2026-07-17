@@ -10,6 +10,11 @@ briefly/.env
 google-service-account.json
 briefly/play-store-service-account.json
 play-store-service-account.json
+briefly/credentials/*
+!briefly/credentials/README.md
+briefly/.supabase/
+supabase/.temp/
+briefly/supabase/.temp/
 briefly/.npmrc
 
 # Expo

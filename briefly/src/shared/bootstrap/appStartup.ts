@@ -1,6 +1,7 @@
 import { useSettingsStore } from '@/features/settings/state/useSettingsStore';
 import { resumeInterruptedRecordingProcessing } from '@/features/recording/services/recordingBackgroundProcessing';
 import { refreshLocalLlmModelStateFromDisk } from '@/features/processing/summarization';
+import { initCrashReporter } from '@/shared/services/crashReporter';
 import { checkEnvironment } from '@/shared/utils/environment/environmentCheck';
 import { installRealtimeTerminalLogs, logger } from '@/shared/utils/logging/logger';
 export async function loadRecordingsOnStartup(
@@ -24,6 +25,7 @@ export function runAfterSettingsHydrated(): void {
   resumeInterruptedRecordingProcessing();
 }
 export function installStartupLogging(): void {
+  initCrashReporter();
   if (__DEV__) {
     installRealtimeTerminalLogs();
   }
