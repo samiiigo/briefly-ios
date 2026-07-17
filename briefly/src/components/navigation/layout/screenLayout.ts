@@ -38,6 +38,7 @@ function createScreenLayoutStyles(colors: ColorPalette, sheet = false) {
       lineHeight: 22,
       color: colors.subtext,
       paddingHorizontal: Spacing.sm,
+      marginTop: sheet ? Spacing.sm : 0,
       marginBottom: Spacing.md,
     }),
     card: {

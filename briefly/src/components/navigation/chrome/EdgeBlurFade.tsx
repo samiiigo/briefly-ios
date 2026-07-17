@@ -83,7 +83,7 @@ function tintedDarkFade(
       const match = stop.match(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)/);
       if (match) return withBackgroundAlpha(hex, Number(match[1]));
       return stop;
-    }) as GradientStops['colors'],
+    }) as unknown as GradientStops['colors'],
     locations: template.locations,
   };
 }

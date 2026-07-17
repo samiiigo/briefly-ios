@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { CircularIconButton } from '@/components/ui/CircularIconButton';
 import {
   TOP_HEADER_BUTTON_ROW_HEIGHT,
@@ -14,7 +14,7 @@ interface Props {
   showBack?: boolean;
   onBack?: () => void;
   /** Leading control when `showBack` is true (defaults to arrow-back). */
-  leadingIcon?: 'arrow-back' | 'close';
+  leadingIcon?: 'arrow-back' | 'chevron-back' | 'close';
   trailing?: React.ReactNode;
   /** Custom leading control (replaces the default back button). */
   leading?: React.ReactNode;
@@ -25,6 +25,7 @@ interface Props {
   centerTitle?: boolean;
   /** `large` matches Recents/Library; `nav` is a compact centered modal title. */
   titleSize?: 'large' | 'nav';
+  buttonStyle?: StyleProp<ViewStyle>;
 }
 /** Large-title header row aligned with Recents / Library tabs. */
 export function StackScreenHeader({
@@ -36,6 +37,7 @@ export function StackScreenHeader({
   leading,
   centerTitle,
   titleSize = 'large',
+  buttonStyle,
 }: Props) {
   const styles = useCreateStyles(createStackScreenHeaderStyles);
   const hasLeading = Boolean(leading ?? (showBack && onBack));
@@ -70,7 +72,7 @@ export function StackScreenHeader({
                 icon={leadingIcon}
                 accessibilityLabel={leadingIcon === 'close' ? 'Close' : 'Back'}
                 onPress={onBack}
-                style={styles.backButton}
+                style={[styles.backButton, buttonStyle]}
               />
             ) : absoluteCenter ? (
               <View style={styles.sideSpacer} />

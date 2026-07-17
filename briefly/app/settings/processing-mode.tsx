@@ -17,7 +17,7 @@ import {
   useSettingsSheetLayoutStyles,
 } from '@/components/navigation/layout/screenLayout';
 import { processingModeDescription, processingModeTitle } from '@/utils/processing/processingMode';
-import { Colors, withAppFont } from '@/theme';
+import { Colors, useThemedColors, withAppFont } from '@/theme';
 import {
   LOCAL_LLM_NATIVE_FALLBACK_HINT,
   LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE,
@@ -31,6 +31,7 @@ import {
 
 export default function ProcessingModePickerScreen() {
   const goBack = useStackBack('/settings');
+  const colors = useThemedColors();
   const sl = useSettingsSheetLayoutStyles();
   const mp = useModePickerStyles();
   const { scrollPaddingTop } = useTopChromeLayout();
@@ -66,9 +67,7 @@ export default function ProcessingModePickerScreen() {
         contentContainerStyle={[sl.scrollContent, { paddingTop: scrollPaddingTop }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={sl.sectionDescription}>
-          Choose how Briefly generates your final summary after transcription.
-        </Text>
+        <Text style={sl.sectionLabel}>Summarization mode</Text>
         <View style={sl.card}>
           {PROCESSING_MODE_OPTIONS.map((mode, index) => {
             const selected = summarizationMode === mode;
@@ -90,6 +89,9 @@ export default function ProcessingModePickerScreen() {
             );
           })}
         </View>
+        <Text style={sl.sectionDescription}>
+          Choose how Briefly generates your final summary after transcription.
+        </Text>
         {summarizationMode === 'on-device' ? (
           <>
             {showUnsupportedBuild ? (
@@ -224,7 +226,15 @@ export default function ProcessingModePickerScreen() {
           </>
         ) : null}
       </ScrollView>
-      <StackScreenHeader title="Summarization" showBack onBack={goBack} />
+      <StackScreenHeader
+        title="Summarization"
+        showBack
+        onBack={goBack}
+        leadingIcon="chevron-back"
+        centerTitle
+        titleSize="nav"
+        buttonStyle={{ backgroundColor: colors.surfaceElevated }}
+      />
     </View>
   );
 }
