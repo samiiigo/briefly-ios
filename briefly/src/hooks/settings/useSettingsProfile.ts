@@ -10,7 +10,7 @@ export type SettingsProfile = {
 /** Dummy until auth/profile API exists. Swap the body of {@link fetchSettingsProfile}. */
 const DUMMY_PROFILE: SettingsProfile = {
   email: 'you@briefly.app',
-  displayName: null,
+  displayName: 'You',
   avatarUrl: null,
   plan: 'free',
 };

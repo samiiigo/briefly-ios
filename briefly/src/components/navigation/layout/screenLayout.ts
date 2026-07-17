@@ -47,16 +47,16 @@ function createScreenLayoutStyles(colors: ColorPalette, sheet = false) {
     },
     cardDivider: {
       height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.border,
+      backgroundColor: sheet ? colors.textTertiary : colors.border,
       marginLeft: Spacing.md + 24 + Spacing.md,
     },
     settingsRow: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: Spacing.md,
-      paddingVertical: 15,
-      gap: Spacing.md,
-      minHeight: 52,
+      paddingVertical: 14,
+      gap: 14,
+      minHeight: 50,
     },
     settingsRowIcon: {
       width: 24,
@@ -93,6 +93,9 @@ function createScreenLayoutStyles(colors: ColorPalette, sheet = false) {
       fontWeight: '500',
       color: colors.red,
     }),
+    settingsProfileGap: {
+      height: Spacing.md,
+    },
     listSectionHeader: withAppFont({
       fontSize: 14,
       fontWeight: '500',

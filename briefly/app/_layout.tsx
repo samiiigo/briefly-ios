@@ -57,7 +57,7 @@ function RootLayoutContent() {
             <Stack.Screen
               name="settings"
               options={{
-                presentation: 'modal',
+                presentation: 'pageSheet',
                 animation: 'slide_from_bottom',
                 gestureDirection: 'vertical',
                 contentStyle: { backgroundColor: colors.surface },

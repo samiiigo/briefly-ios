@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useCreateStyles, Spacing, BorderRadius, withAppFont } from '@/theme';
 import type { ColorPalette } from '@/theme/colorPalettes';
 import type { SettingsProfile } from '@/hooks/settings/useSettingsProfile';
@@ -11,10 +10,8 @@ type Props = {
 
 export function SettingsProfileCard({ profile }: Props) {
   const styles = useCreateStyles(createStyles);
-  const initial = useMemo(() => {
-    const source = profile.displayName?.trim() || profile.email.trim();
-    return source.charAt(0).toUpperCase() || '?';
-  }, [profile.displayName, profile.email]);
+  const name = profile.displayName?.trim() || profile.email.split('@')[0] || 'You';
+  const initial = useMemo(() => name.charAt(0).toUpperCase() || '?', [name]);
   const planLabel = profile.plan === 'plus' ? 'Plus' : 'Free';
 
   return (
@@ -27,13 +24,13 @@ export function SettingsProfileCard({ profile }: Props) {
         </View>
       )}
       <View style={styles.meta}>
+        <Text style={styles.name} numberOfLines={1}>
+          {name}
+        </Text>
         <Text style={styles.email} numberOfLines={1}>
           {profile.email}
         </Text>
         <View style={styles.planBadge}>
-          {profile.plan === 'plus' ? (
-            <Ionicons name="add" size={12} color={styles.planLabel.color} />
-          ) : null}
           <Text style={styles.planLabel}>{planLabel}</Text>
         </View>
       </View>
@@ -50,43 +47,45 @@ function createStyles(c: ColorPalette) {
       backgroundColor: c.surfaceElevated,
       borderRadius: BorderRadius.cardXL,
       paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.md,
-      marginBottom: Spacing.sm,
+      paddingVertical: 20,
+      minHeight: 88,
     },
     avatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
       backgroundColor: c.headerButtonMuted,
     },
     avatarFallback: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
       backgroundColor: c.headerButtonMuted,
       alignItems: 'center',
       justifyContent: 'center',
     },
     avatarInitial: withAppFont({
-      fontSize: 20,
+      fontSize: 24,
       fontWeight: '600',
       color: c.textPrimary,
     }),
     meta: {
       flex: 1,
       minWidth: 0,
-      gap: 6,
+      gap: 4,
     },
-    email: withAppFont({
+    name: withAppFont({
       fontSize: 17,
-      fontWeight: '500',
+      fontWeight: '600',
       color: c.textPrimary,
+    }),
+    email: withAppFont({
+      fontSize: 14,
+      color: c.subtext,
     }),
     planBadge: {
       alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 2,
+      marginTop: 6,
       backgroundColor: c.background,
       borderRadius: BorderRadius.full,
       paddingHorizontal: 8,

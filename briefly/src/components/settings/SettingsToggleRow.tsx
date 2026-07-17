@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemedColors } from '@/theme';
-import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
+import { useSettingsSheetLayoutStyles } from '@/components/navigation/layout/screenLayout';
 type SettingsToggleRowProps = {
   title: string;
   value: boolean;
@@ -11,7 +11,7 @@ type SettingsToggleRowProps = {
 };
 export function SettingsToggleRow({ title, value, onValueChange, icon }: SettingsToggleRowProps) {
   const colors = useThemedColors();
-  const sl = useScreenLayoutStyles();
+  const sl = useSettingsSheetLayoutStyles();
   return (
     <View style={sl.settingsRow}>
       {icon ? (

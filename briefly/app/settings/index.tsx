@@ -21,7 +21,6 @@ export default function SettingsScreen() {
   const {
     showLivePreview,
     setShowLivePreview,
-    labels,
     routes,
     storageBusy,
     exportTranscripts,
@@ -37,13 +36,13 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <SettingsProfileCard profile={profile} />
+        <View style={sl.settingsProfileGap} />
 
-        <Text style={sl.sectionLabel}>General</Text>
+        <Text style={[sl.sectionLabel, styles.firstSectionLabel]}>General</Text>
         <View style={sl.card}>
           <SettingsNavigateRow
             title="Preferences"
             icon="options-outline"
-            value={labels.theme}
             showChevron={false}
             onPress={routes.appearance}
           />
@@ -51,7 +50,6 @@ export default function SettingsScreen() {
           <SettingsNavigateRow
             title="Transcription"
             icon="mic-outline"
-            value={labels.transcriptionMode}
             showChevron={false}
             onPress={routes.transcriptionMode}
           />
@@ -59,7 +57,6 @@ export default function SettingsScreen() {
           <SettingsNavigateRow
             title="Summarization"
             icon="sparkles-outline"
-            value={labels.summarizationMode}
             showChevron={false}
             onPress={routes.processingMode}
           />
@@ -74,7 +71,6 @@ export default function SettingsScreen() {
           <SettingsNavigateRow
             title="Library"
             icon="grid-outline"
-            value={labels.folderLayout}
             showChevron={false}
             onPress={routes.folderLayout}
           />
@@ -133,6 +129,9 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
+  },
+  firstSectionLabel: {
+    marginTop: 0,
   },
   versionText: {
     marginTop: 'auto',

@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemedColors } from '@/theme';
-import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
+import { useSettingsSheetLayoutStyles } from '@/components/navigation/layout/screenLayout';
 type SettingsNavigateRowProps = {
   title: string;
   value?: string;
@@ -27,7 +27,7 @@ export function SettingsNavigateRow({
   style,
 }: SettingsNavigateRowProps) {
   const colors = useThemedColors();
-  const sl = useScreenLayoutStyles();
+  const sl = useSettingsSheetLayoutStyles();
   return (
     <TouchableOpacity
       style={[sl.settingsRow, style]}
