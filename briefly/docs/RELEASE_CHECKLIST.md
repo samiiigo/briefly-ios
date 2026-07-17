@@ -4,19 +4,25 @@ Project: Supabase `vcuvfstcobxujjrvqpop` · EAS `a76ad650-f9a8-479c-ad81-a666f58
 
 ## 1. Supabase backend
 
-From `briefly/` (after `supabase login` + `supabase link --project-ref vcuvfstcobxujjrvqpop`):
+Project region: **ca-central-1** (use IPv4 transaction pooler for `db push`).
+
+**Status:** initial migration `20260717000000_initial.sql` has been applied remotely.
+
+From `briefly/`:
 
 ```bash
+# Access token from https://supabase.com/dashboard/account/tokens (starts with sbp_)
+export SUPABASE_ACCESS_TOKEN=sbp_...
+export SUPABASE_DB_PASSWORD='your-db-password'
 export ASSEMBLYAI_API_KEY=...
 export OPENROUTER_SHARED_API_KEY=...
-chmod +x scripts/supabase-deploy.sh
-./scripts/supabase-deploy.sh
+npm run supabase:deploy
 ```
 
-Or step-by-step:
+Or step-by-step (functions + secrets only, if migrations are already applied):
 
 ```bash
-npx supabase db push
+export SUPABASE_ACCESS_TOKEN=sbp_...
 npx supabase functions deploy summarize --project-ref vcuvfstcobxujjrvqpop
 npx supabase functions deploy assemblyai-stream-token --project-ref vcuvfstcobxujjrvqpop
 npx supabase functions deploy transcription-upload-url --project-ref vcuvfstcobxujjrvqpop
