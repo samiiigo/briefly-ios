@@ -2,27 +2,27 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { KeyInsights } from '@/components/features/recording/KeyInsights';
-import { RecordingTitleHero } from '@/components/features/recording/RecordingTitleHero';
-import { RecordingProcessingFlashIcon } from '@/components/features/recording/RecordingProcessingFlashIcon';
-import { SummaryMarkdownSection } from '@/components/features/recording/SummaryMarkdownSection';
-import { RecordingDetailHeader } from '@/components/features/recording/RecordingDetailChrome';
-import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
-import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { usePlaybackBarLayout } from '@/components/navigation/layout/usePlaybackBarLayout';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
-import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
-import { TextInputDialog } from '@/components/ui/TextInputDialog';
-import { builtInFolderName } from '@/constants/builtInFolders';
-import { useRecordingDetail } from '@/hooks/recording/useRecordingDetail';
+import { KeyInsights } from '@/features/recording/components/KeyInsights';
+import { RecordingTitleHero } from '@/features/recording/components/RecordingTitleHero';
+import { RecordingProcessingFlashIcon } from '@/features/recording/components/RecordingProcessingFlashIcon';
+import { SummaryMarkdownSection } from '@/features/recording/components/SummaryMarkdownSection';
+import { RecordingDetailHeader } from '@/features/recording/components/RecordingDetailChrome';
+import { RecordingPlaybackBar } from '@/features/recording/components/RecordingPlaybackBar';
+import { StackScreenHeader } from '@/navigation/header/StackScreenHeader';
+import { usePlaybackBarLayout } from '@/navigation/layout/usePlaybackBarLayout';
+import { useTopChromeLayout } from '@/navigation/layout/useTopChromeLayout';
+import { useScreenLayoutStyles } from '@/navigation/layout/screenLayout';
+import { TextInputDialog } from '@/shared/components/ui/TextInputDialog';
+import { builtInFolderName } from '@/shared/constants/builtInFolders';
+import { useRecordingDetail } from '@/features/recording/hooks/useRecordingDetail';
 import {
   Spacing,
   BorderRadius,
   useCreateStyles,
   useThemedColors,
   withAppFont,
-} from '@/theme';
-import type { ColorPalette } from '@/theme/colorPalettes';
+} from '@/shared/theme';
+import type { ColorPalette } from '@/shared/theme/colorPalettes';
 
 export default function RecordingDetailScreen() {
   const st = useCreateStyles(createRecordingDetailStyles);

@@ -2,18 +2,18 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { RecentsHeader } from '@/components/features/recents/RecentsHeader';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
+import { RecentsHeader } from '@/features/library/components/recents/RecentsHeader';
+import { useTopChromeLayout } from '@/navigation/layout/useTopChromeLayout';
 import {
   RECORD_BUTTON_SIZE,
   useFloatingTabBarLayout,
-} from '@/components/navigation/layout/useFloatingTabBarLayout';
-import { RecentsEntryCard } from '@/components/features/recents/RecentsEntryCard';
-import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
-import { RecordingSectionFlashList } from '@/components/features/recording/RecordingSectionFlashList';
-import { useRecentsScreen } from '@/hooks/library/useRecentsScreen';
-import { useCreateStyles, useThemedColors, Spacing, withAppFont } from '@/theme';
-import type { ColorPalette } from '@/theme/colorPalettes';
+} from '@/navigation/layout/useFloatingTabBarLayout';
+import { RecentsEntryCard } from '@/features/library/components/recents/RecentsEntryCard';
+import { RecordingSwipeableRow } from '@/features/recording/components/RecordingSwipeableRow';
+import { RecordingSectionFlashList } from '@/features/recording/components/RecordingSectionFlashList';
+import { useRecentsScreen } from '@/features/library/hooks/useRecentsScreen';
+import { useCreateStyles, useThemedColors, Spacing, withAppFont } from '@/shared/theme';
+import type { ColorPalette } from '@/shared/theme/colorPalettes';
 
 const LIST_BOTTOM_PADDING = 140;
 

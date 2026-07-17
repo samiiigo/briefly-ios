@@ -1,5 +1,5 @@
 import React from 'react';
-import { SearchScreen } from '@/components/features/search';
+import { SearchScreen } from '@/features/search/components';
 export default function SearchRoute() {
   return <SearchScreen />;
 }

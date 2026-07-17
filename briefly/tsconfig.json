@@ -4,7 +4,14 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*", "./app/*"],
+      "@/*": ["./src/*"],
+      "@app/*": ["./app/*"],
+      "@features/*": ["./src/features/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@navigation/*": ["./src/navigation/*"],
+      "@providers/*": ["./src/providers/*"],
+      "@store/*": ["./src/store/*"],
+      "@api/*": ["./src/api/*"],
       "@root/*": ["./*"]
     }
   },
@@ -12,5 +19,9 @@
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "supabase/functions"
   ]
 }

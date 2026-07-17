@@ -1,0 +1,227 @@
+/**
+ * LiveTranscriptionService
+ *
+ * Live transcription during recording.
+ *
+ *  Cloud mode
+ *  ├── Native build  → NativeAudioCapture (Swift AVAudioEngine)
+ *  │                    + AssemblyAIWebSocketService (JS)
+ *  └── Expo Go       → ExpoAudioStreamingCapture (expo-audio file polling)
+ *                       + AssemblyAIWebSocketService (JS)
+ *
+ *  On-device mode    → BrieflyTranscriber.startOnDeviceLiveTranscription
+ *                       (iOS Speech framework, fully on-device)
+ *
+ * The AssemblyAI WebSocket is always implemented in JavaScript, matching
+ * the reference design from the v3 streaming spec.
+ */
+import { getBrieflyTranscriberModule } from '@root/modules/briefly-transcriber';
+import { getPathInfo } from '@/shared/utils/fileSystem/pathInfo';
+import { normalizeDbMetering } from './audioMetering';
+import { AssemblyAIConfig } from '@/shared/constants/api/assemblyAI';
+import { fetchAssemblyAIStreamToken } from '@/api/assemblyAiProxy';
+import { AudioRecordingResult } from './types';
+import { logger } from '@/shared/utils/logging/logger';
+import type { AssemblyAIConnectionState } from './assemblyAILiveTranscription';
+import { AssemblyAILiveTranscriptionClient } from './assemblyAILiveTranscription';
+import { AssemblyAIWebSocketService } from './assemblyAIWebSocketService';
+import { NativeAudioCapture } from './nativeAudioCapture';
+import { ExpoAudioStreamingCapture } from './expoAudioStreamingCapture';
+import { ensureMicrophonePermission } from '@/features/recording/utils/recordingPermissions';
+import { PlaybackService } from './playbackService';
+import { configureActiveRecordingSession } from './recordingSession';
+import {
+  startRecordingLiveActivity,
+  stopRecordingLiveActivity,
+} from './recordingLiveActivity';
+export interface LiveTranscriptionCallbacks {
+  onPartial: (text: string) => void;
+  onFinal: (text: string) => void;
+  onConnectionState?: (state: AssemblyAIConnectionState, reason?: string) => void;
+  onError?: (message: string) => void;
+}
+type ActivePath =
+  | { kind: 'native-js'; capture: NativeAudioCapture; ws: AssemblyAIWebSocketService }
+  | { kind: 'expo-js'; capture: ExpoAudioStreamingCapture; ws: AssemblyAIWebSocketService }
+  | { kind: 'on-device'; client: AssemblyAILiveTranscriptionClient };
+class LiveTranscriptionServiceClass {
+  private active: ActivePath | null = null;
+  /** True when the native module is present (any live mode possible). */
+  get isSupported(): boolean {
+    return NativeAudioCapture.isSupported || ExpoAudioStreamingCapture.isSupported;
+  }
+  /** True when on-device Swift Speech path is available. */
+  get isOnDeviceSupported(): boolean {
+    return AssemblyAILiveTranscriptionClient.isOnDeviceSupported;
+  }
+  async start(
+    mode: 'cloud' | 'on-device',
+    callbacks: LiveTranscriptionCallbacks,
+  ): Promise<void> {
+    this.stopActive();
+    await ensureMicrophonePermission();
+    await PlaybackService.stop();
+    await configureActiveRecordingSession();
+    if (mode === 'on-device') {
+      // On-device path stays in Swift (iOS Speech framework).
+      const client = new AssemblyAILiveTranscriptionClient({
+        onPartial: callbacks.onPartial,
+        onFinal: callbacks.onFinal,
+        onConnectionState: callbacks.onConnectionState,
+        onError: callbacks.onError,
+      });
+      await client.start({
+        sampleRate: AssemblyAIConfig.streamSampleRate,
+        speechModel: AssemblyAIConfig.streamModel,
+        mode: 'on-device',
+      });
+      this.active = { kind: 'on-device', client };
+      startRecordingLiveActivity();
+      logger.info('AUDIO', 'Live transcription started (on-device)');
+      return;
+    }
+    // Cloud path: AssemblyAI WebSocket in JS, audio from native or expo-audio.
+    const streamToken = await fetchAssemblyAIStreamToken();
+    const ws = new AssemblyAIWebSocketService();
+    ws.connect(
+      streamToken,
+      AssemblyAIConfig.streamSampleRate,
+      AssemblyAIConfig.streamModel,
+      {
+        onPartial: callbacks.onPartial,
+        onFinal: callbacks.onFinal,
+        onState: (state, reason) => {
+          callbacks.onConnectionState?.(state as AssemblyAIConnectionState, reason);
+        },
+        onError: (msg) => {
+          callbacks.onError?.(msg);
+        },
+      },
+      { useToken: true },
+    );
+    if (NativeAudioCapture.isSupported) {
+      const capture = new NativeAudioCapture();
+      await capture.start(
+        AssemblyAIConfig.streamSampleRate,
+        (chunk) => ws.sendPCM(chunk),
+        (msg) => callbacks.onError?.(msg),
+      );
+      this.active = { kind: 'native-js', capture, ws };
+      logger.info('AUDIO', 'Live transcription started (native PCM stream + JS WebSocket)');
+    } else {
+      logger.info(
+        'AUDIO',
+        'Native PCM capture unavailable; using expo-audio file polling (higher latency)',
+      );
+      const capture = new ExpoAudioStreamingCapture();
+      await capture.start(
+        (chunk) => ws.sendPCM(chunk),
+        (msg) => callbacks.onError?.(msg),
+      );
+      this.active = { kind: 'expo-js', capture, ws };
+      logger.info('AUDIO', 'Live transcription started (expo-audio + JS WebSocket)');
+    }
+    startRecordingLiveActivity();
+  }
+  async pause(): Promise<void> {
+    const a = this.active;
+    if (!a) return;
+    if (a.kind === 'on-device') {
+      await a.client.pause();
+    } else if (a.kind === 'native-js') {
+      await a.capture.pause();
+      // Pause the WS by not sending audio; connection stays open.
+    } else {
+      a.capture.pause();
+    }
+    logger.info('AUDIO', 'Live transcription paused');
+  }
+  async resume(): Promise<void> {
+    const a = this.active;
+    if (!a) return;
+    if (a.kind === 'on-device') {
+      await a.client.resume();
+    } else if (a.kind === 'native-js') {
+      await a.capture.resume();
+    } else {
+      await a.capture.resume();
+    }
+    logger.info('AUDIO', 'Live transcription resumed');
+  }
+  getMetering(): number {
+    const a = this.active;
+    if (!a) return 0;
+    if (a.kind === 'native-js') return a.capture.getMetering();
+    if (a.kind === 'expo-js') return a.capture.getMetering();
+    const optionalMetering = getBrieflyTranscriberModule() as {
+      getAudioCaptureMetering?: () => number;
+    } | null;
+    if (optionalMetering && typeof optionalMetering.getAudioCaptureMetering === 'function') {
+      try {
+        const db = optionalMetering.getAudioCaptureMetering();
+        if (typeof db === 'number') return normalizeDbMetering(db);
+      } catch {
+        // optional native API
+      }
+    }
+    return 0;
+  }
+  async stop(): Promise<AudioRecordingResult> {
+    const a = this.active;
+    this.active = null;
+    if (!a) {
+      stopRecordingLiveActivity();
+      return { uri: '', duration: 0, fileSize: 0 };
+    }
+    if (a.kind === 'on-device') {
+      const result = await a.client.stop();
+      const recording = await this.toRecordingResult(result?.uri ?? '', result?.duration ?? 0);
+      stopRecordingLiveActivity(recording.duration);
+      return recording;
+    }
+    // Cloud paths: terminate WebSocket gracefully, then stop audio.
+    try {
+      a.ws.terminate();
+      await new Promise((r) => setTimeout(r, 250)); // let final Turn arrive
+    } catch {
+      // ignore
+    }
+    a.ws.disconnect();
+    const result = a.kind === 'native-js'
+      ? await a.capture.stop()
+      : await a.capture.stop();
+    logger.info('AUDIO', 'Live transcription stopped', {
+      kind: a.kind,
+      uri: result.uri,
+      duration: result.duration,
+    });
+    const recording = await this.toRecordingResult(result.uri, result.duration);
+    stopRecordingLiveActivity(recording.duration);
+    return recording;
+  }
+  private async toRecordingResult(uri: string, duration: number): Promise<AudioRecordingResult> {
+    let fileSize = 0;
+    try {
+      const info = getPathInfo(uri);
+      fileSize = info.exists ? info.size : 0;
+    } catch {
+      // non-critical
+    }
+    return { uri, duration, fileSize };
+  }
+  private stopActive(): void {
+    const a = this.active;
+    this.active = null;
+    stopRecordingLiveActivity();
+    if (!a) return;
+    if (a.kind === 'on-device') {
+      a.client.dispose();
+    } else {
+      a.ws.disconnect();
+      if (a.kind === 'native-js') {
+        a.capture.dispose();
+      }
+    }
+  }
+}
+export const LiveTranscriptionService = new LiveTranscriptionServiceClass();

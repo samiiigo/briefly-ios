@@ -1,42 +1,13 @@
-/** @param {string | undefined} value */
-function normalize(value) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-}
-
-/** @param {...(string | undefined)} values */
-function firstDefined(...values) {
-  for (const value of values) {
-    const normalized = normalize(value);
-    if (normalized) {
-      return normalized;
-    }
-  }
-  return undefined;
-}
-
 /** @param {import('expo/config').ConfigContext} param0 */
 module.exports = ({ config }) => {
   const extra = config.extra ?? {};
 
-  // OWASP: prefer non-public env vars (EAS secrets). EXPO_PUBLIC_* is legacy dev-only.
-  const assemblyAiApiKey =
-    firstDefined(
-      process.env.ASSEMBLYAI_API_KEY,
-      process.env.EXPO_PUBLIC_ASSEMBLYAI_API_KEY,
-      extra.assemblyAiApiKey
-    ) ?? '';
-
-  const openRouterSharedApiKey =
-    firstDefined(
-      process.env.OPENROUTER_SHARED_API_KEY,
-      process.env.EXPO_PUBLIC_OPENROUTER_API_KEY,
-      extra.openRouterSharedApiKey
-    ) ?? '';
-
   const plugins = [...(config.plugins ?? [])];
   if (!plugins.includes('expo-secure-store')) {
     plugins.push('expo-secure-store');
+  }
+  if (!plugins.includes('expo-apple-authentication')) {
+    plugins.push('expo-apple-authentication');
   }
 
   const hasLlamaPlugin = plugins.some(
@@ -59,9 +30,14 @@ module.exports = ({ config }) => {
     plugins,
     extra: {
       ...extra,
-      assemblyAiApiKey,
-      openRouterSharedApiKey,
-      appVariant: process.env.APP_VARIANT ?? 'development',
+      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? extra.supabaseUrl ?? '',
+      supabasePublishableKey:
+        process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
+        extra.supabasePublishableKey ??
+        extra.supabaseAnonKey ??
+        '',
+      appVariant: process.env.APP_VARIANT ?? extra.appVariant ?? 'development',
     },
   };
 };

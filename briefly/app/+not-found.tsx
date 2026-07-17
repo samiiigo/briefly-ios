@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors, Spacing, BorderRadius, withAppFont } from '@/theme';
+import { Colors, Spacing, BorderRadius, withAppFont } from '@/shared/theme';
 export default function NotFoundScreen() {
   const router = useRouter();
   return (

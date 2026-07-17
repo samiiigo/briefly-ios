@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { useStackBack } from '@/components/navigation/layout/useStackBack';
-import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
-import { useSettingsSheetLayoutStyles } from '@/components/navigation/layout/screenLayout';
-import { useThemePreferenceSettings } from '@/hooks/settings/useThemePreferenceSettings';
-import { BorderRadius, useCreateStyles, useThemedColors, withAppFont } from '@/theme';
-import type { ColorPalette } from '@/theme/colorPalettes';
+import { useStackBack } from '@/navigation/layout/useStackBack';
+import { StackScreenHeader } from '@/navigation/header/StackScreenHeader';
+import { useSettingsTopChromeLayout } from '@/navigation/layout/useSettingsTopChromeLayout';
+import { useSettingsSheetLayoutStyles } from '@/navigation/layout/screenLayout';
+import { useThemePreferenceSettings } from '@/features/settings/hooks/useThemePreferenceSettings';
+import { BorderRadius, useCreateStyles, useThemedColors, withAppFont } from '@/shared/theme';
+import type { ColorPalette } from '@/shared/theme/colorPalettes';
 
 export default function ThemePickerScreen() {
   const goBack = useStackBack('/settings');

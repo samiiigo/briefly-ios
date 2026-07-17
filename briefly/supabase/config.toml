@@ -1,0 +1,20 @@
+[project]
+id = "briefly"
+name = "briefly"
+
+[api]
+enabled = true
+
+[db]
+major_version = 15
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "briefly://auth/callback"
+additional_redirect_urls = ["briefly://auth/callback"]
+
+[functions]
+verify_jwt = true

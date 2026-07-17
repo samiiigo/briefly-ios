@@ -1,15 +1,15 @@
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { useStackBack } from '@/components/navigation/layout/useStackBack';
-import { ModePickerOption } from '@/components/navigation/header/ModePickerOption';
-import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
+import { useStackBack } from '@/navigation/layout/useStackBack';
+import { ModePickerOption } from '@/navigation/header/ModePickerOption';
+import { StackScreenHeader } from '@/navigation/header/StackScreenHeader';
+import { useSettingsTopChromeLayout } from '@/navigation/layout/useSettingsTopChromeLayout';
 import {
   useModePickerStyles,
   useSettingsSheetLayoutStyles,
-} from '@/components/navigation/layout/screenLayout';
-import { useFolderLayoutSettings } from '@/hooks/library/useFolderLayoutSettings';
-import { useThemedColors } from '@/theme';
+} from '@/navigation/layout/screenLayout';
+import { useFolderLayoutSettings } from '@/features/library/hooks/useFolderLayoutSettings';
+import { useThemedColors } from '@/shared/theme';
 
 export default function FolderLayoutPickerScreen() {
   const goBack = useStackBack('/settings');

@@ -9,25 +9,25 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useStackBack } from '@/components/navigation/layout/useStackBack';
-import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
+import { useStackBack } from '@/navigation/layout/useStackBack';
+import { StackScreenHeader } from '@/navigation/header/StackScreenHeader';
+import { useSettingsTopChromeLayout } from '@/navigation/layout/useSettingsTopChromeLayout';
 import {
   useModePickerStyles,
   useSettingsSheetLayoutStyles,
-} from '@/components/navigation/layout/screenLayout';
-import { processingModeDescription, processingModeTitle } from '@/utils/processing/processingMode';
-import { Colors, useThemedColors, withAppFont } from '@/theme';
+} from '@/navigation/layout/screenLayout';
+import { processingModeDescription, processingModeTitle } from '@/features/processing/utils/processingMode';
+import { Colors, useThemedColors, withAppFont } from '@/shared/theme';
 import {
   LOCAL_LLM_NATIVE_FALLBACK_HINT,
   LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE,
-} from '@/services/summarization';
-import { NATIVE_BUILD_REQUIRED_HINT } from '@/utils/platformCapabilities';
-import { ModePickerOption } from '@/components/navigation/header/ModePickerOption';
+} from '@/features/processing/summarization';
+import { NATIVE_BUILD_REQUIRED_HINT } from '@/shared/utils/platformCapabilities';
+import { ModePickerOption } from '@/navigation/header/ModePickerOption';
 import {
   PROCESSING_MODE_OPTIONS,
   useProcessingModeSettings,
-} from '@/hooks/settings/useProcessingModeSettings';
+} from '@/features/settings/hooks/useProcessingModeSettings';
 
 export default function ProcessingModePickerScreen() {
   const goBack = useStackBack('/settings');
