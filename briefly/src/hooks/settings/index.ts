@@ -4,6 +4,7 @@ export * from './useCloudApiKeySettings';
 export * from './useLocalLlmModelSettings';
 export * from './useProcessingModeSettings';
 export * from './useSettingsHub';
+export * from './useSettingsProfile';
 export * from './useThemePreferenceSettings';
 export * from './useTranscriptBackup';
 export * from './useTranscriptionModeSettings';

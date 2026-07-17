@@ -4,6 +4,7 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useResolvedColorScheme, useThemedColors } from '@/theme';
+import { useChromeFadeColor } from './ChromeFadeColor';
 type Edge = 'top' | 'bottom';
 type GradientStops = {
   colors: readonly [string, string, ...string[]];
@@ -70,6 +71,22 @@ function lightEdgeFade(background: string): GradientStops {
     locations: [0, 1],
   };
 }
+/** Remap dark fade stops onto a custom sheet color (e.g. settings grey). */
+function tintedDarkFade(
+  template: GradientStops,
+  hex: string,
+): GradientStops {
+  return {
+    colors: template.colors.map((stop) => {
+      if (stop === 'transparent') return 'transparent';
+      if (stop.startsWith('#')) return hex;
+      const match = stop.match(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)/);
+      if (match) return withBackgroundAlpha(hex, Number(match[1]));
+      return stop;
+    }) as unknown as GradientStops['colors'],
+    locations: template.locations,
+  };
+}
 interface EdgeBlurFadeProps {
   edge: Edge;
   height: number;
@@ -77,31 +94,28 @@ interface EdgeBlurFadeProps {
 }
 export function EdgeBlurFade({ edge, height, style }: EdgeBlurFadeProps) {
   const colors = useThemedColors();
+  const fadeColorOverride = useChromeFadeColor();
   const resolvedScheme = useResolvedColorScheme();
   const isLight = resolvedScheme === 'light';
   const positionStyle = edge === 'bottom' ? styles.bottom : styles.top;
   const flipForTop = edge === 'top';
-  const fadeMask = useMemo(
-    () =>
-      isLight
-        ? flipForTop
-          ? LIGHT_TOP_FADE_MASK
-          : LIGHT_FADE_MASK
-        : flipForTop
-          ? DARK_TOP_FADE_MASK
-          : DARK_FADE_MASK,
-    [flipForTop, isLight],
+  const fadeMask = useMemo(() => {
+    if (isLight) return flipForTop ? LIGHT_TOP_FADE_MASK : LIGHT_FADE_MASK;
+    const template = flipForTop ? DARK_TOP_FADE_MASK : DARK_FADE_MASK;
+    return fadeColorOverride ? tintedDarkFade(template, fadeColorOverride) : template;
+  }, [fadeColorOverride, flipForTop, isLight]);
+  const fadeTint = useMemo(() => {
+    const template = flipForTop ? DARK_TOP_FADE_TINT : DARK_FADE_TINT;
+    return fadeColorOverride ? tintedDarkFade(template, fadeColorOverride) : template;
+  }, [fadeColorOverride, flipForTop]);
+  const fadeAndroid = useMemo(() => {
+    const template = flipForTop ? DARK_TOP_FADE_ANDROID : DARK_FADE_ANDROID;
+    return fadeColorOverride ? tintedDarkFade(template, fadeColorOverride) : template;
+  }, [fadeColorOverride, flipForTop]);
+  const lightFade = useMemo(
+    () => lightEdgeFade(fadeColorOverride ?? colors.background),
+    [colors.background, fadeColorOverride],
   );
-  const fadeTint = useMemo(
-    () => (flipForTop ? DARK_TOP_FADE_TINT : DARK_FADE_TINT),
-    [flipForTop],
-  );
-  const fadeAndroid = useMemo(
-    () =>
-      flipForTop ? DARK_TOP_FADE_ANDROID : DARK_FADE_ANDROID,
-    [flipForTop],
-  );
-  const lightFade = useMemo(() => lightEdgeFade(colors.background), [colors.background]);
   const blurIntensity = flipForTop ? 100 : 90;
   const useIosBlur = Platform.OS === 'ios';
   return (

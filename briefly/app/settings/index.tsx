@@ -1,29 +1,26 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Switch,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useStackBack } from '@/components/navigation/layout/useStackBack';
 import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
-import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
-import { useThemedColors, Spacing } from '@/theme';
+import { CircularIconButton } from '@/components/ui/CircularIconButton';
+import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
+import { useSettingsSheetLayoutStyles } from '@/components/navigation/layout/screenLayout';
+import { SettingsNavigateRow } from '@/components/settings/SettingsNavigateRow';
+import { SettingsToggleRow } from '@/components/settings/SettingsToggleRow';
+import { SettingsProfileCard } from '@/components/settings/SettingsProfileCard';
+import { Spacing, useThemedColors } from '@/theme';
 import { useSettingsHub } from '@/hooks/settings/useSettingsHub';
+import { useSettingsProfile } from '@/hooks/settings/useSettingsProfile';
 
 export default function SettingsScreen() {
   const goBack = useStackBack('/(tabs)');
-  const { scrollPaddingTop } = useTopChromeLayout();
+  const { scrollPaddingTop } = useSettingsTopChromeLayout();
   const colors = useThemedColors();
-  const sl = useScreenLayoutStyles();
+  const sl = useSettingsSheetLayoutStyles();
+  const { profile } = useSettingsProfile();
   const {
     showLivePreview,
     setShowLivePreview,
-    labels,
     routes,
     storageBusy,
     exportTranscripts,
@@ -38,122 +35,105 @@ export default function SettingsScreen() {
         contentContainerStyle={[sl.scrollContent, styles.content, { paddingTop: scrollPaddingTop }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[sl.sectionLabel, styles.firstSectionLabel]}>Transcription</Text>
+        <View style={styles.profileCard}>
+          <SettingsProfileCard profile={profile} />
+        </View>
+        <View style={sl.settingsProfileGap} />
+
+        <Text style={[sl.sectionLabel, styles.firstSectionLabel]}>General</Text>
         <View style={sl.card}>
-          <TouchableOpacity style={sl.settingsRow} onPress={routes.transcriptionMode}>
-            <Ionicons
-              name="mic-outline"
-              size={20}
-              color={colors.textPrimary}
-              style={sl.settingsRowIcon}
-            />
-            <Text style={sl.settingsRowTitle}>Transcription mode</Text>
-            <Text style={sl.settingsRowValue}>{labels.transcriptionMode}</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
+          <SettingsNavigateRow
+            title="Preferences"
+            icon="options-outline"
+            showChevron={false}
+            onPress={routes.appearance}
+          />
           <View style={sl.cardDivider} />
-          <View style={sl.settingsRow}>
-            <Ionicons
-              name="eye-outline"
-              size={20}
-              color={colors.textPrimary}
-              style={sl.settingsRowIcon}
-            />
-            <Text style={sl.settingsRowTitle}>Show live preview</Text>
-            <Switch
-              value={showLivePreview}
-              onValueChange={setShowLivePreview}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
+          <SettingsNavigateRow
+            title="Transcription"
+            icon="mic-outline"
+            showChevron={false}
+            onPress={routes.transcriptionMode}
+          />
+          <View style={sl.cardDivider} />
+          <SettingsNavigateRow
+            title="Summarization"
+            icon="sparkles-outline"
+            showChevron={false}
+            onPress={routes.processingMode}
+          />
+          <View style={sl.cardDivider} />
+          <SettingsToggleRow
+            title="Show live preview"
+            icon="eye-outline"
+            value={showLivePreview}
+            onValueChange={setShowLivePreview}
+          />
+          <View style={sl.cardDivider} />
+          <SettingsNavigateRow
+            title="Library"
+            icon="grid-outline"
+            showChevron={false}
+            onPress={routes.folderLayout}
+          />
         </View>
-        <Text style={sl.sectionLabel}>Summarization</Text>
-        <View style={sl.card}>
-          <TouchableOpacity style={sl.settingsRow} onPress={routes.processingMode}>
-            <Ionicons
-              name="sparkles-outline"
-              size={20}
-              color={colors.textPrimary}
-              style={sl.settingsRowIcon}
-            />
-            <Text style={sl.settingsRowTitle}>Summarization mode</Text>
-            <Text style={sl.settingsRowValue}>{labels.summarizationMode}</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
+
         <Text style={sl.sectionLabel}>Storage</Text>
         <View style={sl.card}>
-          <TouchableOpacity
-            style={sl.settingsRow}
+          <SettingsNavigateRow
+            title="Export all transcripts"
+            icon="cloud-upload-outline"
+            showChevron={false}
             disabled={storageBusy}
             onPress={exportTranscripts}
-          >
-            <Ionicons
-              name="cloud-upload-outline"
-              size={20}
-              color={colors.textPrimary}
-              style={sl.settingsRowIcon}
-            />
-            <Text style={sl.settingsRowTitle}>Export all transcripts</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
+          />
           <View style={sl.cardDivider} />
-          <TouchableOpacity
-            style={sl.settingsRow}
+          <SettingsNavigateRow
+            title="Import transcripts or audio"
+            icon="cloud-download-outline"
+            showChevron={false}
             disabled={storageBusy}
             onPress={importTranscripts}
-          >
-            <Ionicons
-              name="cloud-download-outline"
-              size={20}
-              color={colors.textPrimary}
-              style={sl.settingsRowIcon}
-            />
-            <Text style={sl.settingsRowTitle}>Import transcripts or audio</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <View style={sl.cardDivider} />
+          />
+        </View>
+
+        <View style={sl.settingsActionCard}>
           <TouchableOpacity
-            style={sl.settingsRow}
+            style={sl.settingsActionButton}
             disabled={storageBusy}
             onPress={confirmAndClearCache}
+            accessibilityRole="button"
+            accessibilityLabel="Clear cache"
           >
-            <Ionicons name="trash-outline" size={20} color={colors.red} style={sl.settingsRowIcon} />
-            <Text style={[sl.settingsRowTitle, sl.settingsRowTitleDanger]}>Clear cache</Text>
+            <Text style={sl.settingsActionLabel}>Clear cache</Text>
           </TouchableOpacity>
         </View>
-        <Text style={sl.sectionLabel}>Library</Text>
-        <View style={sl.card}>
-          <TouchableOpacity style={sl.settingsRow} onPress={routes.folderLayout}>
-            <Ionicons
-              name="grid-outline"
-              size={20}
-              color={colors.textPrimary}
-              style={sl.settingsRowIcon}
-            />
-            <Text style={sl.settingsRowTitle}>Folder layout</Text>
-            <Text style={sl.settingsRowValue}>{labels.folderLayout}</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-        <Text style={sl.sectionLabel}>Preferences</Text>
-        <View style={sl.card}>
-          <TouchableOpacity style={sl.settingsRow} onPress={routes.appearance}>
-            <Text style={sl.settingsRowTitle}>Theme</Text>
-            <Text style={sl.settingsRowValue}>{labels.theme}</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
+
         <Text style={[sl.versionText, styles.versionText]}>{appVersionLabel}</Text>
       </ScrollView>
-      <StackScreenHeader title="Settings" showBack onBack={goBack} />
+      <StackScreenHeader
+        title="Settings"
+        centerTitle
+        titleSize="nav"
+        trailing={
+          <CircularIconButton
+            icon="close"
+            accessibilityLabel="Close"
+            onPress={goBack}
+            style={{ backgroundColor: colors.surfaceElevated }}
+          />
+        }
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    flex: 1,
+    flexGrow: 1,
+  },
+  profileCard: {
+    marginTop: Spacing.md,
   },
   firstSectionLabel: {
     marginTop: 0,
@@ -161,5 +141,6 @@ const styles = StyleSheet.create({
   versionText: {
     marginTop: 'auto',
     paddingTop: Spacing.xl,
+    paddingBottom: 0,
   },
 });

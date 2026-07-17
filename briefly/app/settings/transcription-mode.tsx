@@ -3,18 +3,20 @@ import { View, Text, ScrollView } from 'react-native';
 import { useStackBack } from '@/components/navigation/layout/useStackBack';
 import { ModePickerOption } from '@/components/navigation/header/ModePickerOption';
 import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
+import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
 import {
   useModePickerStyles,
-  useScreenLayoutStyles,
+  useSettingsSheetLayoutStyles,
 } from '@/components/navigation/layout/screenLayout';
 import { NATIVE_BUILD_REQUIRED_HINT } from '@/utils/platformCapabilities';
 import { useTranscriptionModeSettings } from '@/hooks/settings/useTranscriptionModeSettings';
+import { useThemedColors } from '@/theme';
 
 export default function TranscriptionModePickerScreen() {
   const goBack = useStackBack('/settings');
-  const { scrollPaddingTop } = useTopChromeLayout();
-  const sl = useScreenLayoutStyles();
+  const { scrollPaddingTop } = useSettingsTopChromeLayout();
+  const colors = useThemedColors();
+  const sl = useSettingsSheetLayoutStyles();
   const mp = useModePickerStyles();
   const { options, selectMode } = useTranscriptionModeSettings();
 
@@ -24,10 +26,7 @@ export default function TranscriptionModePickerScreen() {
         contentContainerStyle={[sl.scrollContent, { paddingTop: scrollPaddingTop }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={sl.sectionDescription}>
-          Choose where Briefly transcribes and summarizes after you stop recording. Live preview
-          while recording is optional and does not change this.
-        </Text>
+        <Text style={sl.sectionLabel}>Transcription mode</Text>
         <View style={sl.card}>
           {options.map((option, index) => (
             <React.Fragment key={option.mode}>
@@ -43,8 +42,20 @@ export default function TranscriptionModePickerScreen() {
             </React.Fragment>
           ))}
         </View>
+        <Text style={sl.sectionDescription}>
+          Choose where Briefly transcribes after you stop recording. Live preview is configured
+          separately.
+        </Text>
       </ScrollView>
-      <StackScreenHeader title="Transcription" showBack onBack={goBack} />
+      <StackScreenHeader
+        title="Transcription"
+        showBack
+        onBack={goBack}
+        leadingIcon="chevron-back"
+        centerTitle
+        titleSize="nav"
+        buttonStyle={{ backgroundColor: colors.surfaceElevated }}
+      />
     </View>
   );
 }

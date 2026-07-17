@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemedColors } from '@/theme';
-import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
+import { useSettingsSheetLayoutStyles } from '@/components/navigation/layout/screenLayout';
 type SettingsNavigateRowProps = {
   title: string;
   value?: string;
@@ -11,6 +11,8 @@ type SettingsNavigateRowProps = {
   onPress: () => void;
   disabled?: boolean;
   danger?: boolean;
+  /** Defaults to true. Set false for Beeper-style icon+label rows. */
+  showChevron?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 export function SettingsNavigateRow({
@@ -21,10 +23,11 @@ export function SettingsNavigateRow({
   onPress,
   disabled,
   danger,
+  showChevron = true,
   style,
 }: SettingsNavigateRowProps) {
   const colors = useThemedColors();
-  const sl = useScreenLayoutStyles();
+  const sl = useSettingsSheetLayoutStyles();
   return (
     <TouchableOpacity
       style={[sl.settingsRow, style]}
@@ -34,14 +37,16 @@ export function SettingsNavigateRow({
       {icon ? (
         <Ionicons
           name={icon}
-          size={20}
+          size={22}
           color={iconColor ?? colors.textPrimary}
           style={sl.settingsRowIcon}
         />
       ) : null}
       <Text style={[sl.settingsRowTitle, danger && sl.settingsRowTitleDanger]}>{title}</Text>
       {value ? <Text style={sl.settingsRowValue}>{value}</Text> : null}
-      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+      {showChevron ? (
+        <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+      ) : null}
     </TouchableOpacity>
   );
 }

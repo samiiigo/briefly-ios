@@ -2,6 +2,7 @@ export * from './bottomBlurRoutes';
 export * from './BottomChromeOverlay';
 export * from './chromeBlur';
 export * from './ChromeBlurFade';
+export * from './ChromeFadeColor';
 export * from './ChromeOverlay';
 export * from './EdgeBlurFade';
 export * from './NavigatorBottomBlur';

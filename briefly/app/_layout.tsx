@@ -54,7 +54,15 @@ function RootLayoutContent() {
           <Stack screenOptions={stackScreenOptions}>
             <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
             <Stack.Screen name="search" options={{ animation: 'fade' }} />
-            <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen
+              name="settings"
+              options={{
+                presentation: 'pageSheet',
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+                contentStyle: { backgroundColor: colors.surface },
+              }}
+            />
           </Stack>
           <NavigatorBottomBlur scope="root" />
           <LibraryFabChromeOverlay />

@@ -4,11 +4,13 @@ import { useCreateStyles } from '@/theme/createStyles';
 import type { ColorPalette } from '@/theme/colorPalettes';
 /** Bottom inset so list content clears the floating tab bar. */
 export const SCREEN_LIST_BOTTOM_PADDING = 140;
-function createScreenLayoutStyles(colors: ColorPalette) {
+function createScreenLayoutStyles(colors: ColorPalette, sheet = false) {
+  const pageBg = sheet ? colors.surface : colors.background;
+  const cardBg = sheet ? colors.surfaceElevated : colors.card;
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: pageBg,
     },
     headerOverlay: {
       position: 'absolute',
@@ -23,11 +25,11 @@ function createScreenLayoutStyles(colors: ColorPalette) {
       paddingBottom: SCREEN_LIST_BOTTOM_PADDING,
     },
     sectionLabel: withAppFont({
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '500',
       lineHeight: 16,
       color: colors.subtext,
-      paddingHorizontal: Spacing.sm,
+      paddingHorizontal: Spacing.md,
       marginTop: Spacing.lg,
       marginBottom: Spacing.sm,
     }),
@@ -36,16 +38,17 @@ function createScreenLayoutStyles(colors: ColorPalette) {
       lineHeight: 22,
       color: colors.subtext,
       paddingHorizontal: Spacing.sm,
+      marginTop: sheet ? Spacing.sm : 0,
       marginBottom: Spacing.md,
     }),
     card: {
-      backgroundColor: colors.card,
+      backgroundColor: cardBg,
       borderRadius: BorderRadius.cardXL,
       overflow: 'hidden',
     },
     cardDivider: {
       height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.border,
+      backgroundColor: sheet ? colors.textTertiary : colors.border,
       marginLeft: Spacing.md + 24 + Spacing.md,
     },
     settingsRow: {
@@ -53,7 +56,8 @@ function createScreenLayoutStyles(colors: ColorPalette) {
       alignItems: 'center',
       paddingHorizontal: Spacing.md,
       paddingVertical: 14,
-      gap: Spacing.md,
+      gap: 14,
+      minHeight: 50,
     },
     settingsRowIcon: {
       width: 24,
@@ -72,6 +76,27 @@ function createScreenLayoutStyles(colors: ColorPalette) {
       color: colors.subtext,
       marginRight: 4,
     }),
+    settingsActionCard: {
+      backgroundColor: cardBg,
+      borderRadius: BorderRadius.cardXL,
+      overflow: 'hidden',
+      marginTop: Spacing.lg,
+    },
+    settingsActionButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 16,
+      paddingHorizontal: Spacing.md,
+      minHeight: 52,
+    },
+    settingsActionLabel: withAppFont({
+      fontSize: 17,
+      fontWeight: '500',
+      color: colors.red,
+    }),
+    settingsProfileGap: {
+      height: Spacing.md,
+    },
     listSectionHeader: withAppFont({
       fontSize: 14,
       fontWeight: '500',
@@ -86,7 +111,7 @@ function createScreenLayoutStyles(colors: ColorPalette) {
       height: 8,
     },
     versionText: withAppFont({
-      fontSize: 12,
+      fontSize: 13,
       color: colors.subtext,
       textAlign: 'center',
       paddingVertical: Spacing.md,
@@ -163,6 +188,13 @@ function createModePickerStyles(colors: ColorPalette) {
 export function useScreenLayoutStyles() {
   return useCreateStyles(createScreenLayoutStyles);
 }
+/** Grey sheet surface + elevated cards (settings modal). */
+export function useSettingsSheetLayoutStyles() {
+  return useCreateStyles(createSettingsSheetLayoutStyles);
+}
 export function useModePickerStyles() {
   return useCreateStyles(createModePickerStyles);
+}
+function createSettingsSheetLayoutStyles(colors: ColorPalette) {
+  return createScreenLayoutStyles(colors, true);
 }

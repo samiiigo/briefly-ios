@@ -3,17 +3,19 @@ import { View, Text, ScrollView } from 'react-native';
 import { useStackBack } from '@/components/navigation/layout/useStackBack';
 import { ModePickerOption } from '@/components/navigation/header/ModePickerOption';
 import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
+import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
 import {
   useModePickerStyles,
-  useScreenLayoutStyles,
+  useSettingsSheetLayoutStyles,
 } from '@/components/navigation/layout/screenLayout';
 import { useFolderLayoutSettings } from '@/hooks/library/useFolderLayoutSettings';
+import { useThemedColors } from '@/theme';
 
 export default function FolderLayoutPickerScreen() {
   const goBack = useStackBack('/settings');
-  const { scrollPaddingTop } = useTopChromeLayout();
-  const sl = useScreenLayoutStyles();
+  const { scrollPaddingTop } = useSettingsTopChromeLayout();
+  const colors = useThemedColors();
+  const sl = useSettingsSheetLayoutStyles();
   const mp = useModePickerStyles();
   const { options, selectLayout } = useFolderLayoutSettings();
 
@@ -23,9 +25,7 @@ export default function FolderLayoutPickerScreen() {
         contentContainerStyle={[sl.scrollContent, { paddingTop: scrollPaddingTop }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={sl.sectionDescription}>
-          Choose how folders appear in your library. This applies everywhere folders are shown.
-        </Text>
+        <Text style={sl.sectionLabel}>Library layout</Text>
         <View style={sl.card}>
           {options.map((option, index) => (
             <React.Fragment key={option.mode}>
@@ -39,8 +39,19 @@ export default function FolderLayoutPickerScreen() {
             </React.Fragment>
           ))}
         </View>
+        <Text style={sl.sectionDescription}>
+          Choose how folders appear throughout your library.
+        </Text>
       </ScrollView>
-      <StackScreenHeader title="Folder layout" showBack onBack={goBack} />
+      <StackScreenHeader
+        title="Folder layout"
+        showBack
+        onBack={goBack}
+        leadingIcon="chevron-back"
+        centerTitle
+        titleSize="nav"
+        buttonStyle={{ backgroundColor: colors.surfaceElevated }}
+      />
     </View>
   );
 }
