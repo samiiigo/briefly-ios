@@ -21,7 +21,7 @@
     "submit:prod:android": "eas submit --profile production --platform android --latest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src app --ext .ts,.tsx",
-    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "test": "node ./scripts/run-tests.mjs",
     "audit:ci": "npm audit --audit-level=high",
     "verify": "npm run typecheck && npm test && npm run audit:ci",
     "preinstall": "node ./scripts/prepare-llama-windows-install.js",
