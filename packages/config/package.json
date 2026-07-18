@@ -1,0 +1,25 @@
+{
+  "name": "@briefly/config",
+  "private": true,
+  "version": "0.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api/*": "./src/api/*.ts",
+    "./api/assemblyAI": "./src/api/assemblyAI.ts",
+    "./api/openRouter": "./src/api/openRouter.ts",
+    "./api/openRouterModel": "./src/api/openRouterModel.ts",
+    "./api/openai": "./src/api/openai.ts",
+    "./api/gemini": "./src/api/gemini.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "tsx": "^4.21.0",
+    "typescript": "~5.9.2"
+  }
+}

@@ -1,0 +1,61 @@
+import { TranscriptSegment, KeyInsight, ProcessingMode } from '@briefly/types';
+import { StoreBackedSummarizationModeReader } from '@/features/processing/summarization/summarizationModeReader';
+import {
+  createSummarizationProvider,
+  configureSummarizationProviderFactory,
+  resetSummarizationProviderFactory,
+} from './summarizationProviderFactory';
+import { logger } from '@/lib/utils/logging/logger';
+import {
+  assertLocalLlmReadyForSummarization,
+  isOnDeviceSummarizationMode,
+} from './local/localLlmAvailability';
+// Re-export for external consumers
+export type { SummarizationResult, SummarizationProvider } from './summarizationProvider';
+export const SummarizationService = {
+  /**
+   * Resolves the active summarization mode from Settings when `modeOverride` is omitted,
+   * so re-runs use the user's current choice instead of the mode stored on the recording.
+   */
+  async summarize(
+    segments: TranscriptSegment[],
+    modeOverride?: ProcessingMode,
+  ): Promise<{ summary: string; keyInsights: KeyInsight[]; mainEmoji?: string; title?: string }> {
+    const mode = modeOverride ?? new StoreBackedSummarizationModeReader().getSummarizationMode();
+    logger.info('SUMMARY', 'Summarization requested', {
+      mode,
+      modeOverride: modeOverride ?? null,
+      segmentCount: segments.length,
+    });
+    if (isOnDeviceSummarizationMode(mode)) {
+      assertLocalLlmReadyForSummarization();
+    }
+    const provider = createSummarizationProvider(mode);
+    return provider.summarize(segments);
+  },
+};
+export {
+  createSummarizationProvider,
+  configureSummarizationProviderFactory,
+  resetSummarizationProviderFactory,
+};
+export {
+  ensureLocalGemmaModelDownloaded,
+  isLocalGemmaModelDownloaded,
+  getLocalGemmaModelPath,
+  cancelLocalGemmaModelDownload,
+  deleteLocalGemmaModel,
+} from './local/gemmaModelDownload';
+export type { ModelDownloadProgress } from './local/gemmaModelDownload';
+export { LocalLlamaError, isLocalLlamaError } from './local/localLlamaErrors';
+export {
+  refreshLocalLlmModelStateFromDisk,
+  getLocalLlmSummarizationBlocker,
+  evaluateLocalLlmAvailability,
+  isOnDeviceSummarizationMode,
+  LOCAL_LLM_DOWNLOAD_IN_PROGRESS_MESSAGE,
+  LOCAL_LLM_MODEL_NOT_READY_MESSAGE,
+  LOCAL_LLM_UNSUPPORTED_BUILD_MESSAGE,
+} from './local/localLlmAvailability';
+export { LOCAL_LLM_NATIVE_FALLBACK_HINT } from './local/localLlmMessages';
+export type { LocalLlmAvailability, LocalLlmBlockReason } from './local/localLlmAvailability';

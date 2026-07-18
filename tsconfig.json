@@ -1,4 +1,18 @@
 {
   "files": [],
-  "references": [{ "path": "./briefly" }]
+  "references": [
+    { "path": "./apps/mobile" },
+    { "path": "./apps/web" },
+    { "path": "./apps/website" },
+    { "path": "./packages/types" },
+    { "path": "./packages/utils" },
+    { "path": "./packages/validation" },
+    { "path": "./packages/env" },
+    { "path": "./packages/config" },
+    { "path": "./packages/theme" },
+    { "path": "./packages/api" },
+    { "path": "./packages/auth" },
+    { "path": "./packages/assets" },
+    { "path": "./packages/ui" }
+  ]
 }

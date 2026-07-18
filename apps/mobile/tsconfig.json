@@ -1,0 +1,42 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@app/*": ["./app/*"],
+      "@features/*": ["./src/features/*"],
+      "@core/*": ["./src/core/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@navigation/*": ["./src/navigation/*"],
+      "@providers/*": ["./src/providers/*"],
+      "@store/*": ["./src/store/*"],
+      "@api/*": ["./src/api/*"],
+      "@config/*": ["./src/config/*"],
+      "@root/*": ["./*"],
+      "@briefly/types": ["../../packages/types/src"],
+      "@briefly/types/*": ["../../packages/types/src/*"],
+      "@briefly/validation": ["../../packages/validation/src"],
+      "@briefly/validation/*": ["../../packages/validation/src/*"],
+      "@briefly/theme": ["../../packages/theme/src"],
+      "@briefly/theme/*": ["../../packages/theme/src/*"],
+      "@briefly/env": ["../../packages/env/src"],
+      "@briefly/env/*": ["../../packages/env/src/*"],
+      "@briefly/config": ["../../packages/config/src"],
+      "@briefly/config/*": ["../../packages/config/src/*"],
+      "@briefly/api": ["../../packages/api/src"],
+      "@briefly/api/*": ["../../packages/api/src/*"],
+      "@briefly/auth": ["../../packages/auth/src"],
+      "@briefly/auth/*": ["../../packages/auth/src/*"],
+      "@briefly/assets": ["../../packages/assets/src"],
+      "@briefly/assets/*": ["../../packages/assets/src/*"],
+      "@briefly/ui": ["../../packages/ui/src"],
+      "@briefly/ui/*": ["../../packages/ui/src/*"],
+      "@briefly/utils": ["../../packages/utils/src"],
+      "@briefly/utils/*": ["../../packages/utils/src/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.d.ts"],
+  "exclude": ["node_modules", "supabase/functions"]
+}
