@@ -1,0 +1,17 @@
+{
+  "name": "@briefly/backend",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node -e \"console.log('Backend scaffold only — no runtime yet')\"",
+    "build": "node -e \"console.log('Backend scaffold only — no build yet')\"",
+    "lint": "node -e \"console.log('no lint yet')\"",
+    "typecheck": "node -e \"console.log('no typecheck yet')\"",
+    "test": "node -e \"console.log('no tests yet')\""
+  },
+  "dependencies": {
+    "@briefly/types": "workspace:*",
+    "@briefly/validation": "workspace:*",
+    "@briefly/utils": "workspace:*"
+  }
+}

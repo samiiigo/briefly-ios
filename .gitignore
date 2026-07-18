@@ -5,17 +5,18 @@ node_modules/
 .env
 .env*.local
 
-briefly/.env
-!briefly/.env.example
+apps/mobile/.env
+!apps/mobile/.env.example
 google-service-account.json
-briefly/play-store-service-account.json
+apps/mobile/play-store-service-account.json
 play-store-service-account.json
-briefly/credentials/*
-!briefly/credentials/README.md
-briefly/.supabase/
+apps/mobile/credentials/*
+!apps/mobile/credentials/README.md
+apps/mobile/.supabase/
 supabase/.temp/
-briefly/supabase/.temp/
-briefly/.npmrc
+apps/mobile/supabase/.temp/
+apps/mobile/.npmrc
+**/.npmrc.local
 
 # Expo
 .expo/
@@ -26,10 +27,16 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
+# Turborepo / Next
+.turbo/
+.next/
+out/
+
 # Node
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+pnpm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
@@ -39,7 +46,6 @@ yarn-error.*
 
 # IDE & local tooling
 .idea/
-.vscode/
 .claude/settings.local.json
 
 # Xcode / iOS
@@ -59,10 +65,10 @@ playground.xcworkspace
 *.key
 *.mobileprovision
 .kotlin/
-briefly/ios/
+apps/mobile/ios/
 
 # Android
-briefly/android
+apps/mobile/android
 *.iml
 *.hprof
 *.jsbundle
@@ -78,3 +84,6 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Legacy path (pre-monorepo)
+briefly/

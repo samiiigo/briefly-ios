@@ -1,0 +1,21 @@
+node_modules
+dist
+.next
+.expo
+.turbo
+coverage
+pnpm-lock.yaml
+apps/mobile/ios
+apps/mobile/android
+apps/mobile/modules
+apps/mobile/src
+apps/mobile/app
+apps/mobile/supabase
+apps/mobile/scripts
+apps/mobile/docs
+apps/mobile/credentials
+apps/mobile/public
+apps/mobile/app.json
+apps/mobile/babel.config.js
+**/package-lock.json
+# Legacy mobile sources keep existing formatting; new code uses Prettier.

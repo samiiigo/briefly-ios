@@ -1,4 +1,18 @@
 {
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false
+  },
   "files": [],
-  "references": [{ "path": "./briefly" }]
+  "references": [
+    { "path": "./apps/mobile" },
+    { "path": "./apps/web" },
+    { "path": "./apps/website" },
+    { "path": "./packages/types" },
+    { "path": "./packages/constants" },
+    { "path": "./packages/utils" },
+    { "path": "./packages/validation" },
+    { "path": "./packages/theme" },
+    { "path": "./packages/hooks" }
+  ]
 }
