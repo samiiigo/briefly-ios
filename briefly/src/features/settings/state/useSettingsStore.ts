@@ -163,6 +163,7 @@ export const useSettingsStore = create<SettingsState>()(
       name: '@briefly/settings',
       storage: createJSONStorage(() => createScopedJsonStorage()),
       partialize: partializeSettings,
+      skipHydration: true,
       onRehydrateStorage: () => async (state) => {
         const keys = await loadProviderApiKeysFromSecureStore();
         if (state) {

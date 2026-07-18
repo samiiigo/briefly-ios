@@ -13,19 +13,31 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useCreateStyles, useThemedColors } from '@/shared/theme';
 import type { ColorPalette } from '@/shared/theme';
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export function SignInScreen() {
   const colors = useThemedColors();
   const styles = useCreateStyles(createSignInStyles);
-  const { status, signInWithEmail, signInWithApple, signInWithGoogle, appleAvailable } = useAuth();
+  const {
+    status,
+    errorMessage,
+    signInWithEmail,
+    signInWithApple,
+    signInWithGoogle,
+    appleAvailable,
+  } = useAuth();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<'email' | 'apple' | 'google' | null>(null);
 
-  const canSubmitEmail = useMemo(() => email.trim().includes('@'), [email]);
+  const canSubmitEmail = useMemo(() => isValidEmail(email), [email]);
+  const displayMessage = message ?? errorMessage;
 
   async function handleEmailSignIn(): Promise<void> {
     if (!canSubmitEmail || pending) return;
-    setPending(true);
+    setPending('email');
     setMessage(null);
     try {
       await signInWithEmail(email.trim());
@@ -33,13 +45,13 @@ export function SignInScreen() {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to send sign-in email.');
     } finally {
-      setPending(false);
+      setPending(null);
     }
   }
 
   async function handleProviderSignIn(provider: 'apple' | 'google'): Promise<void> {
     if (pending) return;
-    setPending(true);
+    setPending(provider);
     setMessage(null);
     try {
       if (provider === 'apple') {
@@ -50,7 +62,7 @@ export function SignInScreen() {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Sign-in failed.');
     } finally {
-      setPending(false);
+      setPending(null);
     }
   }
 
@@ -68,9 +80,11 @@ export function SignInScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.card}>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>Sign in to Briefly</Text>
+        <Text style={[styles.brand, { color: colors.primary }]}>Briefly</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Sign in to continue</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Your recordings stay on this device and are scoped to your account.
+          Your library syncs to your account. Sign in to open recordings, folders, and settings tied
+          to you.
         </Text>
 
         <TextInput
@@ -79,8 +93,11 @@ export function SignInScreen() {
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
+          textContentType="emailAddress"
+          autoComplete="email"
           placeholder="Email address"
           placeholderTextColor={colors.textSecondary}
+          editable={!pending}
           style={[
             styles.input,
             { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.surface },
@@ -88,39 +105,53 @@ export function SignInScreen() {
         />
 
         <Pressable
-          disabled={!canSubmitEmail || pending}
+          disabled={!canSubmitEmail || !!pending}
           onPress={() => void handleEmailSignIn()}
           style={[
             styles.primaryButton,
             { backgroundColor: colors.primary, opacity: !canSubmitEmail || pending ? 0.5 : 1 },
           ]}
         >
-          <Text style={styles.primaryButtonText}>Continue with email</Text>
+          {pending === 'email' ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={styles.primaryButtonText}>Continue with email</Text>
+          )}
         </Pressable>
 
         {appleAvailable ? (
           <Pressable
-            disabled={pending}
+            disabled={!!pending}
             onPress={() => void handleProviderSignIn('apple')}
-            style={[styles.secondaryButton, { borderColor: colors.border }]}
+            style={[styles.secondaryButton, { borderColor: colors.border, opacity: pending ? 0.5 : 1 }]}
           >
-            <Text style={[styles.secondaryButtonText, { color: colors.textPrimary }]}>
-              Continue with Apple
-            </Text>
+            {pending === 'apple' ? (
+              <ActivityIndicator color={colors.textPrimary} />
+            ) : (
+              <Text style={[styles.secondaryButtonText, { color: colors.textPrimary }]}>
+                Continue with Apple
+              </Text>
+            )}
           </Pressable>
         ) : null}
 
         <Pressable
-          disabled={pending}
+          disabled={!!pending}
           onPress={() => void handleProviderSignIn('google')}
-          style={[styles.secondaryButton, { borderColor: colors.border }]}
+          style={[styles.secondaryButton, { borderColor: colors.border, opacity: pending ? 0.5 : 1 }]}
         >
-          <Text style={[styles.secondaryButtonText, { color: colors.textPrimary }]}>
-            Continue with Google
-          </Text>
+          {pending === 'google' ? (
+            <ActivityIndicator color={colors.textPrimary} />
+          ) : (
+            <Text style={[styles.secondaryButtonText, { color: colors.textPrimary }]}>
+              Continue with Google
+            </Text>
+          )}
         </Pressable>
 
-        {message ? <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text> : null}
+        {displayMessage ? (
+          <Text style={[styles.message, { color: colors.textSecondary }]}>{displayMessage}</Text>
+        ) : null}
       </View>
     </KeyboardAvoidingView>
   );
@@ -139,8 +170,13 @@ const createSignInStyles = (colors: ColorPalette) =>
       maxWidth: 420,
       gap: 12,
     },
+    brand: {
+      fontSize: 34,
+      fontWeight: '800',
+      letterSpacing: -0.5,
+    },
     title: {
-      fontSize: 28,
+      fontSize: 22,
       fontWeight: '700',
     },
     subtitle: {
@@ -159,6 +195,8 @@ const createSignInStyles = (colors: ColorPalette) =>
       borderRadius: 12,
       paddingVertical: 14,
       alignItems: 'center',
+      minHeight: 48,
+      justifyContent: 'center',
     },
     primaryButtonText: {
       color: '#000',
@@ -170,6 +208,8 @@ const createSignInStyles = (colors: ColorPalette) =>
       borderRadius: 12,
       paddingVertical: 14,
       alignItems: 'center',
+      minHeight: 48,
+      justifyContent: 'center',
     },
     secondaryButtonText: {
       fontSize: 16,

@@ -10,8 +10,11 @@ import {
   signOut,
   subscribeToAuthChanges,
 } from '@/features/auth/services/authService';
-import type { AuthSessionState } from '@/features/auth/types/auth.types';
-import { activateStorageScopeForUser, deactivateStorageScope } from '@/features/auth/services/storageActivation';
+import type { AuthSessionState, AuthUserProfile } from '@/features/auth/types/auth.types';
+import {
+  activateStorageScopeForUser,
+  deactivateStorageScope,
+} from '@/features/auth/services/storageActivation';
 
 export function useAuthSession(): AuthSessionState & {
   signInWithEmail: (email: string) => Promise<void>;
@@ -27,9 +30,9 @@ export function useAuthSession(): AuthSessionState & {
   });
   const [appleAvailable, setAppleAvailable] = useState(false);
 
-  const applyUser = useCallback(async (user: AuthSessionState['user']) => {
+  const applyUser = useCallback(async (user: AuthUserProfile | null) => {
     if (user) {
-      await activateStorageScopeForUser(user.id);
+      await activateStorageScopeForUser(user);
       setState({ status: 'authenticated', user, errorMessage: null });
       return;
     }
@@ -40,21 +43,41 @@ export function useAuthSession(): AuthSessionState & {
   useEffect(() => {
     let mounted = true;
     void (async () => {
-      const [user, apple] = await Promise.all([getCurrentAuthUser(), canUseAppleSignIn()]);
-      if (!mounted) return;
-      setAppleAvailable(apple);
-      await applyUser(user);
+      try {
+        const [user, apple] = await Promise.all([getCurrentAuthUser(), canUseAppleSignIn()]);
+        if (!mounted) return;
+        setAppleAvailable(apple);
+        await applyUser(user);
+      } catch (error) {
+        if (!mounted) return;
+        setAppleAvailable(false);
+        deactivateStorageScope();
+        setState({
+          status: 'unauthenticated',
+          user: null,
+          errorMessage:
+            error instanceof Error ? error.message : 'Unable to restore your session. Please sign in.',
+        });
+      }
     })();
 
     const unsubscribe = subscribeToAuthChanges((user) => {
-      void applyUser(user);
+      void applyUser(user).catch((error) => {
+        if (!mounted) return;
+        setState({
+          status: 'unauthenticated',
+          user: null,
+          errorMessage:
+            error instanceof Error ? error.message : 'Unable to activate your account data.',
+        });
+      });
     });
 
     const linkSub = Linking.addEventListener('url', ({ url }) => {
-      void handleIncomingAuthUrl(url);
+      void handleIncomingAuthUrl(url).catch(() => undefined);
     });
 
-    void Linking.getInitialURL().then((url) => handleIncomingAuthUrl(url));
+    void Linking.getInitialURL().then((url) => handleIncomingAuthUrl(url).catch(() => undefined));
 
     return () => {
       mounted = false;
@@ -65,19 +88,37 @@ export function useAuthSession(): AuthSessionState & {
 
   const signInWithEmail = useCallback(async (email: string) => {
     setState((prev) => ({ ...prev, errorMessage: null }));
-    await signInWithEmailOtp(email);
+    try {
+      await signInWithEmailOtp(email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to send sign-in email.';
+      setState((prev) => ({ ...prev, errorMessage: message }));
+      throw error;
+    }
   }, []);
 
   const signInWithApple = useCallback(async () => {
     setState((prev) => ({ ...prev, errorMessage: null }));
-    const user = await signInWithAppleNative();
-    await applyUser(user);
+    try {
+      const user = await signInWithAppleNative();
+      await applyUser(user);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Apple Sign-In failed.';
+      setState((prev) => ({ ...prev, errorMessage: message }));
+      throw error;
+    }
   }, [applyUser]);
 
   const signInWithGoogle = useCallback(async () => {
     setState((prev) => ({ ...prev, errorMessage: null }));
-    const user = await signInWithGoogleOAuth();
-    await applyUser(user);
+    try {
+      const user = await signInWithGoogleOAuth();
+      await applyUser(user);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Google Sign-In failed.';
+      setState((prev) => ({ ...prev, errorMessage: message }));
+      throw error;
+    }
   }, [applyUser]);
 
   const signOutUser = useCallback(async () => {

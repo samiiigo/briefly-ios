@@ -21,6 +21,7 @@ function RootLayoutContent() {
   const { status } = useAuth();
   const router = useRouter();
   const segments = useSegments();
+  const rootStyle = useRootBackgroundStyle();
 
   const stackScreenOptions = useMemo(
     () => ({
@@ -57,8 +58,6 @@ function RootLayoutContent() {
     }
   }, [iconFontsLoaded, router, segments, status]);
 
-  const rootStyle = useRootBackgroundStyle();
-
   if (!iconFontsLoaded || status === 'loading') {
     return (
       <View style={[rootStyle, { alignItems: 'center', justifyContent: 'center' }]}>
@@ -73,18 +72,24 @@ function RootLayoutContent() {
         <View style={rootStyle}>
           <StatusBar style={resolvedScheme === 'light' ? 'dark' : 'light'} />
           <Stack screenOptions={stackScreenOptions}>
-            <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-            <Stack.Screen name="search" options={{ animation: 'fade' }} />
-            <Stack.Screen name="auth" options={{ animation: 'fade' }} />
-            <Stack.Screen
-              name="settings"
-              options={{
-                presentation: 'pageSheet',
-                animation: 'slide_from_bottom',
-                gestureDirection: 'vertical',
-                contentStyle: { backgroundColor: colors.surface },
-              }}
-            />
+            <Stack.Protected guard={status === 'authenticated'}>
+              <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+              <Stack.Screen name="search" options={{ animation: 'fade' }} />
+              <Stack.Screen name="recording" />
+              <Stack.Screen name="folder" />
+              <Stack.Screen
+                name="settings"
+                options={{
+                  presentation: 'pageSheet',
+                  animation: 'slide_from_bottom',
+                  gestureDirection: 'vertical',
+                  contentStyle: { backgroundColor: colors.surface },
+                }}
+              />
+            </Stack.Protected>
+            <Stack.Protected guard={status !== 'authenticated'}>
+              <Stack.Screen name="auth" options={{ animation: 'fade' }} />
+            </Stack.Protected>
           </Stack>
           {status === 'authenticated' ? (
             <>

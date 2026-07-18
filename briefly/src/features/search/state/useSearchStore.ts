@@ -40,6 +40,7 @@ export const useSearchStore = create<SearchState>()(
       name: '@briefly/search-recent',
       version: 2,
       storage: createJSONStorage(() => createScopedJsonStorage()),
+      skipHydration: true,
       partialize: (state) => ({ recentQueries: state.recentQueries }),
       migrate: (persisted) => {
         const state = persisted as { recentQueries?: string[] } | undefined;

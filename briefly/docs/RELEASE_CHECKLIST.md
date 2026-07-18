@@ -7,10 +7,11 @@ Project: Supabase `vcuvfstcobxujjrvqpop` · EAS `a76ad650-f9a8-479c-ad81-a666f58
 Project region: **ca-central-1** (use IPv4 transaction pooler for `db push`).
 
 **Status:**
-- Migration applied (`profiles`, `usage_events`, `transcription_jobs`, `transcription-temp`)
+- Migrations applied (`profiles`, `usage_events`, `transcription_jobs`, `transcription-temp`, `account_*` library sync)
 - Edge Functions deployed and responding (`summarize`, `assemblyai-stream-token`, `transcription-*`)
 - Secrets set: `ASSEMBLYAI_API_KEY`, `OPENROUTER_SHARED_API_KEY`
 - Auth site URL + redirect allow list: `briefly://auth/callback`
+- App gates on Sign In first; per-account local + cloud library sync for recordings/folders/settings metadata
 
 From `briefly/`:
 

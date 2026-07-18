@@ -18,6 +18,8 @@ export interface UserFolder {
   pinned?: boolean;
   /** Set when pinned; most recently pinned sorts first among pinned folders. */
   pinnedAt?: number;
+  /** Last local/cloud mutation time (ms). Used for account sync merge. */
+  updatedAt?: number;
 }
 export type RecordingStatus =
   | 'idle'
@@ -65,4 +67,6 @@ export interface Recording {
   /** AI-assigned emoji representing the recording theme. */
   mainEmoji?: string;
   errorMessage?: string;
+  /** Last local/cloud mutation time (ms). Used for account sync merge. */
+  updatedAt?: number;
 }

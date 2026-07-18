@@ -56,6 +56,7 @@ export async function migrateLegacyStorageToUser(userId: string): Promise<void> 
     ]);
     if (legacyValue && !scopedValue) {
       await AsyncStorage.setItem(scopedKey, legacyValue);
+      await AsyncStorage.removeItem(legacyKey);
     }
   }
 }
