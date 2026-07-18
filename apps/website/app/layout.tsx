@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { generateThemeCss } from '@briefly/theme';
+import { SiteFooter } from '../components/SiteFooter';
+import { SiteHeader } from '../components/SiteHeader';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -32,7 +34,13 @@ export default function RootLayout({
       <head>
         <style dangerouslySetInnerHTML={{ __html: generateThemeCss() }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <div className="site-shell">
+          <SiteHeader />
+          <div className="site-main">{children}</div>
+          <SiteFooter />
+        </div>
+      </body>
     </html>
   );
 }

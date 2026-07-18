@@ -27,7 +27,27 @@ importers:
         specifier: ~5.9.2
         version: 5.9.3
 
-  apps/backend: {}
+  apps/backend:
+    dependencies:
+      '@briefly/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@briefly/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@briefly/validation':
+        specifier: workspace:*
+        version: link:../../packages/validation
+      '@supabase/supabase-js':
+        specifier: ^2.49.1
+        version: 2.110.7
+    devDependencies:
+      '@types/node':
+        specifier: ^25.3.5
+        version: 25.9.5
+      typescript:
+        specifier: ~5.9.2
+        version: 5.9.3
 
   apps/mobile:
     dependencies:
@@ -245,6 +265,9 @@ importers:
       '@briefly/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@briefly/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       '@supabase/ssr':
         specifier: ^0.12.3
         version: 0.12.3(@supabase/supabase-js@2.110.7)
@@ -278,7 +301,7 @@ importers:
         version: 9.39.5
       eslint-config-next:
         specifier: ^16.2.10
-        version: 16.2.10(@typescript-eslint/parser@8.64.0(eslint@9.39.5)(typescript@5.9.3))(eslint@9.39.5)(typescript@5.9.3)
+        version: 16.2.10(eslint@9.39.5)(typescript@5.9.3)
       typescript:
         specifier: ~5.9.2
         version: 5.9.3
@@ -321,7 +344,7 @@ importers:
         version: 9.39.5
       eslint-config-next:
         specifier: ^16.2.10
-        version: 16.2.10(eslint@9.39.5)(typescript@5.9.3)
+        version: 16.2.10(@typescript-eslint/parser@8.64.0(eslint@9.39.5)(typescript@5.9.3))(eslint@9.39.5)(typescript@5.9.3)
       typescript:
         specifier: ~5.9.2
         version: 5.9.3

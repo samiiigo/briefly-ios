@@ -1,5 +1,7 @@
 import { mapUser } from '@briefly/auth';
 import { AuthProvider } from '@/features/auth';
+import { LibraryProvider } from '@/features/library';
+import { SettingsProvider } from '@/features/settings';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function AppProviders({ children }: { children: React.ReactNode }) {
@@ -14,5 +16,11 @@ export async function AppProviders({ children }: { children: React.ReactNode }) 
     initialUser = null;
   }
 
-  return <AuthProvider initialUser={initialUser}>{children}</AuthProvider>;
+  return (
+    <AuthProvider initialUser={initialUser}>
+      <LibraryProvider>
+        <SettingsProvider>{children}</SettingsProvider>
+      </LibraryProvider>
+    </AuthProvider>
+  );
 }

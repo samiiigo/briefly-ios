@@ -18,6 +18,7 @@
     "@briefly/theme": "workspace:*",
     "@briefly/types": "workspace:*",
     "@briefly/ui": "workspace:*",
+    "@briefly/utils": "workspace:*",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.7",
     "next": "^15.1.0",
