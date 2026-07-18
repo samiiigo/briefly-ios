@@ -83,8 +83,8 @@ export function SignInScreen() {
         <Text style={[styles.brand, { color: colors.primary }]}>Briefly</Text>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Sign in to continue</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Your library syncs to your account. Sign in to open recordings, folders, and settings tied
-          to you.
+          Sign in to open the library for this account. Recordings stay with the account that
+          created them.
         </Text>
 
         <TextInput

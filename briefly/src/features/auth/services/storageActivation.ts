@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  migrateLegacyStorageToUser,
   scopedStorageKey,
   setActiveStorageUserId,
 } from '@/shared/services/storage/storageScope';
@@ -23,7 +22,6 @@ import {
   upsertUserProfile,
 } from '@/features/auth/services/accountSync';
 import type { AuthUserProfile } from '@/features/auth/types/auth.types';
-import { migrateLegacySecureApiKeysToUser } from '@/shared/security/secureApiKeyStore';
 import { logger } from '@/shared/utils/logging/logger';
 
 const RECORDINGS_BASE_KEY = '@briefly/recordings';
@@ -49,8 +47,6 @@ export async function activateStorageScopeForUser(
   }
 
   setActiveStorageUserId(userId);
-  await migrateLegacyStorageToUser(userId);
-  await migrateLegacySecureApiKeysToUser(userId);
   activeScopeUserId = userId;
 
   await Promise.all([

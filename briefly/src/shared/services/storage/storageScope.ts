@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const LEGACY_STORAGE_KEYS = {
+export const SCOPED_STORAGE_KEYS = {
   recordings: '@briefly/recordings',
   userFolders: '@briefly/user_folders',
   settings: '@briefly/settings',
@@ -8,10 +8,10 @@ export const LEGACY_STORAGE_KEYS = {
 } as const;
 
 export type ScopedStorageBaseKey =
-  | typeof LEGACY_STORAGE_KEYS.recordings
-  | typeof LEGACY_STORAGE_KEYS.userFolders
-  | typeof LEGACY_STORAGE_KEYS.settings
-  | typeof LEGACY_STORAGE_KEYS.searchRecent;
+  | typeof SCOPED_STORAGE_KEYS.recordings
+  | typeof SCOPED_STORAGE_KEYS.userFolders
+  | typeof SCOPED_STORAGE_KEYS.settings
+  | typeof SCOPED_STORAGE_KEYS.searchRecent;
 
 let activeUserId: string | null = null;
 
@@ -45,20 +45,6 @@ export function createScopedJsonStorage() {
       await AsyncStorage.removeItem(key);
     },
   };
-}
-
-export async function migrateLegacyStorageToUser(userId: string): Promise<void> {
-  for (const legacyKey of Object.values(LEGACY_STORAGE_KEYS)) {
-    const scopedKey = scopedStorageKey(legacyKey, userId);
-    const [legacyValue, scopedValue] = await Promise.all([
-      AsyncStorage.getItem(legacyKey),
-      AsyncStorage.getItem(scopedKey),
-    ]);
-    if (legacyValue && !scopedValue) {
-      await AsyncStorage.setItem(scopedKey, legacyValue);
-      await AsyncStorage.removeItem(legacyKey);
-    }
-  }
 }
 
 export async function clearScopedStorageForUser(userId: string): Promise<void> {

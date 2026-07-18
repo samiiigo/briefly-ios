@@ -12,6 +12,7 @@ Project region: **ca-central-1** (use IPv4 transaction pooler for `db push`).
 - Secrets set: `ASSEMBLYAI_API_KEY`, `OPENROUTER_SHARED_API_KEY`
 - Auth site URL + redirect allow list: `briefly://auth/callback`
 - App gates on Sign In first; per-account local + cloud library sync for recordings/folders/settings metadata
+- No legacy “claim local device recordings into whoever signs in” migration
 
 From `briefly/`:
 
