@@ -27,9 +27,6 @@
     "typescript": "~5.9.2"
   },
   "lint-staged": {
-    "apps/mobile/**/*.{ts,tsx,js,jsx}": [
-      "eslint --fix --config apps/mobile/eslint.config.js"
-    ],
     "*.{ts,tsx,js,jsx,json,md}": [
       "prettier --write"
     ]

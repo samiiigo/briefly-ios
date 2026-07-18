@@ -33,6 +33,7 @@ yarn-error.*
 
 # TypeScript
 *.tsbuildinfo
+next-env.d.ts
 
 # Turbo / pnpm
 .turbo/
