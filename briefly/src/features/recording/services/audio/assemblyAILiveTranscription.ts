@@ -57,13 +57,8 @@ export interface AssemblyAILiveListeners {
   onError?: (message: string) => void;
 }
 function resolveDefaultApiKey(): string | undefined {
-  const fromSharedConfig = getAssemblyAISharedApiKey();
-  if (fromSharedConfig) {
-    return fromSharedConfig;
-  }
-  const fromExpoConfig = (Constants.expoConfig?.extra as any)?.assemblyAiApiKey as string | undefined;
-  const trimmed = fromExpoConfig?.trim();
-  return trimmed ? trimmed : undefined;
+  // Shared keys live only in Supabase Edge Functions; client no longer embeds them.
+  return getAssemblyAISharedApiKey();
 }
 export class AssemblyAILiveTranscriptionClient {
   private readonly listeners: AssemblyAILiveListeners;
