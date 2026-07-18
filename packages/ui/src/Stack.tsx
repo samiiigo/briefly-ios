@@ -8,7 +8,7 @@ export interface StackProps extends React.HTMLAttributes<HTMLDivElement> {
   direction?: StackDirection;
   align?: StackAlign;
   justify?: StackJustify;
-  gap?: 'xs' | 'sm' | 'md' | 'lg';
+  gap?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 }
 
 const gapClass = {
@@ -16,6 +16,7 @@ const gapClass = {
   sm: 'briefly-stack--gap-sm',
   md: 'briefly-stack--gap-md',
   lg: 'briefly-stack--gap-lg',
+  xl: 'briefly-stack--gap-xl',
 } as const;
 
 export function Stack({

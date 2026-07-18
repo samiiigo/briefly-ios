@@ -18,10 +18,24 @@ Release checklist: `apps/mobile/docs/RELEASE_CHECKLIST.md`.
 
 ## Marketing + Web (Vercel)
 
-- `apps/website` — independent Vercel project (`vercel.json` uses Next.js).
-- `apps/web` — separate Vercel project for the authenticated product.
+### Marketing (`apps/website`) — default Git-connected project
 
-Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` on the web project.
+The repo-root [`vercel.json`](../vercel.json) installs with pnpm and statically exports the marketing site to `apps/website/out`. This restores a green deploy without changing the Vercel Root Directory.
+
+```bash
+pnpm --filter @briefly/website build
+```
+
+### Authenticated web (`apps/web`)
+
+Create a **separate** Vercel project with Root Directory `apps/web` (Node runtime required for middleware). Set:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+```
+
+Enable the Supabase Auth redirect URL: `https://<web-domain>/auth/callback`.
 
 ## Backend (Supabase)
 

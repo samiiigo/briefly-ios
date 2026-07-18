@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 
+export const dynamic = 'force-static';
+
 const siteUrl = 'https://briefly.app';
 
 const routes = [
@@ -20,6 +22,6 @@ const routes = [
 export default function sitemap(): MetadataRoute.Sitemap {
   return routes.map((route) => ({
     url: `${siteUrl}${route}`,
-    lastModified: new Date(),
+    lastModified: new Date('2026-07-18'),
   }));
 }

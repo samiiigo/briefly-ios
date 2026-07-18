@@ -45,6 +45,7 @@ pnpm build
 - [Development](docs/development.md)
 - [Deployment](docs/deployment.md)
 - [Migration summary](docs/migration-summary.md)
+- [Phase 2 — Product surfaces](docs/phase-2.md)
 - [ADRs](docs/architecture/decisions.md)
 
 ## License

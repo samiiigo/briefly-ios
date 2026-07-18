@@ -29,13 +29,46 @@ function readEnvOrExtra(
   return normalize(reader.get(envKey)) ?? normalize(extra[extraKey] as string | undefined);
 }
 
+/** Prefer Expo public keys, then Next.js public keys. */
+function readPublicSupabaseUrl(
+  reader: EnvReader,
+  extra: Record<string, unknown>,
+): string | undefined {
+  return (
+    readEnvOrExtra(reader, extra, 'EXPO_PUBLIC_SUPABASE_URL', 'supabaseUrl') ??
+    readEnvOrExtra(reader, extra, 'NEXT_PUBLIC_SUPABASE_URL', 'supabaseUrl')
+  );
+}
+
+function readPublicSupabaseKey(
+  reader: EnvReader,
+  extra: Record<string, unknown>,
+): string | undefined {
+  return (
+    readEnvOrExtra(
+      reader,
+      extra,
+      'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+      'supabasePublishableKey',
+    ) ??
+    readEnvOrExtra(
+      reader,
+      extra,
+      'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+      'supabasePublishableKey',
+    ) ??
+    readEnvOrExtra(reader, extra, 'EXPO_PUBLIC_SUPABASE_ANON_KEY', 'supabaseAnonKey') ??
+    readEnvOrExtra(reader, extra, 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'supabaseAnonKey')
+  );
+}
+
 const defaultReader: EnvReader = {
   get: (key) => process.env[key],
 };
 
 /**
  * Builds public app configuration from environment variables and optional extra values.
- * Platform-agnostic — callers may pass Expo `Constants.expoConfig.extra` via `extra`.
+ * Platform-agnostic — accepts Expo (`EXPO_PUBLIC_*`) and Next (`NEXT_PUBLIC_*`) keys.
  */
 export function createPublicAppConfig(options: CreatePublicAppConfigOptions = {}): PublicAppConfig {
   const reader = options.reader ?? defaultReader;
@@ -43,26 +76,25 @@ export function createPublicAppConfig(options: CreatePublicAppConfigOptions = {}
 
   if (reader.get('NODE_ENV') === 'test') {
     return {
-      supabaseUrl: reader.get('EXPO_PUBLIC_SUPABASE_URL') ?? 'http://127.0.0.1:54321',
+      supabaseUrl:
+        reader.get('EXPO_PUBLIC_SUPABASE_URL') ??
+        reader.get('NEXT_PUBLIC_SUPABASE_URL') ??
+        'http://127.0.0.1:54321',
       supabasePublishableKey:
-        reader.get('EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY') ?? 'test-publishable-key',
+        reader.get('EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY') ??
+        reader.get('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY') ??
+        'test-publishable-key',
       appVariant: 'test',
     };
   }
 
-  const supabaseUrl = readEnvOrExtra(reader, extra, 'EXPO_PUBLIC_SUPABASE_URL', 'supabaseUrl');
-  const supabasePublishableKey =
-    readEnvOrExtra(
-      reader,
-      extra,
-      'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
-      'supabasePublishableKey',
-    ) ?? readEnvOrExtra(reader, extra, 'EXPO_PUBLIC_SUPABASE_ANON_KEY', 'supabaseAnonKey');
+  const supabaseUrl = readPublicSupabaseUrl(reader, extra);
+  const supabasePublishableKey = readPublicSupabaseKey(reader, extra);
   const appVariant = readEnvOrExtra(reader, extra, 'APP_VARIANT', 'appVariant') ?? 'development';
 
   if (!supabaseUrl || !supabasePublishableKey) {
     throw new Error(
-      'Supabase public config is missing. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY.',
+      'Supabase public config is missing. Set EXPO_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL and the matching publishable key.',
     );
   }
 

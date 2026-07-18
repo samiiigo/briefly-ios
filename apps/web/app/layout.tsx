@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { generateThemeCss } from '@briefly/theme';
+import { AppProviders } from '@/components/AppProviders';
+import { AppShell } from '@/components/AppShell';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -13,11 +15,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark">
       <head>
         <style dangerouslySetInnerHTML={{ __html: generateThemeCss() }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <AppProviders>
+          <AppShell>{children}</AppShell>
+        </AppProviders>
+      </body>
     </html>
   );
 }

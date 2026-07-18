@@ -1,37 +1,42 @@
 import Link from 'next/link';
-import { Button, Text } from '@briefly/ui';
+import { Button, Text, Stack } from '@briefly/ui';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { mapUser } from '@briefly/auth';
 
-const navLinks = [
-  { href: '/library', label: 'Library' },
-  { href: '/search', label: 'Search' },
-  { href: '/settings', label: 'Settings' },
-  { href: '/account', label: 'Account' },
-];
+export default async function HomePage() {
+  let greeting = 'Welcome back';
+  try {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const profile = mapUser(user);
+    if (profile?.fullName || profile?.email) {
+      greeting = `Welcome back, ${profile.fullName ?? profile.email}`;
+    }
+  } catch {
+    // Env may be unset in local preview without .env
+  }
 
-export default function HomePage() {
   return (
-    <main className="page">
-      <nav className="page-nav" aria-label="Main">
-        {navLinks.map((link) => (
-          <Link key={link.href} href={link.href}>
-            {link.label}
-          </Link>
-        ))}
-      </nav>
-
+    <Stack gap="lg">
       <header className="page-header">
         <Text as="h1" variant="title">
           Dashboard
         </Text>
         <Text as="p" variant="body">
-          Your recordings, transcripts, and summaries will appear here once you sign in.
+          {greeting}. Your library, search, and account settings live in the sidebar.
         </Text>
       </header>
 
       <div className="dashboard-actions">
-        <Button variant="primary">Open library</Button>
-        <Button variant="secondary">New recording</Button>
+        <Link href="/library">
+          <Button variant="primary">Open library</Button>
+        </Link>
+        <Link href="/search">
+          <Button variant="secondary">Search recordings</Button>
+        </Link>
       </div>
-    </main>
+    </Stack>
   );
 }
