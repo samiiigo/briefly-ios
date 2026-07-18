@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "echo \"Skipping npm install — Briefly is an Expo iOS/Android app, not a Vercel Node server.\"",
+  "buildCommand": "mkdir -p public",
+  "outputDirectory": "public"
+}

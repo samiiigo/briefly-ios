@@ -85,3 +85,7 @@ Fill `submit.production` with real Apple / Play values, or place ASC API key + P
 ## 6. Optional crash reporting
 
 Set `EXPO_PUBLIC_SENTRY_DSN` (EAS + local `.env`) to enable Sentry via `src/shared/services/crashReporter.ts`. Without it, reporting stays a no-op in production.
+
+## 7. Vercel (optional)
+
+Briefly is not a Vercel Node app. `briefly/vercel.json` serves a static placeholder so linked Preview deployments do not fail looking for `app.js` / `index.js`. Real builds stay on EAS.
