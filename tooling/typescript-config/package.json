@@ -1,0 +1,12 @@
+{
+  "name": "@briefly/typescript-config",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "files": [
+    "base.json",
+    "nextjs.json",
+    "react-native.json",
+    "library.json"
+  ]
+}

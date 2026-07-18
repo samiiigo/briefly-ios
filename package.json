@@ -1,0 +1,48 @@
+{
+  "name": "briefly",
+  "private": true,
+  "version": "5.2.7",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:mobile": "pnpm --filter @briefly/mobile start",
+    "dev:web": "pnpm --filter @briefly/web dev",
+    "dev:website": "pnpm --filter @briefly/website dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "turbo run typecheck lint test",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@briefly/eslint-config": "workspace:*",
+    "@briefly/typescript-config": "workspace:*",
+    "eslint": "^9.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.4",
+    "typescript": "~5.9.2"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs,json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "pnpm": {
+    "overrides": {
+      "react-dom": "19.1.0",
+      "@xmldom/xmldom": "0.8.13",
+      "postcss": "8.5.14",
+      "glob": "^13.0.6",
+      "rimraf": "^6.0.1",
+      "uuid": "^11.1.1"
+    }
+  }
+}

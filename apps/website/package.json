@@ -1,0 +1,30 @@
+{
+  "name": "@briefly/website",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node -e \"console.log('no tests yet')\""
+  },
+  "dependencies": {
+    "@briefly/theme": "workspace:*",
+    "@briefly/ui": "workspace:*",
+    "next": "^15.3.3",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@briefly/eslint-config": "workspace:*",
+    "@briefly/typescript-config": "workspace:*",
+    "@types/node": "^25.3.5",
+    "@types/react": "~19.1.10",
+    "@types/react-dom": "~19.1.0",
+    "eslint": "^9.0.0",
+    "typescript": "~5.9.2"
+  },
+  "type": "module"
+}

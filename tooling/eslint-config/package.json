@@ -1,0 +1,20 @@
+{
+  "name": "@briefly/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./base": "./base.js",
+    "./next": "./next.js",
+    "./react-native": "./react-native.js"
+  },
+  "dependencies": {
+    "eslint-config-expo": "~10.0.0",
+    "eslint-config-prettier": "^10.1.1",
+    "typescript-eslint": "^8.26.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  }
+}
