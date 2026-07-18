@@ -1,16 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useStackBack } from '@/components/navigation/layout/useStackBack';
-import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { CircularIconButton } from '@/components/ui/CircularIconButton';
-import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
-import { useSettingsSheetLayoutStyles } from '@/components/navigation/layout/screenLayout';
-import { SettingsNavigateRow } from '@/components/settings/SettingsNavigateRow';
-import { SettingsToggleRow } from '@/components/settings/SettingsToggleRow';
-import { SettingsProfileCard } from '@/components/settings/SettingsProfileCard';
-import { Spacing, useThemedColors } from '@/theme';
-import { useSettingsHub } from '@/hooks/settings/useSettingsHub';
-import { useSettingsProfile } from '@/hooks/settings/useSettingsProfile';
+import { useStackBack } from '@/navigation/layout/useStackBack';
+import { StackScreenHeader } from '@/navigation/header/StackScreenHeader';
+import { CircularIconButton } from '@/shared/components/ui/CircularIconButton';
+import { useSettingsTopChromeLayout } from '@/navigation/layout/useSettingsTopChromeLayout';
+import { useSettingsSheetLayoutStyles } from '@/navigation/layout/screenLayout';
+import { SettingsNavigateRow } from '@/features/settings/components/SettingsNavigateRow';
+import { SettingsToggleRow } from '@/features/settings/components/SettingsToggleRow';
+import { SettingsProfileCard } from '@/features/settings/components/SettingsProfileCard';
+import { Spacing, useThemedColors } from '@/shared/theme';
+import { useSettingsHub } from '@/features/settings/hooks/useSettingsHub';
+import { useSettingsProfile } from '@/features/settings/hooks/useSettingsProfile';
+import { useAuth } from '@/providers/AuthProvider';
 
 export default function SettingsScreen() {
   const goBack = useStackBack('/(tabs)');
@@ -18,6 +19,7 @@ export default function SettingsScreen() {
   const colors = useThemedColors();
   const sl = useSettingsSheetLayoutStyles();
   const { profile } = useSettingsProfile();
+  const { user, signOutUser } = useAuth();
   const {
     showLivePreview,
     setShowLivePreview,
@@ -107,6 +109,25 @@ export default function SettingsScreen() {
           >
             <Text style={sl.settingsActionLabel}>Clear cache</Text>
           </TouchableOpacity>
+        </View>
+
+        <Text style={sl.sectionLabel}>Account</Text>
+        <View style={sl.card}>
+          <SettingsNavigateRow
+            title={user?.email ?? user?.fullName ?? 'Signed in'}
+            icon="person-circle-outline"
+            showChevron={false}
+            onPress={() => {}}
+          />
+          <View style={sl.cardDivider} />
+          <SettingsNavigateRow
+            title="Sign out"
+            icon="log-out-outline"
+            showChevron={false}
+            onPress={() => {
+              void signOutUser();
+            }}
+          />
         </View>
 
         <Text style={[sl.versionText, styles.versionText]}>{appVersionLabel}</Text>

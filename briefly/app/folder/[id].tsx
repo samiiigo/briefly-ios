@@ -1,18 +1,18 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { RecentsEntryCard } from '@/components/features/recents/RecentsEntryCard';
-import { RecordingCard } from '@/components/features/recording/RecordingCard';
-import { RecordingSwipeableRow } from '@/components/features/recording/RecordingSwipeableRow';
-import { RecordingSectionFlashList } from '@/components/features/recording/RecordingSectionFlashList';
-import { RecordingGridFlashList } from '@/components/features/recording/RecordingGridFlashList';
-import { CircularIconButton } from '@/components/ui/CircularIconButton';
-import { FolderViewOptionsSheet } from '@/components/features/library/FolderViewOptionsSheet';
-import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
-import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
-import { useFolderRecordingsScreen } from '@/hooks/library/useFolderRecordingsScreen';
-import { Colors, Spacing, withAppFont, useThemedColors } from '@/theme';
+import { RecentsEntryCard } from '@/features/library/components/recents/RecentsEntryCard';
+import { RecordingCard } from '@/features/recording/components/RecordingCard';
+import { RecordingSwipeableRow } from '@/features/recording/components/RecordingSwipeableRow';
+import { RecordingSectionFlashList } from '@/features/recording/components/RecordingSectionFlashList';
+import { RecordingGridFlashList } from '@/features/recording/components/RecordingGridFlashList';
+import { CircularIconButton } from '@/shared/components/ui/CircularIconButton';
+import { FolderViewOptionsSheet } from '@/features/library/components/FolderViewOptionsSheet';
+import { StackScreenHeader } from '@/navigation/header/StackScreenHeader';
+import { useTopChromeLayout } from '@/navigation/layout/useTopChromeLayout';
+import { useScreenLayoutStyles } from '@/navigation/layout/screenLayout';
+import { useFolderRecordingsScreen } from '@/features/library/hooks/useFolderRecordingsScreen';
+import { Colors, Spacing, withAppFont, useThemedColors } from '@/shared/theme';
 
 const LIST_BOTTOM_PADDING = 140;
 

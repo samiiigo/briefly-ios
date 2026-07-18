@@ -1,16 +1,16 @@
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { useStackBack } from '@/components/navigation/layout/useStackBack';
-import { ModePickerOption } from '@/components/navigation/header/ModePickerOption';
-import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useSettingsTopChromeLayout } from '@/components/navigation/layout/useSettingsTopChromeLayout';
+import { useStackBack } from '@/navigation/layout/useStackBack';
+import { ModePickerOption } from '@/navigation/header/ModePickerOption';
+import { StackScreenHeader } from '@/navigation/header/StackScreenHeader';
+import { useSettingsTopChromeLayout } from '@/navigation/layout/useSettingsTopChromeLayout';
 import {
   useModePickerStyles,
   useSettingsSheetLayoutStyles,
-} from '@/components/navigation/layout/screenLayout';
-import { NATIVE_BUILD_REQUIRED_HINT } from '@/utils/platformCapabilities';
-import { useTranscriptionModeSettings } from '@/hooks/settings/useTranscriptionModeSettings';
-import { useThemedColors } from '@/theme';
+} from '@/navigation/layout/screenLayout';
+import { NATIVE_BUILD_REQUIRED_HINT } from '@/shared/utils/platformCapabilities';
+import { useTranscriptionModeSettings } from '@/features/settings/hooks/useTranscriptionModeSettings';
+import { useThemedColors } from '@/shared/theme';
 
 export default function TranscriptionModePickerScreen() {
   const goBack = useStackBack('/settings');

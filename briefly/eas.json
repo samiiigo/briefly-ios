@@ -45,12 +45,14 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "YOUR_APPLE_ID@example.com",
-        "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID",
-        "appleTeamId": "YOUR_APPLE_TEAM_ID"
+        "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID",
+        "appleTeamId": "REPLACE_WITH_APPLE_TEAM_ID",
+        "ascApiKeyPath": "./credentials/AuthKey_REPLACE.p8",
+        "ascApiKeyId": "REPLACE_WITH_ASC_KEY_ID",
+        "ascApiIssuerId": "REPLACE_WITH_ASC_ISSUER_UUID"
       },
       "android": {
-        "serviceAccountKeyPath": "./play-store-service-account.json",
+        "serviceAccountKeyPath": "./credentials/play-store-service-account.json",
         "track": "internal"
       }
     }

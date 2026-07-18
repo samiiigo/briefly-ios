@@ -1,8 +1,8 @@
 import { View, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { useMemo } from 'react';
-import { useThemedColors } from '@/theme';
-import { ChromeFadeColorProvider } from '@/components/navigation/chrome/ChromeFadeColor';
+import { useThemedColors } from '@/shared/theme';
+import { ChromeFadeColorProvider } from '@/navigation/chrome/ChromeFadeColor';
 
 export default function SettingsLayout() {
   const colors = useThemedColors();

@@ -1,9 +1,9 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { LibraryFolderBrowser } from '@/components/features/library/LibraryFolderBrowser';
-import { MAX_PINNED_FOLDERS, MAX_YOUR_FOLDERS_PREVIEW } from '@/constants/userFolders';
-import { useCreateStyles } from '@/theme';
-import type { ColorPalette } from '@/theme/colorPalettes';
+import { LibraryFolderBrowser } from '@/features/library/components/LibraryFolderBrowser';
+import { MAX_PINNED_FOLDERS, MAX_YOUR_FOLDERS_PREVIEW } from '@/shared/constants/userFolders';
+import { useCreateStyles } from '@/shared/theme';
+import type { ColorPalette } from '@/shared/theme/colorPalettes';
 export default function HistoryScreen() {
   const styles = useCreateStyles(createHistoryScreenStyles);
   return (

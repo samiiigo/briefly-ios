@@ -1,9 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { LibraryFolderBrowser } from '@/components/features/library/LibraryFolderBrowser';
-import { UserFolderListFilter } from '@/constants/userFolders';
-import { useThemedStackShell } from '@/components/navigation/layout/themedStackLayout';
+import { LibraryFolderBrowser } from '@/features/library/components/LibraryFolderBrowser';
+import { UserFolderListFilter } from '@/shared/constants/userFolders';
+import { useThemedStackShell } from '@/navigation/layout/themedStackLayout';
 function parseFolderListFilter(
   value: string | string[] | undefined
 ): UserFolderListFilter | undefined {

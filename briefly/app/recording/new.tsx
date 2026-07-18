@@ -8,12 +8,12 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { useFloatingTabBarLayout } from '@/components/navigation/layout/useFloatingTabBarLayout';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
-import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
+import { StackScreenHeader } from '@/navigation/header/StackScreenHeader';
+import { useFloatingTabBarLayout } from '@/navigation/layout/useFloatingTabBarLayout';
+import { useTopChromeLayout } from '@/navigation/layout/useTopChromeLayout';
+import { useScreenLayoutStyles } from '@/navigation/layout/screenLayout';
 import { useLocalSearchParams } from 'expo-router';
-import { WaveformVisualizer } from '@/components/features/recording/WaveformVisualizer';
+import { WaveformVisualizer } from '@/features/recording/components/WaveformVisualizer';
 import {
   Spacing,
   BorderRadius,
@@ -21,11 +21,11 @@ import {
   useResolvedColorScheme,
   useThemedColors,
   withAppFont,
-} from '@/theme';
-import type { ColorPalette } from '@/theme/colorPalettes';
-import { RecordingFolder } from '@/types';
-import { formatTimestamp } from '@/utils';
-import { useNewRecordingSession } from '@/hooks/recording/useNewRecordingSession';
+} from '@/shared/theme';
+import type { ColorPalette } from '@/shared/theme/colorPalettes';
+import { RecordingFolder } from '@/shared/types';
+import { formatTimestamp } from '@/shared/utils';
+import { useNewRecordingSession } from '@/features/recording/hooks/useNewRecordingSession';
 
 /** Pause/stop row + labels (above bottom chrome fade). */
 const RECORDING_CONTROLS_HEIGHT = 96;

@@ -1,18 +1,18 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { isRecordingProcessing } from '@/utils/recording/recordingContentEmoji';
-import { hasMeaningfulTranscript } from '@/utils/recording/recordingValidation';
-import { TranscriptSegmentView } from '@/components/features/recording/TranscriptSegmentView';
-import { RecordingPlaybackBar } from '@/components/features/recording/RecordingPlaybackBar';
-import { StackScreenHeader } from '@/components/navigation/header/StackScreenHeader';
-import { CircularIconButton } from '@/components/ui/CircularIconButton';
-import { usePlaybackBarLayout } from '@/components/navigation/layout/usePlaybackBarLayout';
-import { useTopChromeLayout } from '@/components/navigation/layout/useTopChromeLayout';
-import { useScreenLayoutStyles } from '@/components/navigation/layout/screenLayout';
-import { RecordingProcessingFlashIcon } from '@/components/features/recording/RecordingProcessingFlashIcon';
-import { useTranscriptScreen } from '@/hooks/recording/useTranscriptScreen';
-import { Colors, Spacing } from '@/theme';
+import { isRecordingProcessing } from '@/features/recording/utils/recordingContentEmoji';
+import { hasMeaningfulTranscript } from '@/features/recording/utils/recordingValidation';
+import { TranscriptSegmentView } from '@/features/recording/components/TranscriptSegmentView';
+import { RecordingPlaybackBar } from '@/features/recording/components/RecordingPlaybackBar';
+import { StackScreenHeader } from '@/navigation/header/StackScreenHeader';
+import { CircularIconButton } from '@/shared/components/ui/CircularIconButton';
+import { usePlaybackBarLayout } from '@/navigation/layout/usePlaybackBarLayout';
+import { useTopChromeLayout } from '@/navigation/layout/useTopChromeLayout';
+import { useScreenLayoutStyles } from '@/navigation/layout/screenLayout';
+import { RecordingProcessingFlashIcon } from '@/features/recording/components/RecordingProcessingFlashIcon';
+import { useTranscriptScreen } from '@/features/recording/hooks/useTranscriptScreen';
+import { Colors, Spacing } from '@/shared/theme';
 
 export default function RecordingTranscriptScreen() {
   const sl = useScreenLayoutStyles();

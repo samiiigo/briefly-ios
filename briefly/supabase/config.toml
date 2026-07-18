@@ -1,0 +1,19 @@
+# Linked remote project: vcuvfstcobxujjrvqpop
+# https://supabase.com/dashboard/project/vcuvfstcobxujjrvqpop
+# Enable Apple + Google in the dashboard (Auth → Providers).
+# Redirect URL: briefly://auth/callback
+project_id = "vcuvfstcobxujjrvqpop"
+
+[api]
+enabled = true
+
+[db]
+major_version = 17
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "briefly://auth/callback"
+additional_redirect_urls = ["briefly://auth/callback"]

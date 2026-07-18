@@ -1,8 +1,8 @@
 import { View, Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import { NavigatorBottomBlur } from '@/components/navigation/chrome/NavigatorBottomBlur';
-import { FolderChromeOverlay } from '@/components/navigation/overlays/FolderChromeOverlay';
-import { useThemedStackShell } from '@/components/navigation/layout/themedStackLayout';
+import { NavigatorBottomBlur } from '@/navigation/chrome/NavigatorBottomBlur';
+import { FolderChromeOverlay } from '@/navigation/overlays/FolderChromeOverlay';
+import { useThemedStackShell } from '@/navigation/layout/themedStackLayout';
 export default function FolderLayout() {
   const shell = useThemedStackShell();
   return (
