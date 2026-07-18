@@ -52,10 +52,11 @@ Summaries pull out key insights and format them into structured markdown section
 
 - **Framework**: Expo SDK 54, React Native 0.81, React 19
 - **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/) (`expo-router`) using file-based routes inside `briefly/app/`
-- **State**: [Zustand](https://github.com/pmndrs/zustand) paired with AsyncStorage for persistence (`briefly/src/context/`)
+- **Auth / backend**: Supabase Auth + Edge Functions (shared AssemblyAI / OpenRouter keys stay server-side)
+- **State**: [Zustand](https://github.com/pmndrs/zustand) with account-scoped AsyncStorage
 - **Lists**: `@shopify/flash-list` for high-performance scrolling
 - **Audio**: `expo-audio` handling recording, playback, and background audio tasks
-- **Storage**: `expo-file-system` for local audio files; `@react-native-async-storage/async-storage` for metadata
+- **Storage**: `expo-file-system` for local audio files; account-scoped metadata + optional Supabase library sync
 - **UI**: Custom chrome (including a floating tab bar and blur overlays), `expo-blur`, `expo-haptics`, and native dark theme support
 - **Build / OTA**: EAS Build and `expo-updates`
 
@@ -67,25 +68,21 @@ Check out `briefly/package.json` for the complete dependency tree and npm script
 
 ```
 briefly/
-├── app/                    # Expo Router screens and layouts
-│   ├── (tabs)/             # Recents + Library tab shell
-│   ├── recording/          # New recording, detail, transcript, summarizing
-│   ├── folder/             # Folder browser and detail
-│   ├── settings.tsx
-│   ├── search.tsx
-│   └── …
+├── app/                    # Expo Router thin routes (auth, tabs, recording, …)
 ├── src/
-│   ├── components/         # UI (features/, navigation/)
-│   ├── context/            # Zustand stores
-│   ├── services/           # Audio, transcription, summarization, storage
-│   ├── hooks/
-│   ├── utils/
-│   ├── theme/
-│   └── types/
+│   ├── features/           # auth, recording, library, search, settings, processing
+│   ├── shared/             # theme, components, storage, security, services
+│   ├── api/                # Supabase client + Edge Function helpers
+│   ├── providers/          # Auth + app providers
+│   ├── navigation/         # chrome / overlays
+│   └── store/              # cross-cutting store wiring (if any)
+├── supabase/               # migrations + Edge Functions
+├── docs/RELEASE_CHECKLIST.md
 ├── assets/
-├── app.config.js           # Injects API keys from env into expo.extra
+├── app.config.js           # Injects public Supabase config into expo.extra
 ├── app.json
-└── eas.json
+├── eas.json
+└── vercel.json             # static placeholder for linked Preview deploys
 ```
 
 ---
@@ -138,7 +135,7 @@ Full store release steps: `briefly/docs/RELEASE_CHECKLIST.md`.
 
 ### Security (client)
 
-Outbound calls to AssemblyAI, OpenRouter, and other configured LLM hosts go through `secureFetch` with per-device and per-user rate limits (graceful 429-style errors). User-facing text (titles, folder names, search queries) is validated in `briefly/src/security/`. See `briefly/src/security/` for OWASP-oriented helpers.
+Shared cloud calls go through authenticated Supabase Edge Functions. BYOK provider calls use `secureFetch` with per-device and per-user rate limits. User-facing text (titles, folder names, search queries) is validated under `briefly/src/shared/security/`.
 
 ### Run in development
 
@@ -178,6 +175,6 @@ npm run verify      # Runs typecheck + test + npm audit (high)
 ## Privacy
 
 - **On-device transcription** utilizes native iOS speech APIs, meaning your audio never leaves the phone.
-- **Cloud** modes send audio or text directly to the third-party APIs you configure (AssemblyAI, OpenRouter, or your own provider). You should review the privacy terms of the provider you choose.
-- All recordings and metadata are stored **locally** on your device unless you manually export or share them.
-- The app has zero subscription billing logic; cloud features run strictly on the API keys you provide or build into the app.
+- **Shared cloud** modes send audio or text through your Supabase Edge Functions to AssemblyAI / OpenRouter. **BYOK** modes call the provider you configure with your own key.
+- Recording library metadata can sync to your signed-in Supabase account; audio files remain on-device. Review third-party provider privacy terms for cloud modes.
+- The app has zero subscription billing logic.
