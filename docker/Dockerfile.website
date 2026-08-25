@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1
+# Marketing site (@briefly/website) — static export served by nginx
+ARG NODE_VERSION=22
+
+FROM node:${NODE_VERSION}-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+WORKDIR /app
+
+FROM base AS builder
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV CI=1
+ENV HUSKY=0
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json .npmrc ./
+COPY tsconfig.json tsconfig.base.json ./
+COPY configs ./configs
+COPY apps/website ./apps/website
+COPY packages ./packages
+
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+  pnpm install --frozen-lockfile --filter @briefly/website...
+
+RUN pnpm --filter @briefly/website build
+
+FROM nginx:1.27-alpine AS runner
+COPY docker/nginx.website.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/apps/website/out /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

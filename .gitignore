@@ -4,6 +4,8 @@ node_modules/
 # Environment & secrets
 .env
 .env*.local
+.env.docker
+k8s/secrets.yaml
 
 apps/mobile/.env
 !apps/mobile/.env.example

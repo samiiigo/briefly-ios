@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: briefly-web-config
+  namespace: briefly
+  labels:
+    app.kubernetes.io/name: briefly-web
+    app.kubernetes.io/part-of: briefly
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  HOSTNAME: "0.0.0.0"
+  # NEXT_PUBLIC_* are baked at image build time; keep here for documentation /
+  # any server-side reads that fall back to process.env at runtime.
+  NEXT_PUBLIC_SUPABASE_URL: "https://YOUR_PROJECT.supabase.co"

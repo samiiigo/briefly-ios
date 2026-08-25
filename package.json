@@ -16,6 +16,10 @@
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose --env-file .env.docker up --build",
+    "docker:down": "docker compose down",
+    "k8s:apply": "kubectl apply -k k8s",
     "prepare": "husky"
   },
   "devDependencies": {

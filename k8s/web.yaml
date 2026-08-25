@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: briefly-web
+  namespace: briefly
+  labels:
+    app.kubernetes.io/name: briefly-web
+    app.kubernetes.io/part-of: briefly
+    app.kubernetes.io/component: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: briefly-web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: briefly-web
+        app.kubernetes.io/part-of: briefly
+        app.kubernetes.io/component: web
+    spec:
+      containers:
+        - name: web
+          image: briefly/web:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: briefly-web-config
+            - secretRef:
+                name: briefly-web-env
+                optional: true
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 1001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: briefly-web
+  namespace: briefly
+  labels:
+    app.kubernetes.io/name: briefly-web
+    app.kubernetes.io/part-of: briefly
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: briefly-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

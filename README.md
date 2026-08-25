@@ -43,10 +43,20 @@ pnpm build
 - [Feature conventions](docs/feature-conventions.md)
 - [Package conventions](docs/package-conventions.md)
 - [Development](docs/development.md)
-- [Deployment](docs/deployment.md)
+- [Deployment](docs/deployment.md) (Vercel, EAS, Docker, Kubernetes)
 - [Migration summary](docs/migration-summary.md)
 - [Phase 2 — Product surfaces](docs/phase-2.md)
 - [ADRs](docs/architecture/decisions.md)
+
+## Docker (web + website)
+
+```bash
+cp .env.docker.example .env.docker
+# set NEXT_PUBLIC_SUPABASE_* then:
+pnpm docker:up
+```
+
+See [docs/deployment.md](docs/deployment.md) for Kubernetes (`pnpm k8s:apply`).
 
 ## License
 
