@@ -1,5 +1,6 @@
 export type ThemePreference = 'dark' | 'light' | 'system';
 export type ResolvedColorScheme = 'dark' | 'light';
+
 export function themePreferenceTitle(preference: ThemePreference): string {
   switch (preference) {
     case 'dark':
@@ -10,6 +11,7 @@ export function themePreferenceTitle(preference: ThemePreference): string {
       return 'System';
   }
 }
+
 export function themePreferenceDescription(preference: ThemePreference): string {
   switch (preference) {
     case 'dark':
@@ -20,6 +22,7 @@ export function themePreferenceDescription(preference: ThemePreference): string 
       return 'Match your device light or dark mode.';
   }
 }
+
 export function resolveColorScheme(
   preference: ThemePreference,
   systemScheme: ResolvedColorScheme | null | undefined,

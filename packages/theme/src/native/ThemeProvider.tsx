@@ -16,7 +16,7 @@ import {
   resolveColorScheme,
   type ResolvedColorScheme,
   type ThemePreference,
-} from './themePreference';
+} from '../themePreference';
 
 type ThemeContextValue = {
   colors: ColorPalette;

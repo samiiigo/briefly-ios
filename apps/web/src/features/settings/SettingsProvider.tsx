@@ -10,8 +10,8 @@ import {
   type ReactNode,
 } from 'react';
 import type { CloudProvider, ProcessingMode, TranscriptionMode } from '@briefly/types';
-import type { ThemePreference } from '@briefly/theme/native';
-import { resolveColorScheme } from '@briefly/theme/native';
+import type { ThemePreference } from '@briefly/theme';
+import { resolveColorScheme } from '@briefly/theme';
 import { useAuth } from '@/features/auth';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import { pullSettings, pushSettings } from '@/features/library/api/accountLibraryApi';

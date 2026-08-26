@@ -29,7 +29,7 @@ export {
   themePreferenceDescription,
   type ThemePreference,
   type ResolvedColorScheme,
-} from './themePreference';
+} from '../themePreference';
 /** SF Pro scale — Display for ≥20pt, Text below (Apple HIG). */
 export const Typography = {
   largeTitle: withAppFont({

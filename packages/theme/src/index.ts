@@ -8,3 +8,10 @@ export {
   darkThemeCssVariables,
   generateThemeCss,
 } from './cssVariables';
+export {
+  resolveColorScheme,
+  themePreferenceTitle,
+  themePreferenceDescription,
+  type ThemePreference,
+  type ResolvedColorScheme,
+} from './themePreference';

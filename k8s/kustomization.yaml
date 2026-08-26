@@ -8,7 +8,7 @@ resources:
   - web-configmap.yaml
   - web.yaml
   - website.yaml
-  - ingress.yaml
+  # ingress.yaml  # enable when an ingress controller is installed
 
 # Retag after pushing to your registry, e.g.:
 #   newName: ghcr.io/OWNER/REPO/web

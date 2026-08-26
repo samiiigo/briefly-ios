@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: briefly
     app.kubernetes.io/component: website
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: briefly-website
@@ -41,11 +41,11 @@ spec:
             periodSeconds: 20
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
+              cpu: 25m
+              memory: 32Mi
             limits:
-              cpu: 250m
-              memory: 128Mi
+              cpu: 100m
+              memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
@@ -59,11 +59,12 @@ metadata:
     app.kubernetes.io/name: briefly-website
     app.kubernetes.io/part-of: briefly
 spec:
-  type: ClusterIP
+  type: NodePort
   selector:
     app.kubernetes.io/name: briefly-website
   ports:
     - name: http
       port: 80
       targetPort: http
+      nodePort: 30081
       protocol: TCP

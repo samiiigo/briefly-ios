@@ -1,6 +1,6 @@
 'use client';
 
-import { themePreferenceTitle } from '@briefly/theme/native';
+import { themePreferenceTitle } from '@briefly/theme';
 import { Button, Stack, Text } from '@briefly/ui';
 import {
   processingModeDescription,
