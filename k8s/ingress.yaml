@@ -1,0 +1,39 @@
+# Requires an ingress controller (e.g. ingress-nginx) and optional cert-manager.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: briefly
+  namespace: briefly
+  labels:
+    app.kubernetes.io/part-of: briefly
+  annotations:
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: app.briefly.example
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: briefly-web
+                port:
+                  number: 80
+    - host: www.briefly.example
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: briefly-website
+                port:
+                  number: 80
+  # tls:
+  #   - hosts:
+  #       - app.briefly.example
+  #       - www.briefly.example
+  #     secretName: briefly-tls

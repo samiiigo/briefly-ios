@@ -1,0 +1,50 @@
+# Dependencies & caches
+node_modules
+**/node_modules
+.pnpm-store
+.turbo
+**/.turbo
+**/.next
+**/out
+**/dist
+**/.expo
+
+# Git / IDE
+.git
+.github
+.claude
+.husky
+.idea
+.vscode
+**/.DS_Store
+
+# Env & secrets
+.env
+.env.*
+!**/.env.example
+**/*.pem
+**/*.p8
+**/*.p12
+**/*.key
+**/*.mobileprovision
+**/google-service-account.json
+**/play-store-service-account.json
+
+# Mobile / native (not needed for web images)
+apps/mobile
+briefly
+**/ios
+**/android
+**/*.ipa
+**/*.dSYM
+**/*.dSYM.zip
+
+# Docs & misc
+docs
+**/*.md
+!README.md
+LICENSE
+**/coverage
+**/*.log
+**/*.tsbuildinfo
+**/next-env.d.ts

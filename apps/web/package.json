@@ -1,0 +1,37 @@
+{
+  "name": "@briefly/web",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@briefly/api": "workspace:*",
+    "@briefly/assets": "workspace:*",
+    "@briefly/auth": "workspace:*",
+    "@briefly/config": "workspace:*",
+    "@briefly/env": "workspace:*",
+    "@briefly/theme": "workspace:*",
+    "@briefly/types": "workspace:*",
+    "@briefly/ui": "workspace:*",
+    "@briefly/utils": "workspace:*",
+    "@supabase/ssr": "^0.12.3",
+    "@supabase/supabase-js": "^2.110.7",
+    "next": "^15.1.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.6",
+    "@types/node": "^25.3.5",
+    "@types/react": "~19.1.10",
+    "@types/react-dom": "~19.1.10",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.2.10",
+    "typescript": "~5.9.2"
+  }
+}

@@ -4,18 +4,20 @@ node_modules/
 # Environment & secrets
 .env
 .env*.local
+.env.docker
+k8s/secrets.yaml
 
-briefly/.env
-!briefly/.env.example
+apps/mobile/.env
+!apps/mobile/.env.example
 google-service-account.json
-briefly/play-store-service-account.json
+apps/mobile/play-store-service-account.json
 play-store-service-account.json
-briefly/credentials/*
-!briefly/credentials/README.md
-briefly/.supabase/
+apps/mobile/credentials/*
+!apps/mobile/credentials/README.md
+apps/mobile/.supabase/
 supabase/.temp/
-briefly/supabase/.temp/
-briefly/.npmrc
+apps/backend/supabase/.temp/
+apps/mobile/.npmrc
 
 # Expo
 .expo/
@@ -33,6 +35,11 @@ yarn-error.*
 
 # TypeScript
 *.tsbuildinfo
+next-env.d.ts
+
+# Turbo / pnpm
+.turbo/
+*.log
 
 # macOS
 .DS_Store
@@ -59,10 +66,10 @@ playground.xcworkspace
 *.key
 *.mobileprovision
 .kotlin/
-briefly/ios/
+apps/mobile/ios/
 
 # Android
-briefly/android
+apps/mobile/android
 *.iml
 *.hprof
 *.jsbundle
@@ -72,6 +79,12 @@ briefly/android
 
 # Carthage
 Carthage/Build/
+
+# Next.js
+apps/web/.next/
+apps/website/.next/
+apps/web/out/
+apps/website/out/
 
 # fastlane
 fastlane/report.xml

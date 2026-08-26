@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: briefly-website
+  namespace: briefly
+  labels:
+    app.kubernetes.io/name: briefly-website
+    app.kubernetes.io/part-of: briefly
+    app.kubernetes.io/component: website
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: briefly-website
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: briefly-website
+        app.kubernetes.io/part-of: briefly
+        app.kubernetes.io/component: website
+    spec:
+      containers:
+        - name: website
+          image: briefly/website:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: briefly-website
+  namespace: briefly
+  labels:
+    app.kubernetes.io/name: briefly-website
+    app.kubernetes.io/part-of: briefly
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: briefly-website
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      nodePort: 30081
+      protocol: TCP

@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: briefly
+
+resources:
+  - namespace.yaml
+  - web-configmap.yaml
+  - web.yaml
+  - website.yaml
+  # ingress.yaml  # enable when an ingress controller is installed
+
+# Retag after pushing to your registry, e.g.:
+#   newName: ghcr.io/OWNER/REPO/web
+images:
+  - name: briefly/web
+    newName: briefly/web
+    newTag: latest
+  - name: briefly/website
+    newName: briefly/website
+    newTag: latest
